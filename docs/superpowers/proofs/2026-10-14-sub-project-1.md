@@ -52,3 +52,15 @@ FAILED tests/runtime/test_assistant_learning.py::test_forget_removes_a_learned_e
 FAILED tests/runtime/test_assistant_learning.py::test_forgetting_a_learned_alias_restores_the_configured_one
 3 failed, 1 passed, 13 deselected in 0.09s
 ```
+
+## Embedder batch independence
+Finding: with the int8 model, a sentence vector depended on its batch-mates (max abs diff 0.011 next to another sentence of the *same* length — so not padding). Cause: dynamic int8 quantization scales activations over the whole batch. Fix: `OnnxEmbedder.embed` runs each text alone.
+Mutation: batch all texts in one run again. `test_batch_mates_do_not_change_a_sentence_vector`:
+```
+FAILED tests/adapters/test_onnx_embedder.py::test_padding_does_not_change_a_sentence_vector
+1 failed, 4 passed in 1.12s
+```
+Planned mutation `pooled = hidden.mean(axis=1)` (unmasked pooling) **did not discriminate**: one-row runs have no padding, so masking cannot matter. Reported as a finding, not bent into a failure; masked pooling stays for correctness if batching ever returns.
+```
+5 passed in 1.29s
+```
