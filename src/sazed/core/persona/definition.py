@@ -77,6 +77,9 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
     "SnipOpened": ("Selecione a área da tela, {mestre}.",),
     "SettingsOpened": ("Abrindo as configurações ({page}), {mestre}.",),
     "UnknownSettingsPage": ("Não conheço a página de configurações '{raw}', {mestre}.",),
+    "BrightnessSet": ("Brilho em {percent}%, {mestre}.",),
+    "BrightnessChanged": ("Pronto, {mestre}. Brilho em {percent}%.",),
+    "BrightnessUnsupported": ("Este monitor não permite ajustar o brilho por software, {mestre}.",),
     "SearchOpened": (
         "Abrindo a busca por '{query}' em {engine}, {mestre}.",
         "Pesquisando '{query}' em {engine}, {mestre}.",

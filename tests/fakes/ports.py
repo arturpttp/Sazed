@@ -126,3 +126,18 @@ class FakeScreen:
 
     def open_snip(self) -> None:
         self.snips += 1
+
+
+class FakeBrightness:
+    def __init__(self, level: int | None = 50, accepts: bool = True) -> None:
+        self.level = level
+        self.accepts = accepts
+
+    def get(self) -> int | None:
+        return self.level
+
+    def set(self, percent: int) -> bool:
+        if not self.accepts or self.level is None:
+            return False
+        self.level = percent
+        return True

@@ -83,3 +83,13 @@ def test_fake_screen_saves_unique_names_and_counts_snips() -> None:
     assert screen.capture("x.png") == "x (2).png"
     screen.open_snip()
     assert screen.saved == ["x (2).png"] and screen.snips == 1
+
+
+def test_fake_brightness() -> None:
+    from fakes.ports import FakeBrightness
+
+    b = FakeBrightness(40)
+    assert b.get() == 40 and b.set(70) and b.level == 70
+    assert FakeBrightness(None).get() is None
+    refusing = FakeBrightness(40, accepts=False)
+    assert not refusing.set(10) and refusing.level == 40

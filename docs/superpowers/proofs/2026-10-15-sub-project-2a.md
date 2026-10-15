@@ -148,3 +148,15 @@ Mutation 2: `unique_name` returns the name unchanged (overwrites).
 FAILED tests/adapters/test_windows_pure.py::test_unique_name_never_overwrites
 1 failed, 30 deselected in 0.12s
 ```
+
+## Brightness refused
+Mutation: ignore the result of `set()` and always report success.
+```
+FAILED tests/skills/test_brightness.py::test_a_refused_set_is_unsupported - A...
+1 failed, 6 passed in 0.12s
+```
+
+## WMI brightness call (found on the real desktop)
+The plan's dynamic call `monitor.WmiSetBrightness(0, n)` raised "Parâmetro inválido";
+`test_brightness_reads_and_rewrites_the_same_level` (`-m windows`) FAILED with `assert False`.
+Fix: named in-parameters through `ExecMethod_`; the same test passes.

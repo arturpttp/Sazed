@@ -104,3 +104,13 @@ def test_settings_page_opens() -> None:
     from sazed.adapters.windows.opener import ShellOpener
 
     ShellOpener().open("ms-settings:sound")  # opens the Settings app; close it afterwards
+
+
+def test_brightness_reads_and_rewrites_the_same_level() -> None:
+    from sazed.adapters.windows.brightness import WmiBrightness
+
+    brightness = WmiBrightness()
+    level = brightness.get()
+    if level is None:
+        pytest.skip("no monitor exposes WMI brightness")
+    assert brightness.set(level)  # the same value: no visible change

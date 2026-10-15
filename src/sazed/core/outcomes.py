@@ -108,6 +108,21 @@ class UnknownSettingsPage:
 
 
 @dataclass(frozen=True)
+class BrightnessSet:
+    percent: int
+
+
+@dataclass(frozen=True)
+class BrightnessChanged:
+    percent: int
+
+
+@dataclass(frozen=True)
+class BrightnessUnsupported:
+    pass
+
+
+@dataclass(frozen=True)
 class SearchOpened:
     query: str
     engine: str
@@ -205,6 +220,8 @@ Success = (
     | ScreenshotSaved
     | SnipOpened
     | SettingsOpened
+    | BrightnessSet
+    | BrightnessChanged
     | ExampleLearned
     | AliasLearned
     | AlreadyKnown
@@ -222,6 +239,7 @@ Failure = (
     | CannotCloseSite
     | NoMediaSession
     | UnknownSettingsPage
+    | BrightnessUnsupported
 )
 Outcome = Success | Failure
 

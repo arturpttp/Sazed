@@ -6,7 +6,15 @@ from random import Random
 
 from fakes.clock import ManualClock
 from fakes.index import ScriptedIndex
-from fakes.ports import FakeAudio, FakeCatalog, FakeLauncher, FakeOpener, FakePower, FakeScreen
+from fakes.ports import (
+    FakeAudio,
+    FakeBrightness,
+    FakeCatalog,
+    FakeLauncher,
+    FakeOpener,
+    FakePower,
+    FakeScreen,
+)
 from sazed.adapters.sqlite.coppermind import SqliteCoppermind
 from sazed.core.learning import LearningThresholds
 from sazed.core.policy import Thresholds
@@ -16,6 +24,7 @@ from sazed.runtime.assistant import Assistant, Settings
 from sazed.runtime.config import BUILTIN_ENGINES
 from sazed.runtime.extractors import build_extractors
 from sazed.skills.pc.apps import AppsSkill
+from sazed.skills.pc.brightness import BrightnessSkill
 from sazed.skills.pc.power import PowerSkill
 from sazed.skills.pc.screen import ScreenSkill
 from sazed.skills.pc.settings import PAGE_NAMES, SettingsSkill
@@ -42,6 +51,7 @@ class Harness:
     opener: FakeOpener
     power: FakePower
     screen: FakeScreen
+    brightness: FakeBrightness
 
     def say(self, text: str) -> Response:
         return self.assistant.handle(text)
@@ -68,6 +78,7 @@ def build_harness(
     opener = FakeOpener()
     power = FakePower()
     screen = FakeScreen()
+    brightness = FakeBrightness()
     skills: list[Skill] = [
         AppsSkill(FakeCatalog(APPS), launcher),
         VolumeSkill(audio),
@@ -75,6 +86,7 @@ def build_harness(
         PowerSkill(power),
         ScreenSkill(screen),
         SettingsSkill(opener),
+        BrightnessSkill(brightness),
     ]
     assistant = Assistant(
         skills=[*skills, *extra_skills],
@@ -88,4 +100,6 @@ def build_harness(
         clock=clock,
         rng=Random(0),
     )
-    return Harness(assistant, index, store, launcher, audio, clock, opener, power, screen)
+    return Harness(
+        assistant, index, store, launcher, audio, clock, opener, power, screen, brightness
+    )
