@@ -21,9 +21,19 @@ from sazed.runtime.wiring import SazedApp, StartupError, start
 EXIT_WORDS = {"sair", "tchau", "até logo", "ate logo"}
 
 
-class _Formatter(argparse.HelpFormatter):
+EXAMPLES = """exemplos:
+  sazed                                  conversa com Sazed (sair: "sair" ou Ctrl-C)
+  sazed aprendizado                      lista o que aprendeu (e3 = exemplo, a5 = apelido)
+  sazed aprendizado --esquecer e3        esquece um item aprendido
+  sazed revisar                          lista falhas recentes, com o número de cada pedido
+  sazed revisar --rotular 12 abrir_app   ensina o que o pedido 12 queria dizer
+      (acrescente --forcar para guardar mesmo se parecer outro pedido)"""
+
+
+class _Formatter(argparse.RawDescriptionHelpFormatter):
     def add_usage(self, usage, actions, groups, prefix=None):  # type: ignore[no-untyped-def]
-        return super().add_usage(usage, actions, groups, prefix="uso: ")
+        # argparse passes prefix="" when it builds a subcommand's name: keep that one empty.
+        return super().add_usage(usage, actions, groups, "uso: " if prefix is None else prefix)
 
 
 class _Parser(argparse.ArgumentParser):
@@ -38,7 +48,7 @@ class _Parser(argparse.ArgumentParser):
 
 
 def _parser() -> _Parser:
-    parser = _Parser(prog="sazed", description="Sazed, seu assistente local.")
+    parser = _Parser(prog="sazed", description="Sazed, seu assistente local.", epilog=EXAMPLES)
     parser.add_argument("--config", type=Path, default=None, help="caminho do config.toml")
     commands = parser.add_subparsers(dest="command", parser_class=_Parser, metavar="comando")
     learned = commands.add_parser("aprendizado", help="lista o que Sazed aprendeu")
