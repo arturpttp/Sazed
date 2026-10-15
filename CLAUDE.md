@@ -31,7 +31,8 @@ Sazed, the Terris Keeper from *Mistborn*. Read [`AGENTS.md`](./AGENTS.md) and
 - 2026-10-15: sub-project 1 merged into `main`. Sub-project 2 split into 2a (one-shot PC skills:
   media, system, web, status, Store apps) and 2b (windows, files). 2a spec:
   [`docs/superpowers/specs/2026-10-15-sazed-pc-skills-2a-design.md`](./docs/superpowers/specs/2026-10-15-sazed-pc-skills-2a-design.md).
-- **Next step:** user review of the 2a spec, then its implementation plan.
+- 2a plan: [`docs/superpowers/plans/2026-10-15-sazed-pc-skills-2a.md`](./docs/superpowers/plans/2026-10-15-sazed-pc-skills-2a.md) (16 tasks).
+- **Next step:** user review of the 2a plan, then implementation on `feat/sub-project-2a`.
 
 ## Measurements
 
