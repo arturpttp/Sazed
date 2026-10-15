@@ -16,7 +16,8 @@ dialogue-control phrases. Pure functions over already-loaded data; no OS access,
 - "não é o X" is not a correction: without the comma it is a negation.
 - A number right after "para/pra/pro/até" is also read as the `alvo` slot (a level, not a
   step). The `percent` extractor still reads it too: `volume_definir` seeds say "pra 70".
-- Numbers outside 0–100 are ignored, so the user is asked again instead of being clamped silently.
+- Numbers outside 0–100 are `Unmatched` (never clamped): the skill answers `InvalidPercent`
+  with the valid range. `Unmatched` counts as given, so the policy does not ask again.
 - `IntentMatcher.add_examples` embeds in one batch; adding seeds one at a time is ~N× slower with the real model.
 
 ## Not here

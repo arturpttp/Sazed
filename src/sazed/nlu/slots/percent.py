@@ -1,6 +1,6 @@
 """Read a 0-100 percentage from digits or pt-BR number words. Pure."""
 
-from sazed.core.types import SlotValue
+from sazed.core.types import SlotValue, Unmatched
 from sazed.nlu.normalize import strip_accents
 
 _UNITS = {
@@ -43,11 +43,12 @@ _WORDS = {"metade": 50, "meio": 50, "maximo": 100, "tudo": 100, "cem": 100, "min
 _UNITS_AFTER_E = {**_UNITS, "um": 1, "uma": 1}
 
 
-def _value(n: int, raw: str) -> SlotValue | None:
-    return SlotValue("percent", n, raw, 1.0) if 0 <= n <= 100 else None
+def _value(n: int, raw: str) -> SlotValue | Unmatched:
+    # Out of range is "named, but invalid": the skill explains the range instead of guessing.
+    return SlotValue("percent", n, raw, 1.0) if 0 <= n <= 100 else Unmatched("percent", raw, None)
 
 
-def extract_percent(normalized: str) -> SlotValue | None:
+def extract_percent(normalized: str) -> SlotValue | Unmatched | None:
     tokens = strip_accents(normalized).split()
     for token in tokens:
         if token.isdigit():

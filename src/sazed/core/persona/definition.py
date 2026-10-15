@@ -86,6 +86,7 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
         "Peço desculpas, {mestre}. Não consegui {action}.",
         "Algo deu errado ao tentar {action}, {mestre}. Peço desculpas.",
     ),
+    "InvalidPercent": ("Só consigo ajustar de 0 a 100%, {mestre}. '{raw}' fica fora disso.",),
     # Decisions
     "Execute": ("Pois não, {mestre}.",),
     "Confirm": ("Devo {acao}, {mestre}?", "Entendi que deseja {acao}. Confirma, {mestre}?"),

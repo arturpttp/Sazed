@@ -1,6 +1,6 @@
 import pytest
 
-from sazed.core.types import SlotValue
+from sazed.core.types import SlotValue, Unmatched
 from sazed.nlu.slots.target import extract_target
 
 
@@ -30,7 +30,6 @@ def test_a_number_after_para_is_the_level_to_end_at(text: str, value: int) -> No
         "aumenta o volume em 20",  # a step, not a level
         "abaixa o volume",
         "aumenta pra mim",  # "pra" without a number
-        "abaixa o volume para 150",  # out of range: ask instead of clamping
     ],
 )
 def test_no_level_gives_none(text: str) -> None:
@@ -39,3 +38,7 @@ def test_no_level_gives_none(text: str) -> None:
 
 def test_the_number_must_follow_the_preposition() -> None:
     assert extract_target("aumenta 10 pra mim") is None
+
+
+def test_out_of_range_level_is_unmatched() -> None:
+    assert extract_target("abaixa o volume para 150") == Unmatched("alvo", "150", None)

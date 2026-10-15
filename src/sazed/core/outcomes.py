@@ -91,6 +91,13 @@ class ActionFailed:
     action: str
 
 
+@dataclass(frozen=True)
+class InvalidPercent:
+    """A number outside 0-100 was given for a level or a step."""
+
+    raw: str
+
+
 Success = (
     AppOpened
     | AppClosed
@@ -105,7 +112,7 @@ Success = (
     | NothingToForget
     | Cancelled
 )
-Failure = AppNotFound | AppNotRunning | AmbiguousSlot | ActionFailed
+Failure = AppNotFound | AppNotRunning | AmbiguousSlot | ActionFailed | InvalidPercent
 Outcome = Success | Failure
 
 _FAILURE_TYPES: tuple[type, ...] = get_args(Failure)

@@ -3,7 +3,7 @@ import logging
 import pytest
 
 from sazed.core.decisions import AskSlot, Confirm, Execute, NotUnderstood
-from sazed.core.outcomes import ActionFailed, AppNotFound, AppOpened, VolumeSet
+from sazed.core.outcomes import ActionFailed, AppNotFound, AppOpened, InvalidPercent, VolumeSet
 from sazed.core.persona.definition import TEMPLATES
 from support.harness import Make
 
@@ -110,3 +110,11 @@ def test_every_turn_records_an_episode(make: Make) -> None:
     assert older.episode.ranking[0].intent_id == "abrir_app"
     assert older.episode.slots == {"app": "Google Chrome"}
     assert newest.episode.decision == "NotUnderstood"
+
+
+def test_out_of_range_step_is_explained_instead_of_using_the_default(make: Make) -> None:
+    h = make({"aumenta o volume em 150": {"volume_aumentar": 0.97, "volume_definir": 0.70}})
+    r = h.say("aumenta o volume em 150")
+    assert r.outcome == InvalidPercent("150")
+    assert h.audio.volume == 50
+    assert "0 a 100" in r.text
