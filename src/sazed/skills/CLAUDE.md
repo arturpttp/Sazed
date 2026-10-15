@@ -27,7 +27,8 @@ next to the skill that needs them and implemented in `sazed.adapters`.
   learned phrase can never weaken their confirmation.
 - Power intents (`POWER_INTENTS`) use `requires_confirmation=always` and `learnable=False`;
   `tests/runtime/test_power_safety.py` derives its cases from the specs. The Windows adapter
-  delays each action so the reply prints first. No test may call the real adapter.
+  delays each action so the reply prints first, with `/t 0`: a shutdown.exe countdown implies
+  `/f` and kills apps without asking to save. No test may call the real adapter.
 
 ## Not here
 Text matching (→ `nlu`), Windows APIs (→ `adapters/windows`).

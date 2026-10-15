@@ -19,7 +19,7 @@ Sazed, the Terris Keeper from *Mistborn*. Read [`AGENTS.md`](./AGENTS.md) and
   on branch `feat/sub-project-1`. Discrimination proofs:
   [`docs/superpowers/proofs/2026-10-14-sub-project-1.md`](./docs/superpowers/proofs/2026-10-14-sub-project-1.md).
 - NLU fixture (150 cases after sub-project 2a, incl. opposing near-ties, sites, Store apps, power):
-  accuracy 0.920, false-execute 0.000, in-domain executed 0.488 / asked 0.512 / not understood
+  accuracy 0.928, false-execute 0.000, in-domain executed 0.496 / asked 0.504 / not understood
   0.000, with t_exec=0.94, t_confirm=0.88, g_min=0.01 (embedder variant qint8; not re-tuned for 2a).
   Before 2a (87 cases): accuracy 0.909, false-execute 0.011. `tests/nlu/test_fixture_rules.py`
   forbids fixture phrases that copy a seed.

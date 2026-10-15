@@ -1,6 +1,7 @@
 """Power actions. Each one is delayed a little so Sazed's reply is printed first.
 
-Never called by tests: only `power_command` is tested.
+Never called by tests: only `power_command` is tested. shutdown.exe's own countdown is never
+used: any `/t` above 0 implies `/f`, which kills apps without their "save changes?" prompt.
 """
 
 from __future__ import annotations
@@ -9,13 +10,11 @@ import subprocess
 import threading
 from collections.abc import Callable
 
-DELAY_SECONDS = 5
-"""shutdown.exe's own countdown; `shutdown /a` cancels it."""
 _SHORT_DELAY = 2.0
 
 _COMMANDS: dict[str, list[str]] = {
-    "shutdown": ["shutdown", "/s", "/t", str(DELAY_SECONDS)],
-    "restart": ["shutdown", "/r", "/t", str(DELAY_SECONDS)],
+    "shutdown": ["shutdown", "/s", "/t", "0"],
+    "restart": ["shutdown", "/r", "/t", "0"],
     "sign_out": ["shutdown", "/l"],  # /l takes no countdown
 }
 
@@ -38,10 +37,10 @@ class WindowsPower:
             raise OSError("LockWorkStation failed")
 
     def shutdown(self) -> None:
-        subprocess.run(power_command("shutdown"), check=True)
+        _later(lambda: subprocess.run(power_command("shutdown"), check=False))
 
     def restart(self) -> None:
-        subprocess.run(power_command("restart"), check=True)
+        _later(lambda: subprocess.run(power_command("restart"), check=False))
 
     def sign_out(self) -> None:
         _later(lambda: subprocess.run(power_command("sign_out"), check=False))

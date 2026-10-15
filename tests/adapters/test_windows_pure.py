@@ -164,12 +164,11 @@ def test_anything_else_is_refused(uri: str) -> None:
     assert not is_allowed_uri(uri)
 
 
-def test_shutdown_and_restart_wait_so_the_reply_is_seen_and_can_be_cancelled() -> None:
-    from sazed.adapters.windows.power import DELAY_SECONDS, power_command
+def test_shutdown_and_restart_commands() -> None:
+    from sazed.adapters.windows.power import power_command
 
-    assert power_command("shutdown") == ["shutdown", "/s", "/t", str(DELAY_SECONDS)]
-    assert power_command("restart") == ["shutdown", "/r", "/t", str(DELAY_SECONDS)]
-    assert DELAY_SECONDS >= 5
+    assert power_command("shutdown") == ["shutdown", "/s", "/t", "0"]
+    assert power_command("restart") == ["shutdown", "/r", "/t", "0"]
 
 
 def test_sign_out_command() -> None:
@@ -191,3 +190,14 @@ def test_unique_name_never_overwrites() -> None:
     assert unique_name("a.png", set()) == "a.png"
     assert unique_name("a.png", {"a.png"}) == "a (2).png"
     assert unique_name("a.png", {"a.png", "a (2).png"}) == "a (3).png"
+
+
+def test_power_commands_never_force_apps_closed() -> None:
+    # On Windows, any /t above 0 implies /f: apps would be killed without "save changes?".
+    from sazed.adapters.windows.power import power_command
+
+    for kind in ("shutdown", "restart", "sign_out"):
+        command = power_command(kind)
+        assert "/f" not in command
+        if "/t" in command:
+            assert command[command.index("/t") + 1] == "0"

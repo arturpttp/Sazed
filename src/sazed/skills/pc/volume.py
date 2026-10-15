@@ -74,6 +74,8 @@ MUTE_EXAMPLES = (
     "volta o som",
     "ativa o som",
     "silencia o computador",
+    "desmuta o pc",
+    "tira o pc do mudo",
     "deixa mudo",
 )
 

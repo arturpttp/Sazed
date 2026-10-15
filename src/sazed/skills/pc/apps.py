@@ -132,6 +132,9 @@ CLOSE_EXAMPLES = (
     "para o teams",
     "fecha o programa",
     "fechar aplicativo",
+    "fecha o youtube",
+    "fecha o gmail",
+    "fecha o site do github",
 )
 
 
