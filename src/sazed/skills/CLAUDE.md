@@ -21,6 +21,10 @@ next to the skill that needs them and implemented in `sazed.adapters`.
 - Volume up/down carry two number slots: `percent` is a step ("aumenta em 20") and `alvo` is
   the level to end at ("abaixa para 100" means 100%, even above the current volume). `alvo`
   wins; check it with `is not None`, since 0 is a real level.
+- `repeatable` is opt-in: only level steps and track skips set it. "de novo" after anything
+  else answers `NothingToRepeat` (opening a second Chrome was a real bug).
+- `learnable=False` is enforced in one place, `Assistant._learn`. Power intents use it so a
+  learned phrase can never weaken their confirmation.
 
 ## Not here
 Text matching (→ `nlu`), Windows APIs (→ `adapters/windows`).

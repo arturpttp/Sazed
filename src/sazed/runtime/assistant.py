@@ -46,6 +46,7 @@ from sazed.core.outcomes import (
     ExampleLearned,
     Forgotten,
     NothingToForget,
+    NothingToRepeat,
     Outcome,
     is_failure,
 )
@@ -194,13 +195,17 @@ class Assistant:
             last = self._ctx.last
             if control.kind is ControlKind.FORGET:
                 return self._forget()
-            if (
-                control.kind is ControlKind.REPEAT
-                and last is not None
-                and last.kind is LastKind.EXECUTED
-                and last.intent_id is not None
-            ):
-                return self._proceed(last.intent_id, last.slots, u)
+            if control.kind is ControlKind.REPEAT:
+                # Never falls through to ranking: a bare "mais" is not a command by itself.
+                if (
+                    last is not None
+                    and last.kind is LastKind.EXECUTED
+                    and last.intent_id is not None
+                    and self._specs[last.intent_id][1].repeatable
+                ):
+                    return self._proceed(last.intent_id, last.slots, u)
+                nothing = NothingToRepeat()
+                return _Turn([self._say(nothing)], outcome=nothing)
             if control.kind is ControlKind.CORRECT and last is not None:
                 return self._correct(u, last, control.rest)
             if control.kind in (ControlKind.CONFIRM, ControlKind.DENY):
@@ -431,6 +436,8 @@ class Assistant:
         allow_conflict: bool = False,
     ) -> tuple[list[str], Outcome | None]:
         """Validate every candidate, then write all of them in one store transaction."""
+        # The single gate for examples: confirmations, offers and corrections all pass here.
+        examples = [e for e in examples if self._specs[e[1]][1].learnable]
         texts: list[str] = []
         outcome: Outcome | None = None
         new_examples: list[NewExample] = []

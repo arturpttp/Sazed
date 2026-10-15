@@ -111,12 +111,14 @@ class VolumeSkill:
                 UP_EXAMPLES,
                 (SlotSpec("percent", False, "Quanto devo aumentar?"), _LEVEL),
                 describe=level_label("aumentar o volume", "o volume"),
+                repeatable=True,
             ),
             IntentSpec(
                 "volume_diminuir",
                 DOWN_EXAMPLES,
                 (SlotSpec("percent", False, "Quanto devo diminuir?"), _LEVEL),
                 describe=level_label("diminuir o volume", "o volume"),
+                repeatable=True,
             ),
             IntentSpec(
                 "volume_mudo",

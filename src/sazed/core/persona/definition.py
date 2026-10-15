@@ -75,6 +75,7 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
         "Removido de minha mente de cobre, {mestre}: {description}.",
     ),
     "NothingToForget": ("Não há nada recente para esquecer, {mestre}.",),
+    "NothingToRepeat": ("Não há nada recente para repetir, {mestre}.",),
     "Cancelled": ("Como desejar, {mestre}.", "Está bem, {mestre}. Não farei nada."),
     # Outcomes: failures
     "AppNotFound": (

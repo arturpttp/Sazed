@@ -3,7 +3,7 @@ from datetime import datetime
 
 from sazed.core.coppermind import Reaction
 from sazed.core.decisions import AskSlot, Confirm, ConfirmReason, NotUnderstood
-from sazed.core.outcomes import AmbiguousSlot, AppOpened, Cancelled, Outcome
+from sazed.core.outcomes import AmbiguousSlot, AppOpened, Cancelled, NothingToRepeat, Outcome
 from sazed.core.skill import IntentSpec, SkillContext, SlotSpec
 from sazed.core.types import Slots, SlotValue
 from support.harness import Make
@@ -132,7 +132,7 @@ def test_repeat_after_ttl_does_not_rerun(make: Make) -> None:
     h = make({"aumenta o volume": {"volume_aumentar": 0.97, "volume_diminuir": 0.6}})
     h.say("aumenta o volume")
     h.clock.advance(61)
-    assert h.say("de novo").decision == NotUnderstood()
+    assert h.say("de novo").outcome == NothingToRepeat()
     assert h.audio.volume == 60
 
 
@@ -220,3 +220,18 @@ def test_bare_yes_is_never_offered_as_a_rephrase(make: Make) -> None:
     assert "'sim'" not in r.text
     h.say("sim")
     assert h.store.learned() == []
+
+
+def test_repeat_does_not_reopen_an_app(make: Make) -> None:
+    h = make({"abre o chrome": {"abrir_app": 0.95, "fechar_app": 0.60}})
+    h.say("abre o chrome")
+    r = h.say("mais")
+    assert h.launcher.launched == ["Google Chrome"]
+    assert r.outcome == NothingToRepeat()
+
+
+def test_bare_more_with_nothing_to_repeat_is_never_ranked(make: Make) -> None:
+    h = make({"mais": {"volume_aumentar": 0.99, "volume_diminuir": 0.5}})
+    r = h.say("mais")
+    assert r.outcome == NothingToRepeat()
+    assert h.audio.volume == 50

@@ -4,7 +4,16 @@ from fakes.index import ScriptedIndex
 from sazed.adapters.sqlite.coppermind import SqliteCoppermind
 from sazed.core.coppermind import LearnedKind, NewAlias, NewExample, Reaction
 from sazed.core.decisions import AskSlot, Confirm, Execute
-from sazed.core.outcomes import AppOpened, ExampleLearned, Forgotten, NothingToForget
+from sazed.core.outcomes import (
+    AppOpened,
+    Cancelled,
+    ExampleLearned,
+    Forgotten,
+    NothingToForget,
+    Outcome,
+)
+from sazed.core.skill import IntentSpec, SkillContext
+from sazed.core.types import Slots
 from support.harness import Make
 
 LOW_CHROME = {"abre aí o chrome": {"abrir_app": 0.80, "fechar_app": 0.30}}
@@ -208,3 +217,43 @@ def test_a_learning_failure_after_a_confirmed_action_keeps_the_action(make: Make
     assert r.outcome == AppOpened("Google Chrome")
     assert "não consegui guardar" in r.text
     assert "secret internals" not in r.text
+
+
+class GuardedSkill:
+    """One unlearnable intent, as power actions will be."""
+
+    id = "guarded"
+
+    def __init__(self) -> None:
+        self.ran = 0
+        self.intents = (
+            IntentSpec("proteger", ("protege tudo",), (), lambda s: "proteger", learnable=False),
+        )
+
+    def execute(self, intent_id: str, slots: Slots, ctx: SkillContext) -> Outcome:
+        self.ran += 1
+        return Cancelled()
+
+
+def test_confirming_an_unlearnable_intent_learns_nothing(make: Make) -> None:
+    guarded = GuardedSkill()
+    h = make({"protege aí": {"proteger": 0.80}}, extra_skills=[guarded])
+    assert isinstance(h.say("protege aí").decision, Confirm)
+    h.say("sim")
+    assert guarded.ran == 1
+    assert h.store.learned() == []
+
+
+def test_correcting_towards_an_unlearnable_intent_learns_nothing(make: Make) -> None:
+    guarded = GuardedSkill()
+    h = make(
+        {
+            "abre o chrome": {"abrir_app": 0.95, "fechar_app": 0.60},
+            "proteger": {"proteger": 0.95},
+        },
+        extra_skills=[guarded],
+    )
+    h.say("abre o chrome")
+    h.say("não, era pra proteger")
+    assert guarded.ran == 1
+    assert h.store.learned() == []

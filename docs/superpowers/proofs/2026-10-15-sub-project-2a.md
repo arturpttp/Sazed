@@ -18,3 +18,23 @@ latest episode) instead of the corrected command's episode.
 E       AssertionError: assert <Reaction.NONE: 'none'> is <Reaction.CORRECTED: 'corrected'>
 FAILED tests/runtime/test_assistant_learning.py::test_correction_marks_the_corrected_command_not_a_later_reply
 ```
+
+## Learnable gate
+Mutation: delete the `examples = [e for e in examples if ...learnable]` line in `Assistant._learn`.
+```
+FAILED tests/runtime/test_assistant_learning.py::test_confirming_an_unlearnable_intent_learns_nothing
+FAILED tests/runtime/test_assistant_learning.py::test_correcting_towards_an_unlearnable_intent_learns_nothing
+```
+
+## Opt-in repeat
+Mutation 1: drop `and self._specs[last.intent_id][1].repeatable` from the REPEAT branch.
+```
+FAILED tests/runtime/test_assistant_dialogue.py::test_repeat_does_not_reopen_an_app
+```
+`test_bare_more_with_nothing_to_repeat_is_never_ranked` passes under mutation 1: it guards a
+different line. Mutation 2: delete the `NothingToRepeat` return, so a bare "mais" falls through
+to ranking:
+```
+E       AssertionError: assert VolumeChanged(percent=60) == NothingToRepeat()
+FAILED tests/runtime/test_assistant_dialogue.py::test_bare_more_with_nothing_to_repeat_is_never_ranked
+```

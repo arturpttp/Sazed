@@ -63,6 +63,11 @@ class NothingToForget:
 
 
 @dataclass(frozen=True)
+class NothingToRepeat:
+    pass
+
+
+@dataclass(frozen=True)
 class Cancelled:
     pass
 
@@ -110,6 +115,7 @@ Success = (
     | AlreadyKnown
     | Forgotten
     | NothingToForget
+    | NothingToRepeat
     | Cancelled
 )
 Failure = AppNotFound | AppNotRunning | AmbiguousSlot | ActionFailed | InvalidPercent
