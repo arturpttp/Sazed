@@ -101,3 +101,38 @@ Mutation: `midia_proxima` ignores the result of `next()` and always reports `Med
 FAILED tests/skills/test_media.py::test_without_a_session_sazed_says_so[midia_proxima]
 1 failed, 8 passed in 0.24s
 ```
+
+## Power always confirms
+Mutation: `_power` drops `requires_confirmation=always`.
+```
+FAILED tests/runtime/test_power_safety.py::test_a_certain_power_command_still_confirms[pc_desligar]
+FAILED tests/runtime/test_power_safety.py::test_a_certain_power_command_still_confirms[pc_reiniciar]
+FAILED tests/runtime/test_power_safety.py::test_a_certain_power_command_still_confirms[pc_sair_conta]
+FAILED tests/runtime/test_power_safety.py::test_a_certain_power_command_still_confirms[pc_suspender]
+FAILED tests/runtime/test_power_safety.py::test_a_correction_towards_a_power_command_confirms_and_learns_nothing[pc_desligar]
+FAILED tests/runtime/test_power_safety.py::test_a_correction_towards_a_power_command_confirms_and_learns_nothing[pc_reiniciar]
+FAILED tests/runtime/test_power_safety.py::test_a_correction_towards_a_power_command_confirms_and_learns_nothing[pc_sair_conta]
+FAILED tests/runtime/test_power_safety.py::test_a_correction_towards_a_power_command_confirms_and_learns_nothing[pc_suspender]
+8 failed, 5 passed in 0.13s
+```
+
+## Power never learned
+Mutation 1: `_power` drops `learnable=False`. The derived case list becomes empty, so the
+parametrised learning tests are skipped; the guard test catches it:
+```
+FAILED tests/runtime/test_power_safety.py::test_there_are_power_intents_to_check
+1 failed, 3 skipped in 0.10s
+```
+This is a finding about derived parametrisation, and is why the guard exists. To prove the
+learning tests themselves, mutation 2 keeps the flag and deletes the gate in `Assistant._learn`:
+```
+FAILED tests/runtime/test_power_safety.py::test_confirming_a_low_score_power_command_learns_nothing[pc_desligar]
+FAILED tests/runtime/test_power_safety.py::test_confirming_a_low_score_power_command_learns_nothing[pc_reiniciar]
+FAILED tests/runtime/test_power_safety.py::test_confirming_a_low_score_power_command_learns_nothing[pc_sair_conta]
+FAILED tests/runtime/test_power_safety.py::test_confirming_a_low_score_power_command_learns_nothing[pc_suspender]
+FAILED tests/runtime/test_power_safety.py::test_a_correction_towards_a_power_command_confirms_and_learns_nothing[pc_desligar]
+FAILED tests/runtime/test_power_safety.py::test_a_correction_towards_a_power_command_confirms_and_learns_nothing[pc_reiniciar]
+FAILED tests/runtime/test_power_safety.py::test_a_correction_towards_a_power_command_confirms_and_learns_nothing[pc_sair_conta]
+FAILED tests/runtime/test_power_safety.py::test_a_correction_towards_a_power_command_confirms_and_learns_nothing[pc_suspender]
+8 failed, 5 passed in 0.13s
+```

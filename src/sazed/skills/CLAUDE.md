@@ -25,6 +25,9 @@ next to the skill that needs them and implemented in `sazed.adapters`.
   else answers `NothingToRepeat` (opening a second Chrome was a real bug).
 - `learnable=False` is enforced in one place, `Assistant._learn`. Power intents use it so a
   learned phrase can never weaken their confirmation.
+- Power intents (`POWER_INTENTS`) use `requires_confirmation=always` and `learnable=False`;
+  `tests/runtime/test_power_safety.py` derives its cases from the specs. The Windows adapter
+  delays each action so the reply prints first. No test may call the real adapter.
 
 ## Not here
 Text matching (→ `nlu`), Windows APIs (→ `adapters/windows`).

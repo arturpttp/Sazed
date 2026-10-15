@@ -88,3 +88,23 @@ class FakeMedia:
 
     def now_playing(self) -> NowPlayingInfo | None:
         return self.info if self.session else None
+
+
+class FakePower:
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    def lock(self) -> None:
+        self.calls.append("lock")
+
+    def shutdown(self) -> None:
+        self.calls.append("shutdown")
+
+    def restart(self) -> None:
+        self.calls.append("restart")
+
+    def sleep(self) -> None:
+        self.calls.append("sleep")
+
+    def sign_out(self) -> None:
+        self.calls.append("sign_out")

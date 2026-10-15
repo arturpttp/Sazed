@@ -68,6 +68,11 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
     "NowPlaying": ("Está tocando '{title}', de {artist}, {mestre}.",),
     "NowPlaying.no_artist": ("Está tocando '{title}', {mestre}.",),
     "NoMediaSession": ("Não há nada tocando no momento, {mestre}.",),
+    "Locked": ("Computador bloqueado, {mestre}.",),
+    "ShuttingDown": ("Desligando em alguns segundos. Até logo, {mestre}.",),
+    "Restarting": ("Reiniciando em alguns segundos, {mestre}. Já volto.",),
+    "Suspending": ("Suspendendo o computador, {mestre}.",),
+    "SigningOut": ("Saindo da sua conta, {mestre}. Até logo.",),
     "SearchOpened": (
         "Abrindo a busca por '{query}' em {engine}, {mestre}.",
         "Pesquisando '{query}' em {engine}, {mestre}.",

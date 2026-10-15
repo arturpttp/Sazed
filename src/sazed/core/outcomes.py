@@ -63,6 +63,31 @@ class NoMediaSession:
 
 
 @dataclass(frozen=True)
+class Locked:
+    pass
+
+
+@dataclass(frozen=True)
+class ShuttingDown:
+    pass
+
+
+@dataclass(frozen=True)
+class Restarting:
+    pass
+
+
+@dataclass(frozen=True)
+class Suspending:
+    pass
+
+
+@dataclass(frozen=True)
+class SigningOut:
+    pass
+
+
+@dataclass(frozen=True)
 class SearchOpened:
     query: str
     engine: str
@@ -152,6 +177,11 @@ Success = (
     | MediaNext
     | MediaPrevious
     | NowPlaying
+    | Locked
+    | ShuttingDown
+    | Restarting
+    | Suspending
+    | SigningOut
     | ExampleLearned
     | AliasLearned
     | AlreadyKnown

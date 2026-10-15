@@ -65,3 +65,12 @@ def test_fake_media_records_calls_and_reports_no_session() -> None:
     assert media.now_playing() == NowPlayingInfo("t", "a")
     silent = FakeMedia(session=False)
     assert not silent.toggle() and silent.now_playing() is None
+
+
+def test_fake_power_records_calls() -> None:
+    from fakes.ports import FakePower
+
+    power = FakePower()
+    power.lock()
+    power.shutdown()
+    assert power.calls == ["lock", "shutdown"]

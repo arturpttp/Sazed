@@ -3,6 +3,8 @@ from pathlib import Path
 from random import Random
 from typing import get_args
 
+import pytest
+
 from fakes.clock import ManualClock
 from fakes.embedder import HashingEmbedder
 from fakes.ports import FakeAudio, FakeCatalog, FakeLauncher
@@ -108,3 +110,13 @@ def test_labelling_a_phrase_that_belongs_to_another_intent_needs_force(tmp_path:
     assert app.store.examples() == []
     assert label_episode(app, episode_id, "fechar_app", force=True) is LabelResult.LEARNED
     assert [e.intent_id for e in app.store.examples()] == ["fechar_app"]
+
+
+@pytest.mark.skip(reason="enabled in Task 14, when build_app includes PowerSkill")
+def test_a_power_command_cannot_be_labelled(tmp_path: Path) -> None:
+    app = boot(tmp_path)
+    episode_id = app.store.record_episode(
+        Episode("apaga tudo", T0, (), {}, "NotUnderstood", None, "")
+    )
+    assert label_episode(app, episode_id, "pc_desligar") is LabelResult.NOT_LEARNABLE
+    assert app.store.examples() == []

@@ -162,3 +162,24 @@ def test_allowed_uris(uri: str) -> None:
 )
 def test_anything_else_is_refused(uri: str) -> None:
     assert not is_allowed_uri(uri)
+
+
+def test_shutdown_and_restart_wait_so_the_reply_is_seen_and_can_be_cancelled() -> None:
+    from sazed.adapters.windows.power import DELAY_SECONDS, power_command
+
+    assert power_command("shutdown") == ["shutdown", "/s", "/t", str(DELAY_SECONDS)]
+    assert power_command("restart") == ["shutdown", "/r", "/t", str(DELAY_SECONDS)]
+    assert DELAY_SECONDS >= 5
+
+
+def test_sign_out_command() -> None:
+    from sazed.adapters.windows.power import power_command
+
+    assert power_command("sign_out") == ["shutdown", "/l"]
+
+
+def test_unknown_power_kind_is_refused() -> None:
+    from sazed.adapters.windows.power import power_command
+
+    with pytest.raises(ValueError):
+        power_command("format_c")
