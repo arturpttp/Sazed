@@ -38,3 +38,10 @@ to ranking:
 E       AssertionError: assert VolumeChanged(percent=60) == NothingToRepeat()
 FAILED tests/runtime/test_assistant_dialogue.py::test_bare_more_with_nothing_to_repeat_is_never_ranked
 ```
+
+## Review safeguards
+Mutation: `verdict = Verdict.SAVE` instead of calling `judge_example` in `label_episode`.
+```
+FAILED tests/runtime/test_admin.py::test_labelling_a_known_phrase_again_is_reported_and_not_duplicated
+FAILED tests/runtime/test_admin.py::test_labelling_a_phrase_that_belongs_to_another_intent_needs_force
+```

@@ -137,3 +137,14 @@ def test_bad_arguments_are_explained_in_pt_br(capsys: pytest.CaptureFixture[str]
     captured = capsys.readouterr()
     assert "--ajuda" in captured.out + captured.err
     assert "invalid choice" not in captured.out + captured.err
+
+
+def test_review_explains_a_conflict_and_accepts_force(
+    boot: Boot, app: SazedApp, capsys: pytest.CaptureFixture[str]
+) -> None:
+    ep = Episode("abre o chrome", T0, (), {}, "Execute", None, "")
+    episode_id = app.store.record_episode(ep)
+    assert run(boot, ["revisar", "--rotular", str(episode_id), "fechar_app"]) == 1
+    assert "--forcar" in capsys.readouterr().out
+    assert run(boot, ["revisar", "--rotular", str(episode_id), "fechar_app", "--forcar"]) == 0
+    assert [e.intent_id for e in app.store.examples()] == ["fechar_app"]
