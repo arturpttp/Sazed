@@ -53,3 +53,15 @@ def test_fake_opener_records_what_was_opened() -> None:
     opener.open("https://a")
     opener.open("ms-settings:sound")
     assert opener.opened == ["https://a", "ms-settings:sound"]
+
+
+def test_fake_media_records_calls_and_reports_no_session() -> None:
+    from fakes.ports import FakeMedia
+    from sazed.skills.pc.media import NowPlayingInfo
+
+    media = FakeMedia(info=NowPlayingInfo("t", "a"))
+    assert media.toggle() and media.next() and media.previous()
+    assert media.calls == ["toggle", "next", "previous"]
+    assert media.now_playing() == NowPlayingInfo("t", "a")
+    silent = FakeMedia(session=False)
+    assert not silent.toggle() and silent.now_playing() is None

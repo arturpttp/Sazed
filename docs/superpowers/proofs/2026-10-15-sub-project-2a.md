@@ -94,3 +94,10 @@ FAILED tests/adapters/test_windows_pure.py::test_anything_else_is_refused[calc]
 FAILED tests/adapters/test_windows_pure.py::test_anything_else_is_refused[javascript:alert(1)]
 4 failed, 23 deselected in 0.12s
 ```
+
+## No media session
+Mutation: `midia_proxima` ignores the result of `next()` and always reports `MediaNext()`.
+```
+FAILED tests/skills/test_media.py::test_without_a_session_sazed_says_so[midia_proxima]
+1 failed, 8 passed in 0.24s
+```

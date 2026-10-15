@@ -3,6 +3,7 @@
 from collections.abc import Sequence
 
 from sazed.skills.pc.apps import AppEntry
+from sazed.skills.pc.media import NowPlayingInfo
 
 
 class FakeCatalog:
@@ -63,3 +64,27 @@ class FakeOpener:
 
     def open(self, uri: str) -> None:
         self.opened.append(uri)
+
+
+class FakeMedia:
+    def __init__(self, session: bool = True, info: NowPlayingInfo | None = None) -> None:
+        self.session = session
+        self.info = info
+        self.calls: list[str] = []
+
+    def _call(self, name: str) -> bool:
+        if self.session:
+            self.calls.append(name)
+        return self.session
+
+    def toggle(self) -> bool:
+        return self._call("toggle")
+
+    def next(self) -> bool:
+        return self._call("next")
+
+    def previous(self) -> bool:
+        return self._call("previous")
+
+    def now_playing(self) -> NowPlayingInfo | None:
+        return self.info if self.session else None

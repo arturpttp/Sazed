@@ -82,3 +82,11 @@ def test_ask_slot_with_candidates_numbers_them() -> None:
 def test_missing_extra_is_a_programming_error() -> None:
     with pytest.raises(KeyError):
         render(Confirm("abrir_app", {}, ConfirmReason.LOW_SCORE), nome="Artur", rng=Random(0))
+
+
+def test_now_playing_without_artist_omits_it() -> None:
+    from sazed.core.outcomes import NowPlaying
+
+    text = render(NowPlaying("Lofi Radio", ""), nome="Artur", rng=Random(0))
+    assert "Lofi Radio" in text
+    assert ", de" not in text

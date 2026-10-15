@@ -37,6 +37,32 @@ class Unmuted:
 
 
 @dataclass(frozen=True)
+class MediaToggled:
+    pass
+
+
+@dataclass(frozen=True)
+class MediaNext:
+    pass
+
+
+@dataclass(frozen=True)
+class MediaPrevious:
+    pass
+
+
+@dataclass(frozen=True)
+class NowPlaying:
+    title: str
+    artist: str
+
+
+@dataclass(frozen=True)
+class NoMediaSession:
+    pass
+
+
+@dataclass(frozen=True)
 class SearchOpened:
     query: str
     engine: str
@@ -122,6 +148,10 @@ Success = (
     | Muted
     | Unmuted
     | SearchOpened
+    | MediaToggled
+    | MediaNext
+    | MediaPrevious
+    | NowPlaying
     | ExampleLearned
     | AliasLearned
     | AlreadyKnown
@@ -131,7 +161,13 @@ Success = (
     | Cancelled
 )
 Failure = (
-    AppNotFound | AppNotRunning | AmbiguousSlot | ActionFailed | InvalidPercent | CannotCloseSite
+    AppNotFound
+    | AppNotRunning
+    | AmbiguousSlot
+    | ActionFailed
+    | InvalidPercent
+    | CannotCloseSite
+    | NoMediaSession
 )
 Outcome = Success | Failure
 

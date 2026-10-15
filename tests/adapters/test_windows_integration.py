@@ -79,3 +79,14 @@ def test_store_calculator_opens_and_closes() -> None:
     finally:
         if launcher.instances(entry):
             launcher.close(entry)
+
+
+def test_media_session_is_readable_and_toggling_twice_restores_it() -> None:
+    from sazed.adapters.windows.media import WinRtMedia
+
+    media = WinRtMedia()
+    media.now_playing()  # must not raise, session or not
+    if not media.toggle():
+        pytest.skip("no media session open")
+    time.sleep(1.0)
+    assert media.toggle()  # back to how it was

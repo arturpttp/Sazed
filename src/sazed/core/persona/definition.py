@@ -9,7 +9,7 @@ from __future__ import annotations
 from enum import Enum
 
 from sazed.core.decisions import AskSlot, Confirm
-from sazed.core.outcomes import AppNotFound
+from sazed.core.outcomes import AppNotFound, NowPlaying
 
 TRAITS: tuple[str, ...] = (
     "Guardião terrisano: erudito gentil, cortês e muito educado.",
@@ -33,6 +33,7 @@ VARIANT_KEYS: dict[type, tuple[str, ...]] = {
     AppNotFound: ("AppNotFound", "AppNotFound.suggestion"),
     Confirm: ("Confirm", "ConfirmDestructive"),
     AskSlot: ("AskSlot", "AskSlotChoice"),
+    NowPlaying: ("NowPlaying", "NowPlaying.no_artist"),
 }
 
 
@@ -61,6 +62,12 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
     "VolumeChanged": ("Pronto, {mestre}. Volume em {percent}%.", "Volume agora em {percent}%."),
     "Muted": ("Som silenciado, {mestre}.", "Pronto. Silêncio, como pediu."),
     "Unmuted": ("O som está de volta, {mestre}.", "Pronto. Som reativado."),
+    "MediaToggled": ("Feito, {mestre}.", "Pronto, {mestre}."),
+    "MediaNext": ("Próxima faixa, {mestre}.", "Pulando para a próxima, {mestre}."),
+    "MediaPrevious": ("Voltando para a anterior, {mestre}.",),
+    "NowPlaying": ("Está tocando '{title}', de {artist}, {mestre}.",),
+    "NowPlaying.no_artist": ("Está tocando '{title}', {mestre}.",),
+    "NoMediaSession": ("Não há nada tocando no momento, {mestre}.",),
     "SearchOpened": (
         "Abrindo a busca por '{query}' em {engine}, {mestre}.",
         "Pesquisando '{query}' em {engine}, {mestre}.",
