@@ -12,12 +12,29 @@ Sazed, the Terris Keeper from *Mistborn*. Read [`AGENTS.md`](./AGENTS.md) and
 
 ## Status
 
-- 2026-10-14: brainstorm done. Roadmap and sub-project 1 design are in
+- 2026-10-14: brainstorm done; spec in
   [`docs/superpowers/specs/2026-10-14-sazed-core-design.md`](./docs/superpowers/specs/2026-10-14-sazed-core-design.md).
-- 2026-10-14: spec approved; implementation plan written in
-  [`docs/superpowers/plans/2026-10-14-sazed-core.md`](./docs/superpowers/plans/2026-10-14-sazed-core.md).
-- **Next step:** execute docs/superpowers/plans/2026-10-14-sazed-core.md (inline, branch
-  `feat/sub-project-1`).
+- 2026-10-15: sub-project 1 (core + text CLI + PC slice) implemented per
+  [`docs/superpowers/plans/2026-10-14-sazed-core.md`](./docs/superpowers/plans/2026-10-14-sazed-core.md)
+  on branch `feat/sub-project-1`. Discrimination proofs:
+  [`docs/superpowers/proofs/2026-10-14-sub-project-1.md`](./docs/superpowers/proofs/2026-10-14-sub-project-1.md).
+- NLU fixture (82 cases: 37 apps, 24 volume, 21 out of domain): accuracy 0.918, false-execute
+  0.012 (1 case), in-domain executed 0.459 / asked 0.541 / not understood 0.000, with
+  t_exec=0.94, t_confirm=0.88, g_min=0.0 (embedder variant qint8). fp32 for comparison:
+  accuracy 0.918, false-execute 0.000, executed 0.393 — int8 kept (it meets the bar).
+- e5-small weighs the object (app name, number) over the verb: seeds deliberately share objects
+  across opposing intents (open/close, up/down/set) so the verb decides. Keep that when adding seeds.
+- **Unverified:** `learning.t_conflict` / `t_dup` are placeholders (no fixture measures them yet);
+  Store (UWP) apps are not in the catalog; closing apps whose shortcut targets a launcher.
+- **Next step:** final branch review, then brainstorm sub-project 2 (PC skills).
+
+## Measurements
+
+2026-10-15, Ryzen 5 8600G, `scripts/measure_embedder.py`, variant qint8:
+load 0.72 s, RSS +402 MB (process total 470 MB); 92 seed examples embedded in 164 ms;
+single sentence median 1.9 ms, p95 2.8 ms. Breakdown measured separately: the tokenizer
+(`tokenizer.json`, 250k-token vocabulary) alone is +277 MB, the ONNX session +139 MB. The spec's
+~200 MB estimate is exceeded mainly by the tokenizer — a candidate fix for a later sub-project.
 
 ## Commands
 

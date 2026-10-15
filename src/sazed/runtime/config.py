@@ -30,10 +30,10 @@ class UserConfig(_Section):
 
 
 class NluConfig(_Section):
-    # Placeholders until Task 17 tunes them against the NLU fixture.
-    t_exec: float = Field(0.90, ge=0, le=1)
-    t_confirm: float = Field(0.84, ge=0, le=1)
-    g_min: float = Field(0.02, ge=0, le=1)
+    # Tuned against tests/fixtures/nlu_cases.toml with scripts/tune_thresholds.py (int8 model).
+    t_exec: float = Field(0.94, ge=0, le=1)
+    t_confirm: float = Field(0.88, ge=0, le=1)
+    g_min: float = Field(0.0, ge=0, le=1)
 
     @model_validator(mode="after")
     def _confirm_below_exec(self) -> NluConfig:

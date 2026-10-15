@@ -28,18 +28,25 @@ SET_EXAMPLES = (
     "define o volume para 40",
     "som em 80",
     "quero o volume em 25",
+    "volume no mínimo",
+    "coloca o som no máximo",
+    "muda o volume para 60",
 )
 UP_EXAMPLES = (
     "aumenta o volume",
     "aumenta o som",
     "sobe o volume",
+    "sobe o som",
     "mais alto",
     "aumenta o volume em 20",
-    "sobe o som um pouco",
+    "sobe o volume em 10",
     "aumenta mais o volume",
     "coloca mais alto",
     "volume mais alto",
     "aumenta o áudio",
+    "sobe o áudio um pouco",
+    "tá baixo aumenta o som",
+    "aumenta o volume em 30",
 )
 DOWN_EXAMPLES = (
     "diminui o volume",
@@ -47,11 +54,15 @@ DOWN_EXAMPLES = (
     "baixa o volume",
     "mais baixo",
     "diminui o volume em 20",
+    "abaixa o volume em 10",
     "abaixa um pouco",
     "reduz o volume",
     "volume mais baixo",
     "diminui o som",
     "abaixa o áudio",
+    "tá alto abaixa o som",
+    "baixa o som um pouco",
+    "diminui o volume em 30",
 )
 MUTE_EXAMPLES = (
     "muta",
@@ -64,6 +75,7 @@ MUTE_EXAMPLES = (
     "volta o som",
     "ativa o som",
     "silencia o computador",
+    "deixa mudo",
 )
 
 

@@ -1,0 +1,385 @@
+# Labelled pt-BR phrases for the real embedder (tests/nlu/test_fixture.py).
+# Rules: never copy a seed example; never add learned examples; intent "none" = must not execute.
+apps = [
+    "Google Chrome", "Spotify", "Discord", "Visual Studio Code", "Steam",
+    "Microsoft Word", "Microsoft Excel", "Firefox", "OBS Studio", "Calculadora",
+]
+
+# --- apps: open / close, including opposite-verb pairs --------------------------------------
+
+[[case]]
+text = "abre o google chrome"
+intent = "abrir_app"
+app = "Google Chrome"
+
+[[case]]
+text = "fecha o google chrome"
+intent = "fechar_app"
+app = "Google Chrome"
+
+[[case]]
+text = "pode iniciar o spotify"
+intent = "abrir_app"
+app = "Spotify"
+
+[[case]]
+text = "encerra o spotify agora"
+intent = "fechar_app"
+app = "Spotify"
+
+[[case]]
+text = "quero jogar abre a steam"
+intent = "abrir_app"
+app = "Steam"
+
+[[case]]
+text = "fecha a steam por favor"
+intent = "fechar_app"
+app = "Steam"
+
+[[case]]
+text = "abre o discord pra mim"
+intent = "abrir_app"
+app = "Discord"
+
+[[case]]
+text = "sai do discord"
+intent = "fechar_app"
+app = "Discord"
+
+[[case]]
+text = "preciso do word aberto"
+intent = "abrir_app"
+app = "Microsoft Word"
+
+[[case]]
+text = "fecha o excel"
+intent = "fechar_app"
+app = "Microsoft Excel"
+
+[[case]]
+text = "abre o excel"
+intent = "abrir_app"
+app = "Microsoft Excel"
+
+[[case]]
+text = "fecha o word"
+intent = "fechar_app"
+app = "Microsoft Word"
+
+[[case]]
+text = "abre o firefox"
+intent = "abrir_app"
+app = "Firefox"
+
+[[case]]
+text = "fecha o firefox"
+intent = "fechar_app"
+app = "Firefox"
+
+[[case]]
+text = "inicia o obs studio"
+intent = "abrir_app"
+app = "OBS Studio"
+
+[[case]]
+text = "encerra o obs"
+intent = "fechar_app"
+app = "OBS Studio"
+
+[[case]]
+text = "abre a calculadora pra mim"
+intent = "abrir_app"
+app = "Calculadora"
+
+[[case]]
+text = "fecha a calculadora agora"
+intent = "fechar_app"
+app = "Calculadora"
+
+[[case]]
+text = "abre o visual studio code"
+intent = "abrir_app"
+app = "Visual Studio Code"
+
+[[case]]
+text = "fecha o visual studio code"
+intent = "fechar_app"
+app = "Visual Studio Code"
+
+[[case]]
+text = "executa o spotify"
+intent = "abrir_app"
+app = "Spotify"
+
+[[case]]
+text = "mata o spotify"
+intent = "fechar_app"
+app = "Spotify"
+
+[[case]]
+text = "liga o discord"
+intent = "abrir_app"
+app = "Discord"
+
+[[case]]
+text = "desliga o discord"
+intent = "fechar_app"
+app = "Discord"
+
+[[case]]
+text = "quero usar o chrome"
+intent = "abrir_app"
+app = "Google Chrome"
+
+[[case]]
+text = "não preciso mais do chrome pode fechar"
+intent = "fechar_app"
+app = "Google Chrome"
+
+[[case]]
+text = "inicializa a steam"
+intent = "abrir_app"
+app = "Steam"
+
+[[case]]
+text = "termina a steam"
+intent = "fechar_app"
+app = "Steam"
+
+[[case]]
+text = "me abre o word por favor"
+intent = "abrir_app"
+app = "Microsoft Word"
+
+[[case]]
+text = "fecha esse excel"
+intent = "fechar_app"
+app = "Microsoft Excel"
+
+[[case]]
+text = "roda o obs"
+intent = "abrir_app"
+app = "OBS Studio"
+
+[[case]]
+text = "abre o navegador firefox"
+intent = "abrir_app"
+app = "Firefox"
+
+[[case]]
+text = "fecha o navegador firefox"
+intent = "fechar_app"
+app = "Firefox"
+
+[[case]]
+text = "sazed abre o spotify"
+intent = "abrir_app"
+app = "Spotify"
+
+[[case]]
+text = "sazed fecha o spotify"
+intent = "fechar_app"
+app = "Spotify"
+
+[[case]]
+text = "bota o discord pra rodar"
+intent = "abrir_app"
+app = "Discord"
+
+[[case]]
+text = "pode encerrar o word"
+intent = "fechar_app"
+app = "Microsoft Word"
+
+# --- volume ----------------------------------------------------------------------------------
+
+[[case]]
+text = "deixa o volume em quarenta"
+intent = "volume_definir"
+percent = 40
+
+[[case]]
+text = "som em 15 por cento"
+intent = "volume_definir"
+percent = 15
+
+[[case]]
+text = "coloca o som em 60"
+intent = "volume_definir"
+percent = 60
+
+[[case]]
+text = "volume pra 90"
+intent = "volume_definir"
+percent = 90
+
+[[case]]
+text = "ajusta o som para trinta e cinco"
+intent = "volume_definir"
+percent = 35
+
+[[case]]
+text = "põe o som no máximo"
+intent = "volume_definir"
+percent = 100
+
+[[case]]
+text = "aumenta um pouco o som"
+intent = "volume_aumentar"
+
+[[case]]
+text = "sobe o volume em 30"
+intent = "volume_aumentar"
+percent = 30
+
+[[case]]
+text = "aumenta o volume aí"
+intent = "volume_aumentar"
+
+[[case]]
+text = "tá muito baixo aumenta"
+intent = "volume_aumentar"
+
+[[case]]
+text = "coloca o som mais alto"
+intent = "volume_aumentar"
+
+[[case]]
+text = "sobe o áudio"
+intent = "volume_aumentar"
+
+[[case]]
+text = "baixa um pouco"
+intent = "volume_diminuir"
+
+[[case]]
+text = "abaixa o volume em dez"
+intent = "volume_diminuir"
+percent = 10
+
+[[case]]
+text = "tá muito alto abaixa"
+intent = "volume_diminuir"
+
+[[case]]
+text = "diminui o áudio"
+intent = "volume_diminuir"
+
+[[case]]
+text = "reduz o som"
+intent = "volume_diminuir"
+
+[[case]]
+text = "deixa mais baixo"
+intent = "volume_diminuir"
+
+[[case]]
+text = "silencia tudo"
+intent = "volume_mudo"
+
+[[case]]
+text = "pode tirar do mudo"
+intent = "volume_mudo"
+
+[[case]]
+text = "deixa no mudo"
+intent = "volume_mudo"
+
+[[case]]
+text = "corta o som"
+intent = "volume_mudo"
+
+[[case]]
+text = "liga o som de novo"
+intent = "volume_mudo"
+
+[[case]]
+text = "desmuta o computador"
+intent = "volume_mudo"
+
+# --- out of domain: must never execute -------------------------------------------------------
+
+[[case]]
+text = "que horas são"
+intent = "none"
+
+[[case]]
+text = "me conta uma piada"
+intent = "none"
+
+[[case]]
+text = "qual a previsão do tempo para amanhã"
+intent = "none"
+
+[[case]]
+text = "quem foi o senhor soberano"
+intent = "none"
+
+[[case]]
+text = "me lembra de beber água"
+intent = "none"
+
+[[case]]
+text = "obrigado sazed"
+intent = "none"
+
+[[case]]
+text = "bom dia"
+intent = "none"
+
+[[case]]
+text = "quanto é dois mais dois"
+intent = "none"
+
+[[case]]
+text = "cria uma nota sobre a reunião"
+intent = "none"
+
+[[case]]
+text = "coloca um alarme para as sete"
+intent = "none"
+
+[[case]]
+text = "pesquisa receitas de bolo"
+intent = "none"
+
+[[case]]
+text = "desliga o computador"
+intent = "none"
+
+[[case]]
+text = "qual é a capital da frança"
+intent = "none"
+
+[[case]]
+text = "manda uma mensagem para a maria"
+intent = "none"
+
+[[case]]
+text = "toca uma música do queen"
+intent = "none"
+
+[[case]]
+text = "o que você acha de filosofia"
+intent = "none"
+
+[[case]]
+text = "liga a luz da sala"
+intent = "none"
+
+[[case]]
+text = "abre a porta"
+intent = "none"
+
+[[case]]
+text = "fecha a janela do quarto"
+intent = "none"
+
+[[case]]
+text = "me explica derivadas"
+intent = "none"
+
+[[case]]
+text = "qual meu próximo compromisso"
+intent = "none"
