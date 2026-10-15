@@ -181,3 +181,10 @@ Mutation: rename the case "desliga o spotify aí" back to the `fechar_app` seed 
 E       AssertionError: assert ['desliga o spotify'] == []
 E         
 ```
+
+## Final review fixes (each test watched failing before the fix)
+- `test_power_commands_never_force_apps_closed` FAILED on `["shutdown", "/s", "/t", "5"]`
+  (`/t` above 0 implies `/f` on Windows); passes with `/t 0`.
+- `tests/nlu/test_ranking_pairs.py` (real model) FAILED for "fecha o gmail aí", "fecha o github",
+  "fecha o youtube pra mim" (top `abrir_app`) and "desmuta o computador" (top `pc_desligar`);
+  all pass after the close-site and "o pc" mute seeds.
