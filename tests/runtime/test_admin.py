@@ -3,11 +3,9 @@ from pathlib import Path
 from random import Random
 from typing import get_args
 
-import pytest
-
 from fakes.clock import ManualClock
 from fakes.embedder import HashingEmbedder
-from fakes.ports import FakeAudio, FakeCatalog, FakeLauncher
+from fakes.ports import FakeAudio, fake_pc_ports
 from sazed.core.coppermind import Episode, NewAlias, Reaction
 from sazed.core.decisions import Decision
 from sazed.runtime.admin import (
@@ -30,9 +28,7 @@ def boot(tmp_path: Path) -> SazedApp:
     return build_app(
         Config(data=DataConfig(dir=tmp_path)),
         embedder=HashingEmbedder(),
-        catalog=FakeCatalog(["WhatsApp"]),
-        launcher=FakeLauncher(),
-        audio=FakeAudio(),
+        ports=fake_pc_ports(["WhatsApp"], audio=FakeAudio()),
         clock=ManualClock(),
         rng=Random(0),
     )
@@ -112,7 +108,6 @@ def test_labelling_a_phrase_that_belongs_to_another_intent_needs_force(tmp_path:
     assert [e.intent_id for e in app.store.examples()] == ["fechar_app"]
 
 
-@pytest.mark.skip(reason="enabled in Task 14, when build_app includes PowerSkill")
 def test_a_power_command_cannot_be_labelled(tmp_path: Path) -> None:
     app = boot(tmp_path)
     episode_id = app.store.record_episode(

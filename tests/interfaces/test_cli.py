@@ -8,7 +8,7 @@ import pytest
 
 from fakes.clock import ManualClock
 from fakes.embedder import HashingEmbedder
-from fakes.ports import FakeAudio, FakeCatalog, FakeLauncher
+from fakes.ports import FakeAudio, fake_pc_ports
 from sazed.core.coppermind import Episode, NewAlias
 from sazed.interfaces.cli.main import main
 from sazed.runtime.config import Config, DataConfig
@@ -33,9 +33,7 @@ def boot(tmp_path: Path, audio: FakeAudio) -> Boot:
         return build_app(
             Config(data=DataConfig(dir=tmp_path)),
             embedder=HashingEmbedder(),
-            catalog=FakeCatalog(["WhatsApp", "Google Chrome"]),
-            launcher=FakeLauncher(),
-            audio=audio,
+            ports=fake_pc_ports(["WhatsApp", "Google Chrome"], audio=audio),
             clock=ManualClock(),
             rng=Random(0),
         )

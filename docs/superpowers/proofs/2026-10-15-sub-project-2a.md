@@ -167,3 +167,10 @@ Mutation: `pt_number` returns `f"{x:,.{places}f}"` (English separators).
 FAILED tests/skills/test_status.py::test_disks - AssertionError: assert DiskS...
 7 failed, 2 passed in 0.12s
 ```
+
+## Every skill wired
+Mutation: remove `SettingsSkill(ports.opener)` from `build_skills`.
+```
+FAILED tests/runtime/test_skills.py::test_every_skill_is_built_once - Asserti...
+1 failed, 4 passed in 0.10s
+```

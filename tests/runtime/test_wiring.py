@@ -3,7 +3,7 @@ from random import Random
 
 from fakes.clock import ManualClock
 from fakes.embedder import HashingEmbedder
-from fakes.ports import FakeAudio, FakeCatalog, FakeLauncher
+from fakes.ports import FakeAudio, fake_pc_ports
 from sazed.core.decisions import Confirm, Execute
 from sazed.runtime.config import Config, DataConfig, LearningConfig, NluConfig
 from sazed.runtime.wiring import SazedApp, build_app, settings_from
@@ -13,9 +13,7 @@ def boot(config: Config) -> SazedApp:
     return build_app(
         config,
         embedder=HashingEmbedder(),
-        catalog=FakeCatalog(["Google Chrome"]),
-        launcher=FakeLauncher(),
-        audio=FakeAudio(),
+        ports=fake_pc_ports(["Google Chrome"], audio=FakeAudio()),
         clock=ManualClock(),
         rng=Random(0),
     )

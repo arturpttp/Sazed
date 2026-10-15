@@ -22,9 +22,10 @@ from sazed.core.types import SlotValue, Unmatched
 from sazed.nlu.matcher import IntentIndex
 from sazed.nlu.normalize import normalize
 from sazed.runtime.assistant import Assistant, Settings
-from sazed.runtime.extractors import build_extractors
-from sazed.skills.pc.apps import AppEntry, AppsSkill
-from sazed.skills.pc.volume import VolumeSkill
+from sazed.runtime.config import Config
+from sazed.runtime.skills import PcPorts, SkillSet, build_skills
+from sazed.skills.pc.apps import AppEntry
+from sazed.skills.pc.media import NowPlayingInfo
 
 NO_INTENT = "none"
 MIN_ACCURACY = 0.90
@@ -71,11 +72,12 @@ class Report:
 
 
 class DryRunPorts:
-    """Ports that do nothing: evaluation must never open apps or change the volume."""
+    """Ports that do nothing: evaluation must never touch the machine."""
 
     def __init__(self, names: Sequence[str]) -> None:
         self._entries = [AppEntry(n, f"{n}.exe", f"{n}.lnk") for n in names]
 
+    # apps
     def entries(self) -> Sequence[AppEntry]:
         return self._entries
 
@@ -88,6 +90,7 @@ class DryRunPorts:
     def close(self, entry: AppEntry) -> int:
         return 1
 
+    # audio
     def get_volume(self) -> int:
         return 50
 
@@ -96,6 +99,79 @@ class DryRunPorts:
 
     def set_muted(self, muted: bool) -> None:
         return None
+
+    # media
+    def toggle(self) -> bool:
+        return True
+
+    def next(self) -> bool:
+        return True
+
+    def previous(self) -> bool:
+        return True
+
+    def now_playing(self) -> NowPlayingInfo | None:
+        return NowPlayingInfo("Exemplo", "Exemplo")
+
+    # power: never acts
+    def lock(self) -> None:
+        return None
+
+    def shutdown(self) -> None:
+        return None
+
+    def restart(self) -> None:
+        return None
+
+    def sleep(self) -> None:
+        return None
+
+    def sign_out(self) -> None:
+        return None
+
+    # screen
+    def capture(self, file_name: str) -> str:
+        return file_name
+
+    def open_snip(self) -> None:
+        return None
+
+    # brightness
+    def get(self) -> int | None:
+        return 50
+
+    def set(self, percent: int) -> bool:
+        return True
+
+    # opener
+    def open(self, uri: str) -> None:
+        return None
+
+    # status
+    def memory(self) -> tuple[int, int]:
+        return (1, 2)
+
+    def cpu_percent(self) -> float:
+        return 0.0
+
+    def disks(self) -> list[tuple[str, int, int]]:
+        return []
+
+
+def dry_run_skills(app_names: Sequence[str]) -> SkillSet:
+    p = DryRunPorts(app_names)
+    ports = PcPorts(
+        catalog=p,
+        launcher=p,
+        audio=p,
+        media=p,
+        power=p,
+        screen=p,
+        brightness=p,
+        opener=p,
+        status=p,
+    )
+    return build_skills(ports, Config())
 
 
 def _is_false_execute(result: CaseResult) -> bool:
@@ -140,16 +216,17 @@ def evaluate(
     app_names: Sequence[str],
     thresholds: Thresholds,
 ) -> Report:
-    ports = DryRunPorts(app_names)
+    skill_set = dry_run_skills(app_names)
+    extractors = skill_set.extractors()
     settings = Settings("Artur", thresholds, LearningThresholds(1.0, 1.0), 60.0)
     results: list[CaseResult] = []
     for case in cases:
         assistant = Assistant(
-            skills=[AppsSkill(ports, ports), VolumeSkill(ports)],
+            skills=skill_set.skills,
             index=index,
-            extractors=build_extractors(app_names),
+            extractors=extractors,
             store=SqliteCoppermind(":memory:"),
-            aliases={},
+            aliases={"app": skill_set.app_aliases},
             settings=settings,
             clock=lambda: _FIXED_TIME,
             rng=Random(0),

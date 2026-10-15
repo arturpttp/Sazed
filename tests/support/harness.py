@@ -11,6 +11,7 @@ from fakes.ports import (
     FakeBrightness,
     FakeCatalog,
     FakeLauncher,
+    FakeMedia,
     FakeOpener,
     FakePower,
     FakeScreen,
@@ -22,16 +23,8 @@ from sazed.core.policy import Thresholds
 from sazed.core.response import Response
 from sazed.core.skill import Skill
 from sazed.runtime.assistant import Assistant, Settings
-from sazed.runtime.config import BUILTIN_ENGINES
-from sazed.runtime.extractors import build_extractors
-from sazed.skills.pc.apps import AppsSkill
-from sazed.skills.pc.brightness import BrightnessSkill
-from sazed.skills.pc.power import PowerSkill
-from sazed.skills.pc.screen import ScreenSkill
-from sazed.skills.pc.settings import PAGE_NAMES, SettingsSkill
-from sazed.skills.pc.status import StatusSkill
-from sazed.skills.pc.volume import VolumeSkill
-from sazed.skills.pc.web import WebSkill
+from sazed.runtime.config import Config
+from sazed.runtime.skills import PcPorts, build_skills
 
 APPS = ["Google Chrome", "Spotify", "Discord", "Visual Studio Code", "Claude Code"]
 SETTINGS = Settings(
@@ -78,29 +71,26 @@ def build_harness(
     launcher = FakeLauncher(running=running, fail_with=launcher_error)
     audio = FakeAudio(volume=volume)
     clock = ManualClock()
-    opener = FakeOpener()
-    power = FakePower()
-    screen = FakeScreen()
-    brightness = FakeBrightness()
-    status = FakeStatus()
-    skills: list[Skill] = [
-        AppsSkill(FakeCatalog(APPS), launcher),
-        VolumeSkill(audio),
-        WebSkill(opener, BUILTIN_ENGINES, "Google"),
-        PowerSkill(power),
-        ScreenSkill(screen),
-        SettingsSkill(opener),
-        BrightnessSkill(brightness),
-        StatusSkill(status),
-    ]
+    opener, power, screen = FakeOpener(), FakePower(), FakeScreen()
+    brightness, status = FakeBrightness(), FakeStatus()
+    ports = PcPorts(
+        catalog=FakeCatalog(APPS),
+        launcher=launcher,
+        audio=audio,
+        media=FakeMedia(),
+        power=power,
+        screen=screen,
+        brightness=brightness,
+        opener=opener,
+        status=status,
+    )
+    skill_set = build_skills(ports, Config())
     assistant = Assistant(
-        skills=[*skills, *extra_skills],
+        skills=[*skill_set.skills, *extra_skills],
         index=index,
-        extractors=build_extractors(
-            APPS, engine_names=list(BUILTIN_ENGINES), page_names=PAGE_NAMES
-        ),
+        extractors=skill_set.extractors(),
         store=store,
-        aliases={"app": dict(aliases or {})},
+        aliases={"app": {**skill_set.app_aliases, **dict(aliases or {})}},
         settings=SETTINGS,
         clock=clock,
         rng=Random(0),

@@ -101,3 +101,12 @@ def test_fake_status_returns_what_it_was_given() -> None:
     status = FakeStatus(memory=(1, 2), cpu=3.0, disks=[("C:", 4, 5)])
     assert status.memory() == (1, 2) and status.cpu_percent() == 3.0
     assert status.disks() == [("C:", 4, 5)]
+
+
+def test_fake_pc_ports_uses_the_given_fakes() -> None:
+    from fakes.ports import FakeAudio, fake_pc_ports
+
+    audio = FakeAudio(volume=7)
+    ports = fake_pc_ports(["Spotify"], audio=audio)
+    assert ports.audio is audio
+    assert [e.name for e in ports.catalog.entries()] == ["Spotify"]

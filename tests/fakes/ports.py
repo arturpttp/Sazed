@@ -2,6 +2,7 @@
 
 from collections.abc import Sequence
 
+from sazed.runtime.skills import PcPorts
 from sazed.skills.pc.apps import AppEntry
 from sazed.skills.pc.media import NowPlayingInfo
 
@@ -160,3 +161,22 @@ class FakeStatus:
 
     def disks(self) -> list[tuple[str, int, int]]:
         return list(self._disks)
+
+
+def fake_pc_ports(
+    names: Sequence[str],
+    *,
+    launcher: FakeLauncher | None = None,
+    audio: FakeAudio | None = None,
+) -> PcPorts:
+    return PcPorts(
+        catalog=FakeCatalog(names),
+        launcher=launcher or FakeLauncher(),
+        audio=audio or FakeAudio(),
+        media=FakeMedia(),
+        power=FakePower(),
+        screen=FakeScreen(),
+        brightness=FakeBrightness(),
+        opener=FakeOpener(),
+        status=FakeStatus(),
+    )
