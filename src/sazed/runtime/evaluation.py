@@ -40,6 +40,9 @@ class NluCase:
     app: str | None = None
     percent: int | None = None
     alvo: int | None = None
+    consulta: str | None = None
+    pagina: str | None = None
+    site: str | None = None
 
 
 @dataclass(frozen=True)
@@ -183,7 +186,15 @@ def _is_false_execute(result: CaseResult) -> bool:
         return False
     if case.intent == NO_INTENT or decision.intent_id != case.intent:
         return True
-    for name, expected in (("app", case.app), ("percent", case.percent), ("alvo", case.alvo)):
+    expected_slots = (
+        ("app", case.app),
+        ("percent", case.percent),
+        ("alvo", case.alvo),
+        ("consulta", case.consulta),
+        ("pagina", case.pagina),
+        ("site", case.site),
+    )
+    for name, expected in expected_slots:
         if expected is None:
             continue
         value = decision.slots.get(name)
@@ -203,7 +214,16 @@ def _share(results: Sequence[CaseResult], test: Callable[[CaseResult], bool]) ->
 def load_cases(path: Path) -> tuple[list[str], list[NluCase]]:
     data = tomllib.loads(path.read_text(encoding="utf-8"))
     cases = [
-        NluCase(c["text"], c["intent"], c.get("app"), c.get("percent"), c.get("alvo"))
+        NluCase(
+            c["text"],
+            c["intent"],
+            c.get("app"),
+            c.get("percent"),
+            c.get("alvo"),
+            c.get("consulta"),
+            c.get("pagina"),
+            c.get("site"),
+        )
         for c in data["case"]
     ]
     return list(data["apps"]), cases

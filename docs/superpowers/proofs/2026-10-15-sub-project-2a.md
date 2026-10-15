@@ -174,3 +174,10 @@ Mutation: remove `SettingsSkill(ports.opener)` from `build_skills`.
 FAILED tests/runtime/test_skills.py::test_every_skill_is_built_once - Asserti...
 1 failed, 4 passed in 0.10s
 ```
+
+## Fixture never copies a seed
+Mutation: rename the case "desliga o spotify aí" back to the `fechar_app` seed "desliga o spotify".
+```
+E       AssertionError: assert ['desliga o spotify'] == []
+E         
+```

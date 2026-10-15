@@ -69,3 +69,11 @@ def test_executing_with_the_wrong_level_is_a_false_execute() -> None:
     wrong = NluCase("abaixa pra 20", "volume_diminuir", alvo=30)
     assert evaluate([right], index=index, app_names=APPS, thresholds=TH).false_execute_rate == 0
     assert evaluate([wrong], index=index, app_names=APPS, thresholds=TH).false_execute_rate == 1
+
+
+def test_executing_with_the_wrong_query_is_a_false_execute() -> None:
+    index = ScriptedIndex({"pesquisa gatos": {"pesquisar": 0.95}})
+    right = NluCase("pesquisa gatos", "pesquisar", consulta="gatos")
+    wrong = NluCase("pesquisa gatos", "pesquisar", consulta="cachorros")
+    assert evaluate([right], index=index, app_names=APPS, thresholds=TH).false_execute_rate == 0
+    assert evaluate([wrong], index=index, app_names=APPS, thresholds=TH).false_execute_rate == 1

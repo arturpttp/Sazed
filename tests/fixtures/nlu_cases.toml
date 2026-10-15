@@ -3,6 +3,7 @@
 apps = [
     "Google Chrome", "Spotify", "Discord", "Visual Studio Code", "Steam",
     "Microsoft Word", "Microsoft Excel", "Firefox", "OBS Studio", "Calculadora",
+    "WhatsApp", "Notepad",
 ]
 
 # --- apps: open / close, including opposite-verb pairs --------------------------------------
@@ -341,12 +342,13 @@ text = "coloca um alarme para as sete"
 intent = "none"
 
 [[case]]
-text = "pesquisa receitas de bolo"
-intent = "none"
+text = "pesquisa receita de bolo de cenoura"
+intent = "pesquisar"
+consulta = "receita de bolo de cenoura"
 
 [[case]]
-text = "desliga o computador"
-intent = "none"
+text = "quero que desligue o computador"
+intent = "pc_desligar"
 
 [[case]]
 text = "qual é a capital da frança"
@@ -412,3 +414,295 @@ app = "Microsoft Word"
 text = "abaixa o volume para 100"
 intent = "volume_diminuir"
 alvo = 100
+
+# --- sub-project 2a: media ------------------------------------------------------------------
+
+[[case]]
+text = "pausa a música aí"
+intent = "midia_tocar_pausar"
+
+[[case]]
+text = "pode pausar"
+intent = "midia_tocar_pausar"
+
+[[case]]
+text = "continua tocando"
+intent = "midia_tocar_pausar"
+
+[[case]]
+text = "dá pause no vídeo"
+intent = "midia_tocar_pausar"
+
+[[case]]
+text = "pula essa música"
+intent = "midia_proxima"
+
+[[case]]
+text = "próxima por favor"
+intent = "midia_proxima"
+
+[[case]]
+text = "passa pra próxima música"
+intent = "midia_proxima"
+
+[[case]]
+text = "volta pra música anterior"
+intent = "midia_anterior"
+
+[[case]]
+text = "toca a música de antes"
+intent = "midia_anterior"
+
+[[case]]
+text = "que música tá tocando"
+intent = "midia_tocando"
+
+[[case]]
+text = "qual o nome dessa música"
+intent = "midia_tocando"
+
+[[case]]
+text = "o que está tocando agora"
+intent = "midia_tocando"
+
+# --- power and lock (a misranked power intent still confirms, so it is never a false execute) --
+
+[[case]]
+text = "bloqueia o computador agora"
+intent = "pc_bloquear"
+
+[[case]]
+text = "trava a tela pra mim"
+intent = "pc_bloquear"
+
+[[case]]
+text = "pode desligar a máquina"
+intent = "pc_desligar"
+
+[[case]]
+text = "reinicia o pc por favor"
+intent = "pc_reiniciar"
+
+[[case]]
+text = "reiniciar a máquina agora"
+intent = "pc_reiniciar"
+
+[[case]]
+text = "coloca o computador pra dormir"
+intent = "pc_suspender"
+
+[[case]]
+text = "deixa o computador em suspensão"
+intent = "pc_suspender"
+
+[[case]]
+text = "faz logoff da minha conta"
+intent = "pc_sair_conta"
+
+[[case]]
+text = "sai da conta do windows"
+intent = "pc_sair_conta"
+
+[[case]]
+text = "desliga o spotify aí"
+intent = "fechar_app"
+app = "Spotify"
+
+# --- screen ----------------------------------------------------------------------------------
+
+[[case]]
+text = "tira um print pra mim"
+intent = "print_tela"
+
+[[case]]
+text = "captura a tela inteira"
+intent = "print_tela"
+
+[[case]]
+text = "salva uma captura da tela"
+intent = "print_tela"
+
+[[case]]
+text = "recorta um pedaço da tela"
+intent = "recortar_tela"
+
+[[case]]
+text = "quero fazer um recorte"
+intent = "recortar_tela"
+
+[[case]]
+text = "seleciona uma área da tela"
+intent = "recortar_tela"
+
+# --- settings --------------------------------------------------------------------------------
+
+[[case]]
+text = "abre as configurações do bluetooth"
+intent = "abrir_configuracao"
+pagina = "bluetooth"
+
+[[case]]
+text = "configurações de som"
+intent = "abrir_configuracao"
+pagina = "som"
+
+[[case]]
+text = "abre as configurações de rede"
+intent = "abrir_configuracao"
+pagina = "rede"
+
+[[case]]
+text = "me abre as configurações"
+intent = "abrir_configuracao"
+
+[[case]]
+text = "quero trocar o papel de parede"
+intent = "abrir_configuracao"
+pagina = "papel de parede"
+
+[[case]]
+text = "abre as configurações de impressora"
+intent = "abrir_configuracao"
+pagina = "impressora"
+
+# --- brightness (opposing near-ties with volume share the verb) ------------------------------
+
+[[case]]
+text = "deixa o brilho em 45"
+intent = "brilho_definir"
+percent = 45
+
+[[case]]
+text = "coloca o brilho no máximo"
+intent = "brilho_definir"
+percent = 100
+
+[[case]]
+text = "aumenta o brilho um pouco"
+intent = "brilho_aumentar"
+
+[[case]]
+text = "abaixa o brilho da tela"
+intent = "brilho_diminuir"
+
+[[case]]
+text = "aumenta o brilho pra 80"
+intent = "brilho_aumentar"
+alvo = 80
+
+[[case]]
+text = "diminui um pouco o brilho"
+intent = "brilho_diminuir"
+
+# --- web search ------------------------------------------------------------------------------
+
+[[case]]
+text = "pesquisa como trocar pneu"
+intent = "pesquisar"
+consulta = "como trocar pneu"
+
+[[case]]
+text = "procura músicas do queen no youtube"
+intent = "pesquisar"
+consulta = "músicas do queen"
+site = "YouTube"
+
+[[case]]
+text = "busca a previsão do tempo"
+intent = "pesquisar"
+consulta = "a previsão do tempo"
+
+[[case]]
+text = "pesquisa sobre a segunda guerra na wikipédia"
+intent = "pesquisar"
+consulta = "a segunda guerra"
+site = "Wikipédia"
+
+[[case]]
+text = "faz uma busca por notebooks baratos"
+intent = "pesquisar"
+consulta = "notebooks baratos"
+
+# --- status ----------------------------------------------------------------------------------
+
+[[case]]
+text = "quanta memória tem livre"
+intent = "status_memoria"
+
+[[case]]
+text = "como tá a memória ram"
+intent = "status_memoria"
+
+[[case]]
+text = "o processador tá muito usado"
+intent = "status_cpu"
+
+[[case]]
+text = "qual o uso da cpu agora"
+intent = "status_cpu"
+
+[[case]]
+text = "quanto espaço livre tem no disco"
+intent = "status_disco"
+
+[[case]]
+text = "meu hd está cheio"
+intent = "status_disco"
+
+# --- sites and Store apps through abrir_app / fechar_app -------------------------------------
+
+[[case]]
+text = "abre o youtube pra mim"
+intent = "abrir_app"
+app = "YouTube"
+
+[[case]]
+text = "abre o gmail aí"
+intent = "abrir_app"
+app = "Gmail"
+
+[[case]]
+text = "abre o whatsapp web"
+intent = "abrir_app"
+app = "WhatsApp Web"
+
+[[case]]
+text = "abre o whatsapp"
+intent = "abrir_app"
+app = "WhatsApp"
+
+[[case]]
+text = "abre o bloco de notas"
+intent = "abrir_app"
+app = "Notepad"
+
+[[case]]
+text = "fecha o whatsapp"
+intent = "fechar_app"
+app = "WhatsApp"
+
+# --- out of domain, replacing the two phrases that became commands ---------------------------
+
+[[case]]
+text = "traduz bom dia para inglês"
+intent = "none"
+
+[[case]]
+text = "liga a televisão"
+intent = "none"
+
+[[case]]
+text = "agenda uma reunião amanhã"
+intent = "none"
+
+[[case]]
+text = "me acorda às seis"
+intent = "none"
+
+[[case]]
+text = "conta uma história"
+intent = "none"
+
+[[case]]
+text = "desliga a luz do quarto"
+intent = "none"

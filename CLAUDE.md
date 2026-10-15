@@ -18,12 +18,11 @@ Sazed, the Terris Keeper from *Mistborn*. Read [`AGENTS.md`](./AGENTS.md) and
   [`docs/superpowers/plans/2026-10-14-sazed-core.md`](./docs/superpowers/plans/2026-10-14-sazed-core.md)
   on branch `feat/sub-project-1`. Discrimination proofs:
   [`docs/superpowers/proofs/2026-10-14-sub-project-1.md`](./docs/superpowers/proofs/2026-10-14-sub-project-1.md).
-- NLU fixture (87 cases: 39 apps, 27 volume, 21 out of domain, incl. opposing near-ties):
-  accuracy 0.909, false-execute 0.011 (1 case), in-domain executed 0.409 / asked 0.591 /
-  not understood 0.000, with t_exec=0.94, t_confirm=0.88, g_min=0.01 (embedder variant qint8).
-  The tuner never goes below g_min=0.01 (0 would disable the spec's gap rule). Before the
-  near-tie cases (82 cases, g_min=0.0): int8 accuracy 0.918 / false-execute 0.012 / executed
-  0.459; fp32 0.918 / 0.000 / 0.393 — int8 kept (it meets the bar).
+- NLU fixture (150 cases after sub-project 2a, incl. opposing near-ties, sites, Store apps, power):
+  accuracy 0.920, false-execute 0.000, in-domain executed 0.488 / asked 0.512 / not understood
+  0.000, with t_exec=0.94, t_confirm=0.88, g_min=0.01 (embedder variant qint8; not re-tuned for 2a).
+  Before 2a (87 cases): accuracy 0.909, false-execute 0.011. `tests/nlu/test_fixture_rules.py`
+  forbids fixture phrases that copy a seed.
 - e5-small weighs the object (app name, number) over the verb: seeds deliberately share objects
   across opposing intents (open/close, up/down/set) so the verb decides. Keep that when adding seeds.
 - **Unverified:** `learning.t_conflict` / `t_dup` are placeholders (no fixture measures them yet);
