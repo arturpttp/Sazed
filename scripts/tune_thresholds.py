@@ -44,7 +44,8 @@ def main() -> None:
     grid = []
     for e in range(80, 99):
         for c in range(60, e + 1, 2):
-            for g in range(0, 7):
+            # g_min starts at 0.01: spec §4 requires the gap rule, and 0 disables it.
+            for g in range(1, 7):
                 th = Thresholds(e / 100, c / 100, g / 100)
                 report = evaluate(cases, index=index, app_names=app_names, thresholds=th)  # type: ignore[arg-type]
                 if (

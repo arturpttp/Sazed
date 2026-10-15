@@ -33,7 +33,7 @@ class NluConfig(_Section):
     # Tuned against tests/fixtures/nlu_cases.toml with scripts/tune_thresholds.py (int8 model).
     t_exec: float = Field(0.94, ge=0, le=1)
     t_confirm: float = Field(0.88, ge=0, le=1)
-    g_min: float = Field(0.0, ge=0, le=1)
+    g_min: float = Field(0.01, ge=0, le=1)
 
     @model_validator(mode="after")
     def _confirm_below_exec(self) -> NluConfig:
