@@ -55,3 +55,11 @@ class FakeAudio:
 
     def set_muted(self, muted: bool) -> None:
         self.muted = muted
+
+
+class FakeOpener:
+    def __init__(self) -> None:
+        self.opened: list[str] = []
+
+    def open(self, uri: str) -> None:
+        self.opened.append(uri)

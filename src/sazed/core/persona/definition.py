@@ -61,6 +61,10 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
     "VolumeChanged": ("Pronto, {mestre}. Volume em {percent}%.", "Volume agora em {percent}%."),
     "Muted": ("Som silenciado, {mestre}.", "Pronto. Silêncio, como pediu."),
     "Unmuted": ("O som está de volta, {mestre}.", "Pronto. Som reativado."),
+    "SearchOpened": (
+        "Abrindo a busca por '{query}' em {engine}, {mestre}.",
+        "Pesquisando '{query}' em {engine}, {mestre}.",
+    ),
     "ExampleLearned": (
         "Guardarei isso em minha mente de cobre, {mestre}: '{text}'.",
         "Anotado em minha mente de cobre, {mestre}.",

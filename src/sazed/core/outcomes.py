@@ -37,6 +37,12 @@ class Unmuted:
 
 
 @dataclass(frozen=True)
+class SearchOpened:
+    query: str
+    engine: str
+
+
+@dataclass(frozen=True)
 class ExampleLearned:
     text: str
 
@@ -115,6 +121,7 @@ Success = (
     | VolumeChanged
     | Muted
     | Unmuted
+    | SearchOpened
     | ExampleLearned
     | AliasLearned
     | AlreadyKnown

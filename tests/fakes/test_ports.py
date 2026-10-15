@@ -44,3 +44,12 @@ def test_launcher_can_hold_apps_that_ignore_close() -> None:
     launcher = FakeLauncher(running={"Spotify": 1}, unclosable={"Spotify"})
     assert launcher.close(entry) == 0
     assert launcher.instances(entry) == 1
+
+
+def test_fake_opener_records_what_was_opened() -> None:
+    from fakes.ports import FakeOpener
+
+    opener = FakeOpener()
+    opener.open("https://a")
+    opener.open("ms-settings:sound")
+    assert opener.opened == ["https://a", "ms-settings:sound"]

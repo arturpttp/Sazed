@@ -235,3 +235,12 @@ def test_bare_more_with_nothing_to_repeat_is_never_ranked(make: Make) -> None:
     r = h.say("mais")
     assert r.outcome == NothingToRepeat()
     assert h.audio.volume == 50
+
+
+def test_search_without_a_query_asks_and_takes_a_bare_answer(make: Make) -> None:
+    h = make({"pesquisa no youtube": {"pesquisar": 0.97, "abrir_app": 0.5}})
+    r = h.say("pesquisa no youtube")
+    assert isinstance(r.decision, AskSlot)
+    assert "O que devo pesquisar?" in r.text
+    h.say("lofi")
+    assert h.opener.opened == ["https://www.youtube.com/results?search_query=lofi"]

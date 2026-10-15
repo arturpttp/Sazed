@@ -68,3 +68,29 @@ FAILED tests/adapters/test_windows_pure.py::test_a_frame_window_hosting_the_app_
 FAILED tests/adapters/test_windows_integration.py::test_store_calculator_opens_and_closes
 ```
 (The real-desktop run left Calculator open; it was closed afterwards with the fixed code.)
+
+## Search encoding
+Mutation: `search_url` replaces only spaces (`query.replace(" ", "+")`) instead of `quote_plus`.
+```
+FAILED tests/skills/test_web.py::test_search_url_encodes_the_whole_query[p\xe3o & caf\xe9-https://x/?q=p%C3%A3o+%26+caf%C3%A9]
+FAILED tests/skills/test_web.py::test_search_url_encodes_the_whole_query[c# #1-https://x/?q=c%23+%231]
+FAILED tests/skills/test_web.py::test_search_url_encodes_the_whole_query[a/b?c=d-https://x/?q=a%2Fb%3Fc%3Dd]
+3 failed, 3 passed in 0.22s
+```
+
+## Bare search answer
+Mutation: `extract_query` returns `None` when no trigger verb is found.
+```
+FAILED tests/runtime/test_assistant_dialogue.py::test_search_without_a_query_asks_and_takes_a_bare_answer
+1 failed, 24 deselected in 0.10s
+```
+
+## URI allowlist
+Mutation: `is_allowed_uri` returns `True`.
+```
+FAILED tests/adapters/test_windows_pure.py::test_anything_else_is_refused[C:\\Windows\\System32\\cmd.exe]
+FAILED tests/adapters/test_windows_pure.py::test_anything_else_is_refused[file:///C:/x.bat]
+FAILED tests/adapters/test_windows_pure.py::test_anything_else_is_refused[calc]
+FAILED tests/adapters/test_windows_pure.py::test_anything_else_is_refused[javascript:alert(1)]
+4 failed, 23 deselected in 0.12s
+```

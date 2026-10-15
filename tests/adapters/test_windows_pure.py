@@ -2,6 +2,7 @@ import pytest
 
 from sazed.adapters.windows.catalog import build_entries, is_excluded
 from sazed.adapters.windows.launcher import WindowInfo, entry_matcher, root_pids, windows_to_close
+from sazed.adapters.windows.opener import is_allowed_uri
 from sazed.adapters.windows.store import build_store_entries
 from sazed.skills.pc.apps import AppEntry
 
@@ -140,3 +141,24 @@ def test_a_frame_window_hosting_the_app_is_closed() -> None:
         WindowInfo(hwnd=4, pid=7, child_pids=frozenset()),
     ]
     assert windows_to_close(windows, {4376}) == [1, 3]
+
+
+@pytest.mark.parametrize(
+    "uri",
+    [
+        "https://www.youtube.com",
+        "http://exemplo.com",
+        "ms-settings:bluetooth",
+        "ms-screenclip:",
+        "shell:AppsFolder\\Microsoft.WindowsCalculator_8wekyb3d8bbwe!App",
+    ],
+)
+def test_allowed_uris(uri: str) -> None:
+    assert is_allowed_uri(uri)
+
+
+@pytest.mark.parametrize(
+    "uri", ["C:\\Windows\\System32\\cmd.exe", "file:///C:/x.bat", "calc", "javascript:alert(1)"]
+)
+def test_anything_else_is_refused(uri: str) -> None:
+    assert not is_allowed_uri(uri)
