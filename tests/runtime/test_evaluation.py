@@ -61,3 +61,11 @@ def test_served_rates_count_only_in_domain_cases() -> None:
     assert report.executed_rate == pytest.approx(1 / 3)
     assert report.asked_rate == pytest.approx(1 / 3)
     assert report.not_understood_rate == pytest.approx(0.0)
+
+
+def test_executing_with_the_wrong_level_is_a_false_execute() -> None:
+    index = ScriptedIndex({"abaixa pra 20": {"volume_diminuir": 0.95}})
+    right = NluCase("abaixa pra 20", "volume_diminuir", alvo=20)
+    wrong = NluCase("abaixa pra 20", "volume_diminuir", alvo=30)
+    assert evaluate([right], index=index, app_names=APPS, thresholds=TH).false_execute_rate == 0
+    assert evaluate([wrong], index=index, app_names=APPS, thresholds=TH).false_execute_rate == 1

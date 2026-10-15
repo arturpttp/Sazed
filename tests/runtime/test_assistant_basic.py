@@ -60,6 +60,13 @@ def test_volume_command_changes_the_audio_state(make: Make) -> None:
     assert "30%" in r.text
 
 
+def test_lowering_the_volume_to_a_level_above_the_current_one_sets_that_level(make: Make) -> None:
+    h = make({"abaixa o volume para 100": {"volume_diminuir": 0.97, "volume_definir": 0.80}})
+    r = h.say("abaixa o volume para 100")
+    assert h.audio.volume == 100
+    assert r.outcome == VolumeSet(100)
+
+
 def test_skill_exception_is_rendered_politely_and_logged(
     make: Make, caplog: pytest.LogCaptureFixture
 ) -> None:

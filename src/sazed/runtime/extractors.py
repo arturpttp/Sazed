@@ -6,6 +6,7 @@ from sazed.core.types import Extraction
 from sazed.nlu.slots.app import extract_app
 from sazed.nlu.slots.mute import extract_mute
 from sazed.nlu.slots.percent import extract_percent
+from sazed.nlu.slots.target import extract_target
 
 SlotExtractor = Callable[[str, Mapping[str, str]], Extraction | None]
 """(normalized utterance, aliases for this slot) -> extraction."""
@@ -23,4 +24,7 @@ def build_extractors(app_names: Sequence[str]) -> dict[str, SlotExtractor]:
     def mute(text: str, aliases: Mapping[str, str]) -> Extraction | None:
         return extract_mute(text)
 
-    return {"app": app, "percent": percent, "mudo": mute}
+    def target(text: str, aliases: Mapping[str, str]) -> Extraction | None:
+        return extract_target(text)
+
+    return {"app": app, "percent": percent, "alvo": target, "mudo": mute}

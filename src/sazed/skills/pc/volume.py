@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Protocol
 
 from sazed.core.outcomes import Muted, Outcome, Unmuted, VolumeChanged, VolumeSet
@@ -89,6 +90,14 @@ def _percent_label(slots: Slots) -> str:
     return f"{n}%" if n is not None else "um valor"
 
 
+def _level_label(default: str) -> Callable[[Slots], str]:
+    def describe(slots: Slots) -> str:
+        level = _int(slots, "alvo")
+        return f"deixar o volume em {level}%" if level is not None else default
+
+    return describe
+
+
 def _clamp(n: int) -> int:
     return max(0, min(100, n))
 
@@ -98,6 +107,10 @@ def _mute_label(slots: Slots) -> str:
     if isinstance(mute, SlotValue) and mute.value is False:
         return "reativar o som"
     return "silenciar o som"
+
+
+# "abaixa o volume para 100" names the level to end at, in either direction.
+_LEVEL = SlotSpec("alvo", False, "Em quanto devo deixar o volume?")
 
 
 class VolumeSkill:
@@ -115,14 +128,14 @@ class VolumeSkill:
             IntentSpec(
                 "volume_aumentar",
                 UP_EXAMPLES,
-                (SlotSpec("percent", False, "Quanto devo aumentar?"),),
-                describe=lambda s: "aumentar o volume",
+                (SlotSpec("percent", False, "Quanto devo aumentar?"), _LEVEL),
+                describe=_level_label("aumentar o volume"),
             ),
             IntentSpec(
                 "volume_diminuir",
                 DOWN_EXAMPLES,
-                (SlotSpec("percent", False, "Quanto devo diminuir?"),),
-                describe=lambda s: "diminuir o volume",
+                (SlotSpec("percent", False, "Quanto devo diminuir?"), _LEVEL),
+                describe=_level_label("diminuir o volume"),
             ),
             IntentSpec(
                 "volume_mudo",
@@ -140,6 +153,10 @@ class VolumeSkill:
             self._audio.set_volume(_clamp(percent))
             return VolumeSet(_clamp(percent))
         if intent_id in ("volume_aumentar", "volume_diminuir"):
+            level = _int(slots, "alvo")
+            if level is not None:
+                self._audio.set_volume(_clamp(level))
+                return VolumeSet(_clamp(level))
             step = _int(slots, "percent") or DEFAULT_STEP
             sign = 1 if intent_id == "volume_aumentar" else -1
             level = _clamp(self._audio.get_volume() + sign * step)

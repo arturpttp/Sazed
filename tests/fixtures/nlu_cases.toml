@@ -389,12 +389,12 @@ intent = "none"
 [[case]]
 text = "abaixa o volume pra 20"
 intent = "volume_diminuir"
-percent = 20
+alvo = 20
 
 [[case]]
 text = "aumenta o volume pra 80"
 intent = "volume_aumentar"
-percent = 80
+alvo = 80
 
 [[case]]
 text = "encerra o discord"
@@ -405,3 +405,10 @@ app = "Discord"
 text = "desliga o word"
 intent = "fechar_app"
 app = "Microsoft Word"
+
+# "para N" names the level to end at, even against the verb's direction (reported 2026-10-15).
+
+[[case]]
+text = "abaixa o volume para 100"
+intent = "volume_diminuir"
+alvo = 100

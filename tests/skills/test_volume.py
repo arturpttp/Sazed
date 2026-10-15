@@ -59,3 +59,37 @@ def test_mute_without_slot_mutes() -> None:
     audio = FakeAudio()
     VolumeSkill(audio).execute("volume_mudo", {}, CTX)
     assert audio.muted is True
+
+
+def alvo(n: int) -> dict[str, SlotValue]:
+    return {"alvo": SlotValue("alvo", n, str(n), 1.0)}
+
+
+def test_decrease_to_a_level_above_the_current_one_sets_that_level() -> None:
+    audio = FakeAudio(volume=50)
+    assert VolumeSkill(audio).execute("volume_diminuir", alvo(100), CTX) == VolumeSet(100)
+    assert audio.volume == 100
+
+
+def test_increase_to_a_level_below_the_current_one_sets_that_level() -> None:
+    audio = FakeAudio(volume=80)
+    assert VolumeSkill(audio).execute("volume_aumentar", alvo(20), CTX) == VolumeSet(20)
+    assert audio.volume == 20
+
+
+def test_a_level_of_zero_is_kept() -> None:
+    audio = FakeAudio(volume=50)
+    VolumeSkill(audio).execute("volume_diminuir", {**pct(10), **alvo(0)}, CTX)
+    assert audio.volume == 0
+
+
+def test_a_level_wins_over_the_same_number_read_as_a_step() -> None:
+    audio = FakeAudio(volume=50)
+    VolumeSkill(audio).execute("volume_diminuir", {**pct(100), **alvo(100)}, CTX)
+    assert audio.volume == 100
+
+
+def test_confirmation_names_the_level() -> None:
+    spec = next(s for s in VolumeSkill(FakeAudio()).intents if s.id == "volume_diminuir")
+    assert spec.describe(alvo(100)) == "deixar o volume em 100%"
+    assert spec.describe({}) == "diminuir o volume"

@@ -64,3 +64,21 @@ Planned mutation `pooled = hidden.mean(axis=1)` (unmasked pooling) **did not dis
 ```
 5 passed in 1.29s
 ```
+
+## Volume level ("para N")
+Bug from use: "abaixa o volume para 100" set 0% (100 was read as a step down). Fix: an `alvo`
+slot for the number after "para/pra/pro/até"; volume up/down set that level when present.
+Mutation: `if level:` instead of `if level is not None:` in `VolumeSkill.execute`.
+```
+>       assert audio.volume == 0
+E       assert 40 == 0
+FAILED tests/skills/test_volume.py::test_a_level_of_zero_is_kept - assert 40 ...
+1 failed, 11 passed in 0.10s
+```
+Mutation: `alvo` extractor not wired in `runtime/extractors.py`.
+`test_lowering_the_volume_to_a_level_above_the_current_one_sets_that_level`:
+```
+>       assert h.audio.volume == 100
+E       assert 50 == 100
+1 failed, 9 deselected in 0.09s
+```

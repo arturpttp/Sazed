@@ -18,8 +18,8 @@ Sazed, the Terris Keeper from *Mistborn*. Read [`AGENTS.md`](./AGENTS.md) and
   [`docs/superpowers/plans/2026-10-14-sazed-core.md`](./docs/superpowers/plans/2026-10-14-sazed-core.md)
   on branch `feat/sub-project-1`. Discrimination proofs:
   [`docs/superpowers/proofs/2026-10-14-sub-project-1.md`](./docs/superpowers/proofs/2026-10-14-sub-project-1.md).
-- NLU fixture (86 cases: 39 apps, 26 volume, 21 out of domain, incl. opposing near-ties):
-  accuracy 0.908, false-execute 0.012 (1 case), in-domain executed 0.400 / asked 0.600 /
+- NLU fixture (87 cases: 39 apps, 27 volume, 21 out of domain, incl. opposing near-ties):
+  accuracy 0.909, false-execute 0.011 (1 case), in-domain executed 0.409 / asked 0.591 /
   not understood 0.000, with t_exec=0.94, t_confirm=0.88, g_min=0.01 (embedder variant qint8).
   The tuner never goes below g_min=0.01 (0 would disable the spec's gap rule). Before the
   near-tie cases (82 cases, g_min=0.0): int8 accuracy 0.918 / false-execute 0.012 / executed
@@ -64,5 +64,7 @@ single sentence median 1.9 ms, p95 2.8 ms. Breakdown measured separately: the to
 `muta` / `tira do mudo` → muted / unmuted; `abre o character map` → opened;
 `fecha o character map` → confirmation asked (low score), `sim` → closed and the phrase was learned;
 `esquece isso` → that example forgotten. Volume restored afterwards.
+2026-10-15 (after a bug report from use): `abaixa o volume para 100` at 40% → 100%;
+`aumenta o volume pra 30` at 100% → 30%; `abaixa o volume pra zero` → 0%.
 **Unverified:** typing in an interactive console (only piped stdin was used), Ctrl-C handling,
 `sazed aprendizado` / `revisar` against the real data dir (covered only by tests with fakes).

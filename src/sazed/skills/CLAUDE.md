@@ -18,6 +18,9 @@ next to the skill that needs them and implemented in `sazed.adapters`.
   clauses are load-bearing (see the proofs file).
 - Adding an intent with a new slot requires an extractor in `runtime/extractors.py`.
   `tests/runtime/test_extractors.py` fails until it exists.
+- Volume up/down carry two number slots: `percent` is a step ("aumenta em 20") and `alvo` is
+  the level to end at ("abaixa para 100" means 100%, even above the current volume). `alvo`
+  wins; check it with `is not None`, since 0 is a real level.
 
 ## Not here
 Text matching (→ `nlu`), Windows APIs (→ `adapters/windows`).
