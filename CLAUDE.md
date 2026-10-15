@@ -16,6 +16,24 @@ Sazed, the Terris Keeper from *Mistborn*. Read [`AGENTS.md`](./AGENTS.md) and
   [`docs/superpowers/specs/2026-10-14-sazed-core-design.md`](./docs/superpowers/specs/2026-10-14-sazed-core-design.md).
 - 2026-10-14: spec approved; implementation plan written in
   [`docs/superpowers/plans/2026-10-14-sazed-core.md`](./docs/superpowers/plans/2026-10-14-sazed-core.md).
-- **Next step:** the user reviews the plan and picks an execution mode; then Task 1.
+- **Next step:** execute docs/superpowers/plans/2026-10-14-sazed-core.md (inline, branch
+  `feat/sub-project-1`).
 
-Commands, layout and toolchain notes are added here as the project is scaffolded.
+## Commands
+
+- `uv sync` — install (Python 3.12 is pinned in `.python-version`; the machine default is 3.14).
+- `uv run pytest` — fast suite (excludes `model` and `windows` markers).
+- `uv run pytest -m model` — tests that need the downloaded embedder (`uv run python scripts/fetch_model.py` first).
+- `uv run pytest -m windows` — tests that open real apps and change the real volume.
+- `uv run ruff check . && uv run ruff format --check . && uv run mypy` — lint, format, strict types (`core`, `nlu`).
+- `uv run sazed` — the REPL.
+
+## Layout
+
+`src/sazed/{core,nlu,skills,adapters,runtime,interfaces}`. The dependency direction is enforced by
+`tests/test_architecture.py`. Test doubles live in `tests/fakes/`, and each has its own test.
+
+## Toolchain traps
+
+- Ruff formats Python code blocks inside Markdown; `*.md` is excluded in `pyproject.toml` so
+  docs are not rewritten.

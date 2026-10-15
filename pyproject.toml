@@ -1,0 +1,55 @@
+[project]
+name = "sazed"
+version = "0.1.0"
+description = "Local, offline personal assistant with the persona of Sazed."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "numpy>=2.1",
+    "onnxruntime>=1.20",
+    "tokenizers>=0.20",
+    "rapidfuzz>=3.10",
+    "pydantic>=2.9",
+    "psutil>=6.1",
+    "pywin32>=308; sys_platform == 'win32'",
+    "pycaw>=20240316; sys_platform == 'win32'",
+    "comtypes>=1.4; sys_platform == 'win32'",
+]
+
+[project.scripts]
+sazed = "sazed.interfaces.cli.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sazed"]
+
+[dependency-groups]
+dev = ["pytest>=8.3", "ruff>=0.8", "mypy>=1.13", "types-psutil", "types-pywin32"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tests"]
+addopts = "--import-mode=importlib -m 'not model and not windows'"
+markers = [
+    "model: needs the downloaded embedder model (run: uv run pytest -m model)",
+    "windows: touches the real desktop - apps, volume (run: uv run pytest -m windows)",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+extend-exclude = ["*.md"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "TID"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src/sazed/core", "src/sazed/nlu"]
