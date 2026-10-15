@@ -136,3 +136,15 @@ FAILED tests/runtime/test_power_safety.py::test_a_correction_towards_a_power_com
 FAILED tests/runtime/test_power_safety.py::test_a_correction_towards_a_power_command_confirms_and_learns_nothing[pc_suspender]
 8 failed, 5 passed in 0.13s
 ```
+
+## Screenshot names
+Mutation 1: `ScreenSkill` passes the fixed name `"Captura.png"` instead of `screenshot_name(ctx.now)`.
+```
+FAILED tests/skills/test_screen.py::test_screenshot_reports_the_name_actually_saved
+1 failed, 2 passed in 0.10s
+```
+Mutation 2: `unique_name` returns the name unchanged (overwrites).
+```
+FAILED tests/adapters/test_windows_pure.py::test_unique_name_never_overwrites
+1 failed, 30 deselected in 0.12s
+```

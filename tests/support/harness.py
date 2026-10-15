@@ -6,7 +6,7 @@ from random import Random
 
 from fakes.clock import ManualClock
 from fakes.index import ScriptedIndex
-from fakes.ports import FakeAudio, FakeCatalog, FakeLauncher, FakeOpener, FakePower
+from fakes.ports import FakeAudio, FakeCatalog, FakeLauncher, FakeOpener, FakePower, FakeScreen
 from sazed.adapters.sqlite.coppermind import SqliteCoppermind
 from sazed.core.learning import LearningThresholds
 from sazed.core.policy import Thresholds
@@ -17,6 +17,8 @@ from sazed.runtime.config import BUILTIN_ENGINES
 from sazed.runtime.extractors import build_extractors
 from sazed.skills.pc.apps import AppsSkill
 from sazed.skills.pc.power import PowerSkill
+from sazed.skills.pc.screen import ScreenSkill
+from sazed.skills.pc.settings import PAGE_NAMES, SettingsSkill
 from sazed.skills.pc.volume import VolumeSkill
 from sazed.skills.pc.web import WebSkill
 
@@ -39,6 +41,7 @@ class Harness:
     clock: ManualClock
     opener: FakeOpener
     power: FakePower
+    screen: FakeScreen
 
     def say(self, text: str) -> Response:
         return self.assistant.handle(text)
@@ -64,20 +67,25 @@ def build_harness(
     clock = ManualClock()
     opener = FakeOpener()
     power = FakePower()
+    screen = FakeScreen()
     skills: list[Skill] = [
         AppsSkill(FakeCatalog(APPS), launcher),
         VolumeSkill(audio),
         WebSkill(opener, BUILTIN_ENGINES, "Google"),
         PowerSkill(power),
+        ScreenSkill(screen),
+        SettingsSkill(opener),
     ]
     assistant = Assistant(
         skills=[*skills, *extra_skills],
         index=index,
-        extractors=build_extractors(APPS, engine_names=list(BUILTIN_ENGINES)),
+        extractors=build_extractors(
+            APPS, engine_names=list(BUILTIN_ENGINES), page_names=PAGE_NAMES
+        ),
         store=store,
         aliases={"app": dict(aliases or {})},
         settings=SETTINGS,
         clock=clock,
         rng=Random(0),
     )
-    return Harness(assistant, index, store, launcher, audio, clock, opener, power)
+    return Harness(assistant, index, store, launcher, audio, clock, opener, power, screen)

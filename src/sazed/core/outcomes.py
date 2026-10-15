@@ -88,6 +88,26 @@ class SigningOut:
 
 
 @dataclass(frozen=True)
+class ScreenshotSaved:
+    file_name: str
+
+
+@dataclass(frozen=True)
+class SnipOpened:
+    pass
+
+
+@dataclass(frozen=True)
+class SettingsOpened:
+    page: str
+
+
+@dataclass(frozen=True)
+class UnknownSettingsPage:
+    raw: str
+
+
+@dataclass(frozen=True)
 class SearchOpened:
     query: str
     engine: str
@@ -182,6 +202,9 @@ Success = (
     | Restarting
     | Suspending
     | SigningOut
+    | ScreenshotSaved
+    | SnipOpened
+    | SettingsOpened
     | ExampleLearned
     | AliasLearned
     | AlreadyKnown
@@ -198,6 +221,7 @@ Failure = (
     | InvalidPercent
     | CannotCloseSite
     | NoMediaSession
+    | UnknownSettingsPage
 )
 Outcome = Success | Failure
 

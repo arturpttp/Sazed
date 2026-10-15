@@ -87,7 +87,7 @@ def app_query(normalized: str) -> str:
     return " ".join(t for t in strip_accents(normalized).split() if t not in COMMAND_WORDS)
 
 
-def _score(query: str, name_key: str) -> float:
+def name_score(query: str, name_key: str) -> float:
     by_token = max((fuzz.ratio(query, token) for token in name_key.split()), default=0.0)
     return max(fuzz.token_set_ratio(query, name_key), by_token)
 
@@ -110,7 +110,9 @@ def extract_app(
     if len(exact) == 1:
         return SlotValue("app", exact[0], query, 1.0, exact=True)
 
-    scored = sorted(((_score(query, _key(n)), n) for n in names), key=lambda sn: (-sn[0], sn[1]))
+    scored = sorted(
+        ((name_score(query, _key(n)), n) for n in names), key=lambda sn: (-sn[0], sn[1])
+    )
     if not scored:
         return Unmatched("app", query, None)
     best = scored[0][0]

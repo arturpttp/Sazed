@@ -183,3 +183,11 @@ def test_unknown_power_kind_is_refused() -> None:
 
     with pytest.raises(ValueError):
         power_command("format_c")
+
+
+def test_unique_name_never_overwrites() -> None:
+    from sazed.adapters.windows.screen import unique_name
+
+    assert unique_name("a.png", set()) == "a.png"
+    assert unique_name("a.png", {"a.png"}) == "a (2).png"
+    assert unique_name("a.png", {"a.png", "a (2).png"}) == "a (3).png"

@@ -73,6 +73,10 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
     "Restarting": ("Reiniciando em alguns segundos, {mestre}. Já volto.",),
     "Suspending": ("Suspendendo o computador, {mestre}.",),
     "SigningOut": ("Saindo da sua conta, {mestre}. Até logo.",),
+    "ScreenshotSaved": ("Capturei a tela, {mestre}: {file_name}.",),
+    "SnipOpened": ("Selecione a área da tela, {mestre}.",),
+    "SettingsOpened": ("Abrindo as configurações ({page}), {mestre}.",),
+    "UnknownSettingsPage": ("Não conheço a página de configurações '{raw}', {mestre}.",),
     "SearchOpened": (
         "Abrindo a busca por '{query}' em {engine}, {mestre}.",
         "Pesquisando '{query}' em {engine}, {mestre}.",

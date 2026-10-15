@@ -90,3 +90,17 @@ def test_media_session_is_readable_and_toggling_twice_restores_it() -> None:
         pytest.skip("no media session open")
     time.sleep(1.0)
     assert media.toggle()  # back to how it was
+
+
+def test_screenshot_is_saved_to_the_given_folder(tmp_path: Path) -> None:
+    from sazed.adapters.windows.screen import WindowsScreen
+
+    name = WindowsScreen(tmp_path).capture("teste.png")
+    assert name == "teste.png"
+    assert (tmp_path / "teste.png").stat().st_size > 0
+
+
+def test_settings_page_opens() -> None:
+    from sazed.adapters.windows.opener import ShellOpener
+
+    ShellOpener().open("ms-settings:sound")  # opens the Settings app; close it afterwards

@@ -108,3 +108,21 @@ class FakePower:
 
     def sign_out(self) -> None:
         self.calls.append("sign_out")
+
+
+class FakeScreen:
+    def __init__(self, existing: set[str] | None = None) -> None:
+        self.existing = set(existing or ())
+        self.saved: list[str] = []
+        self.snips = 0
+
+    def capture(self, file_name: str) -> str:
+        from sazed.adapters.windows.screen import unique_name
+
+        name = unique_name(file_name, self.existing)
+        self.existing.add(name)
+        self.saved.append(name)
+        return name
+
+    def open_snip(self) -> None:
+        self.snips += 1

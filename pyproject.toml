@@ -20,6 +20,7 @@ dependencies = [
     "winrt-windows-applicationmodel>=3.2.1 ; sys_platform == 'win32'",
     "winrt-windows-storage>=3.2.1 ; sys_platform == 'win32'",
     "winrt-windows-media-control>=3.2.1 ; sys_platform == 'win32'",
+    "pillow>=12.3.0",
 ]
 
 [project.scripts]

@@ -74,3 +74,12 @@ def test_fake_power_records_calls() -> None:
     power.lock()
     power.shutdown()
     assert power.calls == ["lock", "shutdown"]
+
+
+def test_fake_screen_saves_unique_names_and_counts_snips() -> None:
+    from fakes.ports import FakeScreen
+
+    screen = FakeScreen(existing={"x.png"})
+    assert screen.capture("x.png") == "x (2).png"
+    screen.open_snip()
+    assert screen.saved == ["x (2).png"] and screen.snips == 1
