@@ -160,3 +160,10 @@ FAILED tests/skills/test_brightness.py::test_a_refused_set_is_unsupported - A...
 The plan's dynamic call `monitor.WmiSetBrightness(0, n)` raised "Parâmetro inválido";
 `test_brightness_reads_and_rewrites_the_same_level` (`-m windows`) FAILED with `assert False`.
 Fix: named in-parameters through `ExecMethod_`; the same test passes.
+
+## pt-BR numbers
+Mutation: `pt_number` returns `f"{x:,.{places}f}"` (English separators).
+```
+FAILED tests/skills/test_status.py::test_disks - AssertionError: assert DiskS...
+7 failed, 2 passed in 0.12s
+```

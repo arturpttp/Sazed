@@ -93,3 +93,11 @@ def test_fake_brightness() -> None:
     assert FakeBrightness(None).get() is None
     refusing = FakeBrightness(40, accepts=False)
     assert not refusing.set(10) and refusing.level == 40
+
+
+def test_fake_status_returns_what_it_was_given() -> None:
+    from fakes.ports import FakeStatus
+
+    status = FakeStatus(memory=(1, 2), cpu=3.0, disks=[("C:", 4, 5)])
+    assert status.memory() == (1, 2) and status.cpu_percent() == 3.0
+    assert status.disks() == [("C:", 4, 5)]

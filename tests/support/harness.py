@@ -14,6 +14,7 @@ from fakes.ports import (
     FakeOpener,
     FakePower,
     FakeScreen,
+    FakeStatus,
 )
 from sazed.adapters.sqlite.coppermind import SqliteCoppermind
 from sazed.core.learning import LearningThresholds
@@ -28,6 +29,7 @@ from sazed.skills.pc.brightness import BrightnessSkill
 from sazed.skills.pc.power import PowerSkill
 from sazed.skills.pc.screen import ScreenSkill
 from sazed.skills.pc.settings import PAGE_NAMES, SettingsSkill
+from sazed.skills.pc.status import StatusSkill
 from sazed.skills.pc.volume import VolumeSkill
 from sazed.skills.pc.web import WebSkill
 
@@ -52,6 +54,7 @@ class Harness:
     power: FakePower
     screen: FakeScreen
     brightness: FakeBrightness
+    status: FakeStatus
 
     def say(self, text: str) -> Response:
         return self.assistant.handle(text)
@@ -79,6 +82,7 @@ def build_harness(
     power = FakePower()
     screen = FakeScreen()
     brightness = FakeBrightness()
+    status = FakeStatus()
     skills: list[Skill] = [
         AppsSkill(FakeCatalog(APPS), launcher),
         VolumeSkill(audio),
@@ -87,6 +91,7 @@ def build_harness(
         ScreenSkill(screen),
         SettingsSkill(opener),
         BrightnessSkill(brightness),
+        StatusSkill(status),
     ]
     assistant = Assistant(
         skills=[*skills, *extra_skills],
@@ -101,5 +106,5 @@ def build_harness(
         rng=Random(0),
     )
     return Harness(
-        assistant, index, store, launcher, audio, clock, opener, power, screen, brightness
+        assistant, index, store, launcher, audio, clock, opener, power, screen, brightness, status
     )

@@ -80,6 +80,9 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
     "BrightnessSet": ("Brilho em {percent}%, {mestre}.",),
     "BrightnessChanged": ("Pronto, {mestre}. Brilho em {percent}%.",),
     "BrightnessUnsupported": ("Este monitor não permite ajustar o brilho por software, {mestre}.",),
+    "MemoryStatus": ("Há {free} livres de {total} de memória, {mestre}.",),
+    "CpuStatus": ("O processador está com {percent} de uso, {mestre}.",),
+    "DiskStatus": ("Espaço em disco, {mestre}: {disks}.",),
     "SearchOpened": (
         "Abrindo a busca por '{query}' em {engine}, {mestre}.",
         "Pesquisando '{query}' em {engine}, {mestre}.",

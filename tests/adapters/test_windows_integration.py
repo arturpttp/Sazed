@@ -114,3 +114,13 @@ def test_brightness_reads_and_rewrites_the_same_level() -> None:
     if level is None:
         pytest.skip("no monitor exposes WMI brightness")
     assert brightness.set(level)  # the same value: no visible change
+
+
+def test_status_reads_real_numbers() -> None:
+    from sazed.adapters.windows.status import PsutilStatus
+
+    status = PsutilStatus()
+    free, total = status.memory()
+    assert 0 < free < total
+    assert 0.0 <= status.cpu_percent() <= 100.0
+    assert any(mount.upper().startswith("C:") for mount, _, _ in status.disks())

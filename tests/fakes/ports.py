@@ -141,3 +141,22 @@ class FakeBrightness:
             return False
         self.level = percent
         return True
+
+
+class FakeStatus:
+    def __init__(
+        self,
+        memory: tuple[int, int] = (0, 1),
+        cpu: float = 0.0,
+        disks: list[tuple[str, int, int]] | None = None,
+    ) -> None:
+        self._memory, self._cpu, self._disks = memory, cpu, list(disks or [])
+
+    def memory(self) -> tuple[int, int]:
+        return self._memory
+
+    def cpu_percent(self) -> float:
+        return self._cpu
+
+    def disks(self) -> list[tuple[str, int, int]]:
+        return list(self._disks)

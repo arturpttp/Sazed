@@ -123,6 +123,22 @@ class BrightnessUnsupported:
 
 
 @dataclass(frozen=True)
+class MemoryStatus:
+    free: str
+    total: str
+
+
+@dataclass(frozen=True)
+class CpuStatus:
+    percent: str
+
+
+@dataclass(frozen=True)
+class DiskStatus:
+    disks: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class SearchOpened:
     query: str
     engine: str
@@ -222,6 +238,9 @@ Success = (
     | SettingsOpened
     | BrightnessSet
     | BrightnessChanged
+    | MemoryStatus
+    | CpuStatus
+    | DiskStatus
     | ExampleLearned
     | AliasLearned
     | AlreadyKnown
