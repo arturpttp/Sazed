@@ -45,7 +45,17 @@ def _parser() -> _Parser:
     review = commands.add_parser("revisar", help="lista falhas recentes para rotular")
     review.add_argument("--rotular", nargs=2, metavar=("EPISODIO", "PEDIDO"))
     review.add_argument("--limite", type=int, default=20, help="quantas falhas listar")
+    panel = commands.add_parser("painel", help="abre o painel local (somente leitura)")
+    panel.add_argument("--porta", type=_port, default=8765, help="porta local (padrão: 8765)")
+    panel.add_argument("--raiz", type=Path, default=None, help="pasta do repositório de Sazed")
     return parser
+
+
+def _port(text: str) -> int:
+    port = int(text)
+    if not 0 <= port <= 65535:
+        raise ValueError(text)
+    return port
 
 
 def _learned(app: SazedApp, args: argparse.Namespace) -> int:
@@ -109,8 +119,13 @@ def main(
     *,
     build: Callable[[Path | None], SazedApp] | None = None,
     stdin: TextIO | None = None,
+    dashboard: Callable[..., int] | None = None,
 ) -> int:
     args = _parser().parse_args(argv)
+    if args.command == "painel":  # reads only: no model, no writable coppermind
+        if dashboard is None:
+            from sazed.interfaces.dashboard.launch import run as dashboard
+        return dashboard(args.config, port=args.porta, root=args.raiz)
     try:
         app = (build or start)(args.config)
     except StartupError as err:

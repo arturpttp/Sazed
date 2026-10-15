@@ -137,3 +137,40 @@ def test_bad_arguments_are_explained_in_pt_br(capsys: pytest.CaptureFixture[str]
     captured = capsys.readouterr()
     assert "--ajuda" in captured.out + captured.err
     assert "invalid choice" not in captured.out + captured.err
+
+
+def test_painel_starts_the_dashboard_without_loading_sazed(tmp_path: Path) -> None:
+    calls: list[tuple[object, ...]] = []
+
+    def dashboard(config: Path | None, *, port: int, root: Path | None) -> int:
+        calls.append((config, port, root))
+        return 0
+
+    def never_build(config: Path | None) -> SazedApp:
+        raise AssertionError("the dashboard must not load the model or open the coppermind")
+
+    assert main(["painel"], build=never_build, dashboard=dashboard) == 0
+    assert (
+        main(
+            ["--config", "c.toml", "painel", "--porta", "9000", "--raiz", str(tmp_path)],
+            build=never_build,
+            dashboard=dashboard,
+        )
+        == 0
+    )
+    assert calls == [(None, 8765, None), (Path("c.toml"), 9000, tmp_path)]
+
+
+@pytest.mark.parametrize("port", ["abc", "70000", "-1"])
+def test_painel_rejects_a_bad_port(port: str, capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as exited:
+        main(["painel", "--porta", port], dashboard=lambda *a, **k: 0)
+    assert exited.value.code == 2
+    assert "Comando não reconhecido" in capsys.readouterr().err
+
+
+def test_painel_help_is_pt_br(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit):
+        main(["painel", "--ajuda"])
+    out = capsys.readouterr().out
+    assert "porta" in out and "painel" in out.lower()

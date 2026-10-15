@@ -43,3 +43,11 @@ def test_debug_only_when_enabled(tmp_path: Path) -> None:
     loud = setup_logging(tmp_path / "b", debug=True)
     logging.getLogger("sazed.test").debug("ranking detalhado")
     assert "ranking detalhado" in loud.read_text(encoding="utf-8")
+
+
+def test_a_second_process_can_log_to_its_own_file(tmp_path: Path) -> None:
+    path = setup_logging(tmp_path, debug=False, filename="painel.log")
+    logging.getLogger("sazed.test").warning("do painel")
+    assert path == tmp_path / "painel.log"
+    assert "do painel" in path.read_text(encoding="utf-8")
+    assert not (tmp_path / "sazed.log").exists()

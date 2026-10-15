@@ -52,4 +52,10 @@ ban-relative-imports = "all"
 [tool.mypy]
 python_version = "3.12"
 strict = true
-files = ["src/sazed/core", "src/sazed/nlu"]
+files = [
+    "src/sazed/core",
+    "src/sazed/nlu",
+    "src/sazed/interfaces/dashboard",
+    "src/sazed/runtime/insight.py",
+    "src/sazed/adapters/sqlite/reader.py",
+]

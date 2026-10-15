@@ -5,9 +5,9 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 
-def setup_logging(log_dir: Path, *, debug: bool) -> Path:
+def setup_logging(log_dir: Path, *, debug: bool, filename: str = "sazed.log") -> Path:
     log_dir.mkdir(parents=True, exist_ok=True)
-    path = log_dir / "sazed.log"
+    path = log_dir / filename
     handler = RotatingFileHandler(path, maxBytes=1_000_000, backupCount=3, encoding="utf-8")
     handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
     root = logging.getLogger()

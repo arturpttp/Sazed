@@ -58,3 +58,17 @@ def test_is_failure_agrees_with_the_store(tmp_path: Path) -> None:
     store.close()
     assert from_dashboard == from_store
     assert 0 < len(from_store) < len(turns)
+
+
+def test_only_the_cli_imports_the_dashboard() -> None:
+    src = PACKAGE.parents[1]
+    importers = []
+    for file in sorted(src.rglob("*.py")):
+        if PACKAGE in file.parents:
+            continue
+        for node in ast.walk(ast.parse(file.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.ImportFrom) and (node.module or "").startswith(
+                "sazed.interfaces.dashboard"
+            ):
+                importers.append(file.relative_to(src).as_posix())
+    assert importers == ["interfaces/cli/main.py"]
