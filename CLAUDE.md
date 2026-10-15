@@ -28,7 +28,10 @@ Sazed, the Terris Keeper from *Mistborn*. Read [`AGENTS.md`](./AGENTS.md) and
   across opposing intents (open/close, up/down/set) so the verb decides. Keep that when adding seeds.
 - **Unverified:** `learning.t_conflict` / `t_dup` are placeholders (no fixture measures them yet);
   Store (UWP) apps are not in the catalog; closing apps whose shortcut targets a launcher.
-- **Next step:** final branch review, then brainstorm sub-project 2 (PC skills).
+- 2026-10-15: sub-project 1 merged into `main`. Sub-project 2 split into 2a (one-shot PC skills:
+  media, system, web, status, Store apps) and 2b (windows, files). 2a spec:
+  [`docs/superpowers/specs/2026-10-15-sazed-pc-skills-2a-design.md`](./docs/superpowers/specs/2026-10-15-sazed-pc-skills-2a-design.md).
+- **Next step:** user review of the 2a spec, then its implementation plan.
 
 ## Measurements
 
