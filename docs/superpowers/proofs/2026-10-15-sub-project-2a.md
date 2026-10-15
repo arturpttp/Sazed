@@ -52,3 +52,10 @@ Mutation: remove the `http://`/`https://` check from `_http_url` in `runtime/con
 FAILED tests/runtime/test_config.py::test_invalid_sites_and_engines_stop_startup_in_pt_br[[sites]\nnotas = "file:///C:/notas.txt"\n-sites.notas-http]
 FAILED tests/runtime/test_config.py::test_invalid_sites_and_engines_stop_startup_in_pt_br[[sites]\nnotas = "C:/notas.exe"\n-sites.notas-http]
 ```
+
+## Exact app name
+Mutation: delete the exact-name block in `extract_app`.
+```
+E       AssertionError: assert Ambiguous(name='app', raw='whatsapp', candidates=('WhatsApp', 'WhatsApp Web')) == SlotValue(name='app', value='WhatsApp', raw='whatsapp', confidence=1.0, exact=True)
+FAILED tests/nlu/test_slot_app.py::test_an_exact_name_wins_over_a_longer_name_containing_it
+```

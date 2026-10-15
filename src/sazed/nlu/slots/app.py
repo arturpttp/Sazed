@@ -104,6 +104,12 @@ def extract_app(
     if alias_value is not None and alias_value in known:
         return SlotValue("app", alias_value, query, 1.0, exact=True)
 
+    # token_set_ratio scores a contained name 100 ("whatsapp" in "whatsapp web"), so an
+    # exact name must be decided before fuzzy scoring or it ties with every longer name.
+    exact = [n for n in names if _key(n) == query]
+    if len(exact) == 1:
+        return SlotValue("app", exact[0], query, 1.0, exact=True)
+
     scored = sorted(((_score(query, _key(n)), n) for n in names), key=lambda sn: (-sn[0], sn[1]))
     if not scored:
         return Unmatched("app", query, None)

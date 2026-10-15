@@ -84,6 +84,11 @@ class AppNotRunning:
 
 
 @dataclass(frozen=True)
+class CannotCloseSite:
+    app: str
+
+
+@dataclass(frozen=True)
 class AmbiguousSlot:
     slot: str
     candidates: tuple[str, ...]
@@ -118,7 +123,9 @@ Success = (
     | NothingToRepeat
     | Cancelled
 )
-Failure = AppNotFound | AppNotRunning | AmbiguousSlot | ActionFailed | InvalidPercent
+Failure = (
+    AppNotFound | AppNotRunning | AmbiguousSlot | ActionFailed | InvalidPercent | CannotCloseSite
+)
 Outcome = Success | Failure
 
 _FAILURE_TYPES: tuple[type, ...] = get_args(Failure)

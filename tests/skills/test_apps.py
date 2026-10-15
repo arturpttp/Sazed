@@ -1,10 +1,24 @@
 from datetime import datetime
 
 from fakes.ports import FakeCatalog, FakeLauncher
-from sazed.core.outcomes import ActionFailed, AppClosed, AppNotFound, AppNotRunning, AppOpened
+from sazed.core.outcomes import (
+    ActionFailed,
+    AppClosed,
+    AppNotFound,
+    AppNotRunning,
+    AppOpened,
+    CannotCloseSite,
+)
 from sazed.core.skill import SkillContext
 from sazed.core.types import SlotValue, Unmatched
-from sazed.skills.pc.apps import AppsSkill
+from sazed.skills.pc.apps import (
+    AppEntry,
+    AppsSkill,
+    CombinedCatalog,
+    StaticCatalog,
+    merge_entries,
+    site_entries,
+)
 
 CTX = SkillContext(now=datetime(2026, 10, 14, 12, 0))
 CHROME = SlotValue("app", "Google Chrome", "chrome", 1.0, exact=True)
@@ -83,3 +97,31 @@ def test_close_that_closes_nothing_is_reported_as_a_failure() -> None:
     launcher = FakeLauncher(running={"Google Chrome": 1}, unclosable={"Google Chrome"})
     skill = AppsSkill(FakeCatalog(["Google Chrome"]), launcher)
     assert skill.execute("fechar_app", {"app": CHROME}, CTX) == ActionFailed("fechar Google Chrome")
+
+
+def app(name: str) -> dict[str, SlotValue]:
+    return {"app": SlotValue("app", name, name.lower(), 1.0, exact=True)}
+
+
+def test_merge_prefers_installed_over_store_over_site() -> None:
+    lnk = [AppEntry("WhatsApp", "C:/w.exe", "C:/w.lnk")]
+    store = [AppEntry("whatsapp", "C:/WindowsApps/W", "shell:AppsFolder\\W!App", "store")]
+    sites = site_entries({"WhatsApp": "https://web.whatsapp.com", "YouTube": "https://youtube.com"})
+    merged = merge_entries(sites, store, lnk)
+    assert [(e.name, e.kind) for e in merged] == [("WhatsApp", "lnk"), ("YouTube", "site")]
+
+
+def test_opening_a_site_launches_its_entry() -> None:
+    launcher = FakeLauncher()
+    catalog = CombinedCatalog([StaticCatalog(site_entries({"YouTube": "https://youtube.com"}))])
+    skill = AppsSkill(catalog, launcher)
+    assert skill.execute("abrir_app", app("YouTube"), CTX) == AppOpened("YouTube")
+    assert launcher.launched == ["YouTube"]
+
+
+def test_closing_a_site_is_honestly_refused() -> None:
+    launcher = FakeLauncher(running={"YouTube": 1})
+    catalog = StaticCatalog(site_entries({"YouTube": "https://youtube.com"}))
+    skill = AppsSkill(catalog, launcher)
+    assert skill.execute("fechar_app", app("YouTube"), CTX) == CannotCloseSite("YouTube")
+    assert launcher.closed == []

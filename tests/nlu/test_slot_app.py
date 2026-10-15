@@ -65,3 +65,13 @@ def test_alias_to_an_app_that_no_longer_exists_is_ignored() -> None:
 
 def test_only_command_words_means_no_app_named() -> None:
     assert extract_app("abre o programa", NAMES, {}) is None
+
+
+def test_an_exact_name_wins_over_a_longer_name_containing_it() -> None:
+    names = ["WhatsApp", "WhatsApp Web"]
+    assert extract_app("abre o whatsapp", names, {}) == SlotValue(
+        "app", "WhatsApp", "whatsapp", 1.0, exact=True
+    )
+    assert extract_app("abre o whatsapp web", names, {}) == SlotValue(
+        "app", "WhatsApp Web", "whatsapp web", 1.0, exact=True
+    )

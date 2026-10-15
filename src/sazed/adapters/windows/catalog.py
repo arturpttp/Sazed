@@ -1,4 +1,4 @@
-"""Installed apps from Start Menu shortcuts (.lnk). Store (UWP) apps are not covered."""
+"""Installed apps from Start Menu shortcuts (.lnk). Store apps: see store.py."""
 
 from __future__ import annotations
 
@@ -7,11 +7,12 @@ import os
 from collections.abc import Iterable, Iterator, Sequence
 from pathlib import Path
 
+from sazed.nlu.normalize import strip_accents
 from sazed.skills.pc.apps import AppEntry
 
 log = logging.getLogger(__name__)
 
-EXCLUDED_WORDS = ("uninstall", "desinstalar", "remover", "readme", "leia-me", "help", "ajuda")
+EXCLUDED_WORDS = ("uninstall", "desinstal", "remover", "readme", "leia-me", "help", "ajuda")
 _PROGRAMS = Path("Microsoft") / "Windows" / "Start Menu" / "Programs"
 
 
@@ -20,13 +21,18 @@ def start_menu_dirs() -> list[Path]:
     return [Path(r) / _PROGRAMS for r in roots if r]
 
 
+def is_excluded(name: str) -> bool:
+    key = strip_accents(name.strip().lower())
+    return any(word in key for word in EXCLUDED_WORDS)
+
+
 def build_entries(shortcuts: Iterable[tuple[str, str, str]]) -> list[AppEntry]:
     """(display name, target, shortcut path) → entries. The first of duplicate names wins."""
     seen: set[str] = set()
     entries: list[AppEntry] = []
     for name, target, shortcut in shortcuts:
         key = name.strip().lower()
-        if any(word in key for word in EXCLUDED_WORDS):
+        if is_excluded(name):
             continue
         if not target.lower().endswith(".exe"):
             continue

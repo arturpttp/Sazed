@@ -88,6 +88,9 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
         "Peço desculpas, {mestre}. Não consegui {action}.",
         "Algo deu errado ao tentar {action}, {mestre}. Peço desculpas.",
     ),
+    "CannotCloseSite": (
+        "Não consigo fechar abas do navegador, {mestre}. {app} fica por sua conta.",
+    ),
     "InvalidPercent": ("Só consigo ajustar de 0 a 100%, {mestre}. '{raw}' fica fora disso.",),
     # Decisions
     "Execute": ("Pois não, {mestre}.",),

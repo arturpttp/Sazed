@@ -1,4 +1,6 @@
-from sazed.adapters.windows.catalog import build_entries
+import pytest
+
+from sazed.adapters.windows.catalog import build_entries, is_excluded
 from sazed.adapters.windows.launcher import root_pids
 from sazed.skills.pc.apps import AppEntry
 
@@ -57,3 +59,15 @@ def test_ordinary_targets_do_not_match_neighbours_in_their_folder() -> None:
     charmap = r"C:\Windows\System32\charmap.exe"
     processes = [(10, 1, r"C:\Windows\System32\notepad.exe"), (11, 1, charmap)]
     assert root_pids(processes, charmap) == [11]
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["Desinstalação do Foo", "Desinstalar Bar", "Uninstall Baz", "Leia-me", "Ajuda do Qux"],
+)
+def test_uninstallers_and_docs_are_excluded(name: str) -> None:
+    assert is_excluded(name)
+
+
+def test_a_normal_app_is_not_excluded() -> None:
+    assert not is_excluded("Visual Studio Code")
