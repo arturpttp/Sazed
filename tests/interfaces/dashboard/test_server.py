@@ -1,5 +1,6 @@
 import http.client
 import json
+import re
 import threading
 from collections.abc import Iterator
 from datetime import datetime
@@ -19,6 +20,7 @@ from sazed.interfaces.dashboard.sources import DevSources, ResourceSampler
 from sazed.runtime.insight import CoppermindReader, config_view
 
 NOW = datetime(2026, 10, 15, 12, 0)
+SVG_NAMESPACE = b"http://www.w3.org/2000/svg"
 
 
 def seed(db: Path) -> None:
@@ -129,7 +131,9 @@ def test_static_files(served: tuple[int, DashboardApi], path: str) -> None:
     assert status == 200
     assert "default-src 'self'" in headers["Content-Security-Policy"]
     assert headers["X-Content-Type-Options"] == "nosniff"
-    assert b"http://" not in body and b"https://" not in body  # offline: nothing external
+    # Offline: no URL to anywhere. The SVG namespace is an identifier, never fetched.
+    urls = re.findall(rb"(?:https?:)?//[\w.-]+\.[a-z]{2,}[^\s\"')]*", body)
+    assert [u for u in urls if u != SVG_NAMESPACE] == []
 
 
 def test_page_is_pt_br(served: tuple[int, DashboardApi]) -> None:

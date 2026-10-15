@@ -1,1 +1,47 @@
-<!doctype html><html lang="pt-BR"><head><link rel="stylesheet" href="style.css"></head><body><script src="app.js"></script></body></html>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Painel de Sazed</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="top-row">
+      <div class="brand">
+        <h1>Painel de <span>Sazed</span></h1>
+        <small>somente leitura · local</small>
+      </div>
+      <span id="status" class="badge" aria-live="polite">verificando…</span>
+      <span id="updated" class="updated"></span>
+      <label class="updated">Tema
+        <select id="theme" aria-label="Tema">
+          <option value="auto">automático</option>
+          <option value="light">claro</option>
+          <option value="dark">escuro</option>
+        </select>
+      </label>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Seções">
+      <button role="tab" data-tab="geral">Visão geral</button>
+      <button role="tab" data-tab="raciocinio">Raciocínio</button>
+      <button role="tab" data-tab="desenvolvimento">Desenvolvimento</button>
+      <button role="tab" data-tab="aprendizado">Aprendizado</button>
+      <button role="tab" data-tab="recursos">Recursos</button>
+      <button role="tab" data-tab="coppermind">Coppermind</button>
+      <button role="tab" data-tab="capacidades">Capacidades &amp; Config</button>
+    </nav>
+  </header>
+  <main>
+    <section class="panel stack" id="geral" role="tabpanel" hidden></section>
+    <section class="panel stack" id="raciocinio" role="tabpanel" hidden></section>
+    <section class="panel stack" id="desenvolvimento" role="tabpanel" hidden></section>
+    <section class="panel stack" id="aprendizado" role="tabpanel" hidden></section>
+    <section class="panel stack" id="recursos" role="tabpanel" hidden></section>
+    <section class="panel stack" id="coppermind" role="tabpanel" hidden></section>
+    <section class="panel stack" id="capacidades" role="tabpanel" hidden></section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
