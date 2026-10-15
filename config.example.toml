@@ -1,0 +1,29 @@
+# Copy to %LOCALAPPDATA%\Sazed\config.toml and edit.
+# Every value below is the default; the test suite checks that this file stays true.
+
+[user]
+name = "Artur"
+
+[nlu]
+# Tuned against tests/fixtures/nlu_cases.toml (scripts/tune_thresholds.py).
+t_exec = 0.90
+t_confirm = 0.84
+g_min = 0.02
+
+[learning]
+t_conflict = 0.92
+t_dup = 0.97
+
+[dialogue]
+context_ttl_seconds = 60.0
+
+[logging]
+debug = false
+
+# [model]
+# embedder_path = "C:/caminho/para/models/multilingual-e5-small"
+# [data]
+# dir = "C:/Users/<você>/AppData/Local/Sazed"
+
+[aliases]
+# zap = "WhatsApp"
