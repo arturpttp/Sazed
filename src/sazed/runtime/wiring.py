@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from random import Random
 
-from sazed.adapters.sqlite.coppermind import SqliteCoppermind
+from sazed.adapters.sqlite.coppermind import CoppermindVersionError, SqliteCoppermind
 from sazed.core.learning import LearningThresholds
 from sazed.core.persona import Prompt, render
 from sazed.core.policy import Thresholds
@@ -15,8 +17,9 @@ from sazed.core.skill import Skill
 from sazed.nlu.embedder import Embedder
 from sazed.nlu.matcher import IntentMatcher
 from sazed.runtime.assistant import Assistant, Settings
-from sazed.runtime.config import Config
+from sazed.runtime.config import DEFAULT_CONFIG_PATH, Config, ConfigError, load_config
 from sazed.runtime.extractors import build_extractors
+from sazed.runtime.logs import setup_logging
 from sazed.skills.pc.apps import AppCatalog, AppLauncher, AppsSkill
 from sazed.skills.pc.volume import AudioControl, VolumeSkill
 
@@ -80,3 +83,52 @@ def build_app(
         rng=rng,
     )
     return SazedApp(assistant, store, index, skills, config, rng, clock)
+
+
+log = logging.getLogger(__name__)
+
+
+class StartupError(Exception):
+    """Sazed cannot start. `str(error)` is a pt-BR message meant for the user."""
+
+
+def build_default_app(config: Config) -> SazedApp:
+    from sazed.adapters.onnx.embedder import OnnxEmbedder
+    from sazed.adapters.windows.audio import PycawAudio
+    from sazed.adapters.windows.catalog import StartMenuCatalog
+    from sazed.adapters.windows.launcher import WindowsLauncher
+
+    return build_app(
+        config,
+        embedder=OnnxEmbedder(config.model.embedder_path),
+        catalog=StartMenuCatalog(),
+        launcher=WindowsLauncher(),
+        audio=PycawAudio(),
+    )
+
+
+def start(config_path: Path | None) -> SazedApp:
+    path = config_path or DEFAULT_CONFIG_PATH
+    try:
+        config = load_config(path)
+    except ConfigError as err:
+        raise StartupError(str(err)) from None
+    setup_logging(config.data.dir / "logs", debug=config.logging.debug)
+    if not (config.model.embedder_path / "model.onnx").exists():
+        raise StartupError(
+            f"Não encontrei o modelo em {config.model.embedder_path}. "
+            "Rode uma vez: uv run python scripts/fetch_model.py"
+        )
+    try:
+        return build_default_app(config)
+    except CoppermindVersionError:
+        log.exception("coppermind schema is newer than this version")
+        raise StartupError(
+            "Minha mente de cobre foi gravada por uma versão mais nova de Sazed. "
+            "Atualize o programa antes de continuar."
+        ) from None
+    except Exception:
+        log.exception("startup failed")
+        raise StartupError(
+            "Peço desculpas, não consegui iniciar. Os detalhes estão no arquivo de log."
+        ) from None

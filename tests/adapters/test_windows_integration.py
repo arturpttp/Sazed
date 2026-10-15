@@ -25,7 +25,9 @@ def wait_until(condition: Callable[[], bool], seconds: float = 8.0) -> bool:
 def shortcut_dir(tmp_path: Path) -> Path:
     import win32com.client
 
-    link = win32com.client.Dispatch("WScript.Shell").CreateShortcut(str(tmp_path / "Mapa Teste.lnk"))
+    link = win32com.client.Dispatch("WScript.Shell").CreateShortcut(
+        str(tmp_path / "Mapa Teste.lnk")
+    )
     link.TargetPath = CHARMAP
     link.Save()
     return tmp_path

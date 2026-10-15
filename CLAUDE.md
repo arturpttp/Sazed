@@ -37,3 +37,13 @@ Sazed, the Terris Keeper from *Mistborn*. Read [`AGENTS.md`](./AGENTS.md) and
 
 - Ruff formats Python code blocks inside Markdown; `*.md` is excluded in `pyproject.toml` so
   docs are not rewritten.
+
+## Verified by hand
+
+2026-10-15, real model (int8) and desktop, placeholder thresholds, via piped stdin to
+`uv run sazed --config <temp>`: `volume em 30` → 30%; `aumenta o volume` → 40%; `de novo` → 50%;
+`muta` / `tira do mudo` → muted / unmuted; `abre o character map` → opened;
+`fecha o character map` → confirmation asked (low score), `sim` → closed and the phrase was learned;
+`esquece isso` → that example forgotten. Volume restored afterwards.
+**Unverified:** typing in an interactive console (only piped stdin was used), Ctrl-C handling,
+`sazed aprendizado` / `revisar` against the real data dir (covered only by tests with fakes).
