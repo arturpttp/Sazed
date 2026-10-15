@@ -193,7 +193,7 @@ class Assistant:
             if control.kind is ControlKind.CORRECT and last is not None:
                 return self._correct(u, last, control.rest)
             if control.kind in (ControlKind.CONFIRM, ControlKind.DENY):
-                return self._not_understood(u)
+                return self._not_understood(u, remember=False)
         return self._understand(u)
 
     # understanding ---------------------------------------------------------------
@@ -278,6 +278,13 @@ class Assistant:
         return _Turn(texts, outcome=outcome)
 
     def _resolve_answer(self, pending: AwaitSlot, u: Utterance) -> SlotValue | Unmatched | None:
+        ranking = self._index.rank(u.normalized)
+        if (
+            ranking
+            and ranking[0].intent_id != pending.intent_id
+            and ranking[0].score >= self._settings.thresholds.t_exec
+        ):
+            return None  # a different, clearly recognised command: not an answer
         if pending.candidates:
             choice = pick_candidate(u.normalized, pending.candidates)
             if choice is None:
@@ -288,7 +295,6 @@ class Assistant:
         if isinstance(extracted, SlotValue):
             return extracted
         if isinstance(extracted, Unmatched):
-            ranking = self._index.rank(u.normalized)
             looks_like_a_command = (
                 bool(ranking) and ranking[0].score >= self._settings.thresholds.t_confirm
             )
@@ -390,9 +396,14 @@ class Assistant:
         text = self._say(decision, pergunta=spec.question(decision.slot))
         return _Turn([text], decision=decision, intent_id=spec.id)
 
-    def _not_understood(self, u: Utterance, ranking: Ranking = ()) -> _Turn:
-        last = LastTurn(LastKind.NOT_UNDERSTOOD, u.normalized, None, {}, None)
-        self._ctx = self._ctx.with_last(last, self._now)
+    def _not_understood(
+        self, u: Utterance, ranking: Ranking = (), *, remember: bool = True
+    ) -> _Turn:
+        # Control phrases ("sim", "não, era …") are never remembered as a failed command,
+        # otherwise the next success would offer to learn "sim" as its meaning.
+        if remember:
+            last = LastTurn(LastKind.NOT_UNDERSTOOD, u.normalized, None, {}, None)
+            self._ctx = self._ctx.with_last(last, self._now)
         decision = NotUnderstood()
         return _Turn([self._say(decision)], decision=decision, ranking=ranking)
 
@@ -472,7 +483,7 @@ class Assistant:
             _, spec = self._specs[last.intent_id]
             found = self._extractors["app"](rest_norm, self._aliases.get("app", {}))
             if found is None:
-                return self._not_understood(u)
+                return self._not_understood(u, remember=False)
             self._react(Reaction.CORRECTED)
             if isinstance(found, Ambiguous):
                 ask = AskSlot(spec.id, last.slots, "app", found.candidates, last.raw_query)
@@ -499,7 +510,7 @@ class Assistant:
                     if isinstance(v, SlotValue)
                 }
                 if not fixed:
-                    return self._not_understood(u)
+                    return self._not_understood(u, remember=False)
                 self._react(Reaction.CORRECTED)
                 return self._proceed(spec.id, {**last.slots, **fixed}, u)
             # Another intent: the last command misfired. Learn the original phrase for the

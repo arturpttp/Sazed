@@ -179,3 +179,44 @@ def test_context_uses_the_injected_clock_only(make: Make) -> None:
     h.clock.advance(30)
     h.say("sim")
     assert h.launcher.launched == ["Google Chrome"]
+
+
+def test_other_command_with_an_app_is_not_taken_as_the_slot_answer(make: Make) -> None:
+    h = make({**OPEN_SOMETHING, "fecha o spotify": {"fechar_app": 0.97, "abrir_app": 0.60}})
+    h.say("abre o programa")
+    h.say("fecha o spotify")
+    assert h.launcher.launched == []
+
+
+def test_other_command_naming_a_candidate_is_not_the_choice(make: Make) -> None:
+    h = make(
+        {
+            "abre o code": {"abrir_app": 0.95, "fechar_app": 0.40},
+            "fecha o visual studio code": {"fechar_app": 0.97, "abrir_app": 0.60},
+        }
+    )
+    h.say("abre o code")
+    h.say("fecha o visual studio code")
+    assert h.launcher.launched == []
+    assert h.store.aliases() == []
+
+
+def test_other_volume_command_is_not_taken_as_the_percent_answer(make: Make) -> None:
+    h = make(
+        {
+            "volume": {"volume_definir": 0.95, "volume_aumentar": 0.60},
+            "aumenta o volume em 20": {"volume_aumentar": 0.97, "volume_definir": 0.70},
+        }
+    )
+    h.say("volume")
+    h.say("aumenta o volume em 20")
+    assert h.audio.volume == 70
+
+
+def test_bare_yes_is_never_offered_as_a_rephrase(make: Make) -> None:
+    h = make({"abre o chrome": {"abrir_app": 0.95, "fechar_app": 0.60}})
+    h.say("sim")
+    r = h.say("abre o chrome")
+    assert "'sim'" not in r.text
+    h.say("sim")
+    assert h.store.learned() == []
