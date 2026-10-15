@@ -11,13 +11,22 @@ from random import Random
 from sazed.core.context import (
     AliasCandidate,
     AwaitConfirm,
+    AwaitLearn,
     AwaitSlot,
     DialogueContext,
     LastKind,
     LastTurn,
     Pending,
 )
-from sazed.core.coppermind import Coppermind, Episode, Reaction
+from sazed.core.coppermind import (
+    Coppermind,
+    Episode,
+    LearnedItem,
+    LearnedKind,
+    NewAlias,
+    NewExample,
+    Reaction,
+)
 from sazed.core.decisions import (
     AskSlot,
     Confirm,
@@ -26,12 +35,17 @@ from sazed.core.decisions import (
     Execute,
     NotUnderstood,
 )
-from sazed.core.learning import LearningThresholds
+from sazed.core.learning import LearningThresholds, Verdict, judge_example
 from sazed.core.outcomes import (
     ActionFailed,
+    AliasLearned,
+    AlreadyKnown,
     AmbiguousSlot,
     AppNotFound,
     Cancelled,
+    ExampleLearned,
+    Forgotten,
+    NothingToForget,
     Outcome,
     is_failure,
 )
@@ -85,6 +99,14 @@ def _alias_key(alias: str) -> str:
     return strip_accents(normalize(alias))
 
 
+def _describe_learned(items: Sequence[LearnedItem]) -> str:
+    parts = [
+        f"'{i.text}' como {i.target}" if i.kind is LearnedKind.ALIAS else f"'{i.text}'"
+        for i in items
+    ]
+    return " e ".join(parts)
+
+
 def _slot_summary(slots: Mapping[str, Extraction]) -> dict[str, str]:
     summary: dict[str, str] = {}
     for name, value in slots.items():
@@ -126,6 +148,10 @@ class Assistant:
         self._ctx = DialogueContext()
         self._now = datetime.min
         self._last_episode: int | None = None
+        for example in store.examples():
+            index.add(example.intent_id, example.text, example.embedding)
+        for alias in store.aliases():
+            self._aliases.setdefault(alias.slot, {})[_alias_key(alias.alias)] = alias.value
 
     # entry point ---------------------------------------------------------------
 
@@ -155,6 +181,8 @@ class Assistant:
                 return answered
         if control is not None:
             last = self._ctx.last
+            if control.kind is ControlKind.FORGET:
+                return self._forget()
             if (
                 control.kind is ControlKind.REPEAT
                 and last is not None
@@ -162,6 +190,8 @@ class Assistant:
                 and last.intent_id is not None
             ):
                 return self._proceed(last.intent_id, last.slots, u)
+            if control.kind is ControlKind.CORRECT and last is not None:
+                return self._correct(u, last, control.rest)
             if control.kind in (ControlKind.CONFIRM, ControlKind.DENY):
                 return self._not_understood(u)
         return self._understand(u)
@@ -183,9 +213,22 @@ class Assistant:
 
     def _enact(self, decision: Decision, spec: IntentSpec, u: Utterance) -> _Turn:
         if isinstance(decision, Execute):
+            previous = self._ctx.last
             turn = self._execute(spec, decision.slots, u)
             if turn.decision is None:
                 turn.decision = decision
+            rephrased = previous is not None and previous.kind is LastKind.NOT_UNDERSTOOD
+            if (
+                rephrased
+                and previous is not None
+                and isinstance(turn.decision, Execute)
+                and not is_failure(turn.outcome)
+                and self._ctx.pending is None
+            ):
+                self._ctx = self._ctx.with_pending(
+                    AwaitLearn(previous.utterance, spec.id), self._now
+                )
+                turn.texts.append(self._say(Prompt.OFFER_LEARN, original=previous.utterance))
             return turn
         if isinstance(decision, Confirm):
             return self._confirm(spec, decision, u)
@@ -220,8 +263,19 @@ class Assistant:
         if isinstance(pending, AwaitConfirm):
             self._react(Reaction.CONFIRMED)
             _, spec = self._specs[pending.intent_id]
-            return self._execute(spec, pending.slots, u)
-        return None
+            turn = self._execute(spec, pending.slots, u)
+            if not is_failure(turn.outcome):
+                examples = (
+                    [(pending.utterance, spec.id, "confirmed")] if pending.learn_example else []
+                )
+                aliases = [pending.alias] if pending.alias is not None else []
+                texts, _ = self._learn(examples, aliases)
+                turn.texts.extend(texts)
+            return turn
+        texts, outcome = self._learn(
+            [(pending.text, pending.intent_id, "offered")], [], announce=True, allow_conflict=True
+        )
+        return _Turn(texts, outcome=outcome)
 
     def _resolve_answer(self, pending: AwaitSlot, u: Utterance) -> SlotValue | Unmatched | None:
         if pending.candidates:
@@ -255,6 +309,9 @@ class Assistant:
         turn = self._execute(spec, slots, u)
         if turn.decision is None:
             turn.decision = Execute(intent_id, slots)
+        if alias is not None and not is_failure(turn.outcome):
+            texts, _ = self._learn([], [alias])
+            turn.texts.extend(texts)
         return turn
 
     def _cancelled(self) -> _Turn:
@@ -338,6 +395,127 @@ class Assistant:
         self._ctx = self._ctx.with_last(last, self._now)
         decision = NotUnderstood()
         return _Turn([self._say(decision)], decision=decision, ranking=ranking)
+
+    # learning ------------------------------------------------------------------
+
+    def _learn(
+        self,
+        examples: Sequence[tuple[str, str, str]],
+        aliases: Sequence[AliasCandidate],
+        *,
+        ignore: frozenset[str] = frozenset(),
+        announce: bool = False,
+        allow_conflict: bool = False,
+    ) -> tuple[list[str], Outcome | None]:
+        """Validate every candidate, then write all of them in one store transaction."""
+        texts: list[str] = []
+        outcome: Outcome | None = None
+        new_examples: list[NewExample] = []
+        for text, intent_id, origin in examples:
+            scores = self._index.scores(text)
+            verdict = judge_example(scores, intent_id, self._settings.learning, ignore)
+            if verdict is Verdict.DUPLICATE:
+                if announce:
+                    outcome = AlreadyKnown()
+                    texts.append(self._say(outcome))
+                continue
+            if verdict is Verdict.CONFLICT and not allow_conflict:
+                _, spec = self._specs[intent_id]
+                self._ctx = self._ctx.with_pending(AwaitLearn(text, intent_id), self._now)
+                texts.append(self._say(Prompt.CONFLICT_ASK, texto=text, acao=spec.describe({})))
+                continue
+            new_examples.append(NewExample(text, intent_id, self._index.vectorize(text), origin))
+        new_aliases = [
+            NewAlias(a.slot, a.alias, a.value)
+            for a in aliases
+            if self._aliases.get(a.slot, {}).get(_alias_key(a.alias)) != a.value
+        ]
+        if new_examples or new_aliases:
+            self._store.learn(new_examples, new_aliases, self._now)
+            for ex in new_examples:
+                self._index.add(ex.intent_id, ex.text, ex.embedding)
+            for al in new_aliases:
+                self._aliases.setdefault(al.slot, {})[_alias_key(al.alias)] = al.value
+        if announce and new_examples:
+            outcome = ExampleLearned(new_examples[0].text)
+            texts.append(self._say(outcome))
+        for al in new_aliases:
+            outcome = AliasLearned(al.alias, al.value)
+            texts.append(self._say(outcome))
+        return texts, outcome
+
+    def _forget(self) -> _Turn:
+        items = self._store.forget_latest()
+        if not items:
+            nothing = NothingToForget()
+            return _Turn([self._say(nothing)], outcome=nothing)
+        for item in items:
+            if item.kind is LearnedKind.EXAMPLE:
+                self._index.remove(item.target, item.text)
+            else:
+                self._unlearn_alias(item.slot or "", item.text)
+        outcome = Forgotten(_describe_learned(items))
+        return _Turn([self._say(outcome)], outcome=outcome)
+
+    def _unlearn_alias(self, slot: str, alias: str) -> None:
+        key = _alias_key(alias)
+        configured = self._base_aliases.get(slot, {}).get(key)
+        current = self._aliases.setdefault(slot, {})
+        if configured is None:
+            current.pop(key, None)
+        else:
+            current[key] = configured
+
+    def _correct(self, u: Utterance, last: LastTurn, rest: str) -> _Turn:
+        rest_norm = normalize(rest)
+        if last.kind is LastKind.APP_NOT_FOUND and last.intent_id is not None and last.raw_query:
+            _, spec = self._specs[last.intent_id]
+            found = self._extractors["app"](rest_norm, self._aliases.get("app", {}))
+            if found is None:
+                return self._not_understood(u)
+            self._react(Reaction.CORRECTED)
+            if isinstance(found, Ambiguous):
+                ask = AskSlot(spec.id, last.slots, "app", found.candidates, last.raw_query)
+                return self._ask(spec, ask, u)
+            alias = None
+            if isinstance(found, SlotValue):
+                alias = AliasCandidate("app", last.raw_query, str(found.value))
+            return self._proceed(spec.id, {**last.slots, "app": found}, u, alias=alias)
+
+        if last.kind is LastKind.EXECUTED and last.intent_id is not None:
+            ranking = self._index.rank(rest_norm)
+            top = ranking[0] if ranking else None
+            if (
+                top is None
+                or top.score < self._settings.thresholds.t_confirm
+                or top.intent_id == last.intent_id
+                or top.intent_id not in self._specs
+            ):
+                # Same intent: the user is correcting a slot ("não, era o spotify").
+                _, spec = self._specs[last.intent_id]
+                fixed = {
+                    n: v
+                    for n, v in self._extract(spec, rest_norm).items()
+                    if isinstance(v, SlotValue)
+                }
+                if not fixed:
+                    return self._not_understood(u)
+                self._react(Reaction.CORRECTED)
+                return self._proceed(spec.id, {**last.slots, **fixed}, u)
+            # Another intent: the last command misfired. Learn the original phrase for the
+            # right intent; resembling the misfired intent is expected, so it is ignored.
+            _, spec = self._specs[top.intent_id]
+            carried = {n: v for n, v in last.slots.items() if n in spec.slot_names}
+            fresh = _given(self._extract(spec, rest_norm))
+            self._react(Reaction.CORRECTED)
+            turn = self._proceed(spec.id, {**carried, **fresh}, u)
+            texts, _ = self._learn(
+                [(last.utterance, spec.id, "corrected")], [], ignore=frozenset({last.intent_id})
+            )
+            turn.texts.extend(texts)
+            return turn
+
+        return self._understand(Utterance(rest, rest_norm, u.received_at))
 
     # plumbing ------------------------------------------------------------------
 

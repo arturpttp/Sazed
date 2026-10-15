@@ -43,3 +43,12 @@ E         Left contains one more item: StoredExample(id=1, text='abre aí o chrom
 E         Use -v to get more diff
 ```
 (A first attempt used a text anchor that the formatter had changed, so the mutation did not apply and the test passed. It was discarded and redone by line.)
+
+## Forget
+Mutation: `Assistant._forget` deletes from the store but skips removing items from the in-memory index/aliases.
+```
+FAILED tests/runtime/test_assistant_learning.py::test_forget_removes_the_latest_alias_from_store_and_memory
+FAILED tests/runtime/test_assistant_learning.py::test_forget_removes_a_learned_example_from_the_index
+FAILED tests/runtime/test_assistant_learning.py::test_forgetting_a_learned_alias_restores_the_configured_one
+3 failed, 1 passed, 13 deselected in 0.09s
+```
