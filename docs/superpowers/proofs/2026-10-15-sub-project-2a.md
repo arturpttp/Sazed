@@ -59,3 +59,12 @@ Mutation: delete the exact-name block in `extract_app`.
 E       AssertionError: assert Ambiguous(name='app', raw='whatsapp', candidates=('WhatsApp', 'WhatsApp Web')) == SlotValue(name='app', value='WhatsApp', raw='whatsapp', confidence=1.0, exact=True)
 FAILED tests/nlu/test_slot_app.py::test_an_exact_name_wins_over_a_longer_name_containing_it
 ```
+
+## Store app frame windows
+Mutation: `windows_to_close` returns only windows owned by the app's own processes (the old
+behaviour), ignoring ApplicationFrameHost frames that host it.
+```
+FAILED tests/adapters/test_windows_pure.py::test_a_frame_window_hosting_the_app_is_closed
+FAILED tests/adapters/test_windows_integration.py::test_store_calculator_opens_and_closes
+```
+(The real-desktop run left Calculator open; it was closed afterwards with the fixed code.)

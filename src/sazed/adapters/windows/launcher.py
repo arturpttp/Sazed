@@ -2,18 +2,22 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable, Sequence
+from dataclasses import dataclass
 
 import psutil
 
 from sazed.skills.pc.apps import AppEntry
 
 
-def _same_path(a: str | None, b: str) -> bool:
-    return a is not None and os.path.normcase(os.path.normpath(a)) == os.path.normcase(
-        os.path.normpath(b)
-    )
+def _norm(path: str) -> str:
+    return os.path.normcase(os.path.normpath(path))
+
+
+def _under(exe: str | None, folder: str) -> bool:
+    return exe is not None and bool(folder) and _norm(exe).startswith(_norm(folder) + os.sep)
 
 
 # Squirrel installers (Discord, Teams classic, …) point the shortcut at a launcher that
@@ -22,18 +26,41 @@ _LAUNCHER_NAMES = {"update.exe"}
 
 
 def _matches(exe: str | None, target: str) -> bool:
-    if _same_path(exe, target):
+    if exe is not None and _norm(exe) == _norm(target):
         return True
-    if exe is None or os.path.basename(target).lower() not in _LAUNCHER_NAMES:
+    if os.path.basename(target).lower() not in _LAUNCHER_NAMES:
         return False
-    folder = os.path.normcase(os.path.normpath(os.path.dirname(target))) + os.sep
-    return os.path.normcase(os.path.normpath(exe)).startswith(folder)
+    return _under(exe, os.path.dirname(target))
 
 
-def root_pids(processes: Iterable[tuple[int, int, str | None]], target: str) -> list[int]:
-    """PIDs running `target` whose parent is not also running it (one per app instance)."""
-    matching = {pid: ppid for pid, ppid, exe in processes if _matches(exe, target)}
+def entry_matcher(entry: AppEntry) -> Callable[[str | None], bool]:
+    """Which running executables belong to `entry`."""
+    if entry.kind == "site":
+        return lambda exe: False
+    if entry.kind == "store":
+        return lambda exe: _under(exe, entry.target)
+    return lambda exe: _matches(exe, entry.target)
+
+
+def root_pids(
+    processes: Iterable[tuple[int, int, str | None]], matches: Callable[[str | None], bool]
+) -> list[int]:
+    """PIDs of matching processes whose parent does not also match (one per app instance)."""
+    matching = {pid: ppid for pid, ppid, exe in processes if matches(exe)}
     return sorted(pid for pid, ppid in matching.items() if ppid not in matching)
+
+
+@dataclass(frozen=True)
+class WindowInfo:
+    hwnd: int
+    pid: int
+    child_pids: frozenset[int]
+
+
+def windows_to_close(windows: Sequence[WindowInfo], pids: set[int]) -> list[int]:
+    """Top-level windows owned by the app, or hosting it: Store apps draw inside an
+    ApplicationFrameHost.exe frame whose child window belongs to the app's process."""
+    return [w.hwnd for w in windows if w.pid in pids or w.child_pids & pids]
 
 
 def _snapshot() -> list[tuple[int, int, str | None]]:
@@ -49,23 +76,37 @@ class WindowsLauncher:
         os.startfile(entry.shortcut)  # type: ignore[attr-defined]  # Windows only
 
     def instances(self, entry: AppEntry) -> int:
-        return len(root_pids(_snapshot(), entry.target))
+        return len(root_pids(_snapshot(), entry_matcher(entry)))
 
     def close(self, entry: AppEntry) -> int:
         import win32con
         import win32gui
         import win32process
 
-        pids = {pid for pid, _, exe in _snapshot() if _matches(exe, entry.target)}
-        closed: set[int] = set()
+        matches = entry_matcher(entry)
+        pids = {pid for pid, _, exe in _snapshot() if matches(exe)}
+        if not pids:
+            return 0
+        windows: list[WindowInfo] = []
+
+        def pid_of(hwnd: int) -> int:
+            return int(win32process.GetWindowThreadProcessId(hwnd)[1])
 
         def on_window(hwnd: int, _: object) -> bool:
             if win32gui.IsWindowVisible(hwnd):
-                _, pid = win32process.GetWindowThreadProcessId(hwnd)
-                if pid in pids:
-                    win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
-                    closed.add(pid)
+                children: set[int] = set()
+
+                def on_child(child: int, __: object) -> bool:
+                    children.add(pid_of(child))
+                    return True
+
+                with contextlib.suppress(win32gui.error):  # no child windows
+                    win32gui.EnumChildWindows(hwnd, on_child, None)
+                windows.append(WindowInfo(hwnd, pid_of(hwnd), frozenset(children)))
             return True
 
         win32gui.EnumWindows(on_window, None)
-        return len(closed)
+        targets = windows_to_close(windows, pids)
+        for hwnd in targets:
+            win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
+        return len(targets)

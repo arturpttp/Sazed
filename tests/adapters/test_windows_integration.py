@@ -64,3 +64,18 @@ def test_volume_set_read_and_restore() -> None:
     finally:
         audio.set_volume(original)
         audio.set_muted(was_muted)
+
+
+def test_store_calculator_opens_and_closes() -> None:
+    from sazed.adapters.windows.store import StoreCatalog
+
+    entry = next(e for e in StoreCatalog().entries() if e.name == "Calculator")
+    launcher = WindowsLauncher()
+    launcher.launch(entry)
+    try:
+        assert wait_until(lambda: launcher.instances(entry) >= 1)
+        assert launcher.close(entry) >= 1
+        assert wait_until(lambda: launcher.instances(entry) == 0)
+    finally:
+        if launcher.instances(entry):
+            launcher.close(entry)
