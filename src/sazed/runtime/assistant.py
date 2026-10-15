@@ -15,8 +15,9 @@ from sazed.core.context import (
     DialogueContext,
     LastKind,
     LastTurn,
+    Pending,
 )
-from sazed.core.coppermind import Coppermind, Episode
+from sazed.core.coppermind import Coppermind, Episode, Reaction
 from sazed.core.decisions import (
     AskSlot,
     Confirm,
@@ -26,7 +27,14 @@ from sazed.core.decisions import (
     NotUnderstood,
 )
 from sazed.core.learning import LearningThresholds
-from sazed.core.outcomes import ActionFailed, AppNotFound, Outcome, is_failure
+from sazed.core.outcomes import (
+    ActionFailed,
+    AmbiguousSlot,
+    AppNotFound,
+    Cancelled,
+    Outcome,
+    is_failure,
+)
 from sazed.core.persona import Prompt, render
 from sazed.core.policy import IntentRequirements, Thresholds, decide
 from sazed.core.response import Response
@@ -41,6 +49,7 @@ from sazed.core.types import (
     Unmatched,
     Utterance,
 )
+from sazed.nlu.control import Control, ControlKind, parse_control, pick_candidate
 from sazed.nlu.matcher import IntentIndex
 from sazed.nlu.normalize import normalize, strip_accents
 from sazed.runtime.extractors import SlotExtractor
@@ -137,6 +146,24 @@ class Assistant:
         return Response(" ".join(turn.texts), turn.outcome, turn.decision)
 
     def _dispatch(self, u: Utterance) -> _Turn:
+        control = parse_control(u.normalized)
+        pending = self._ctx.pending
+        if pending is not None:
+            self._ctx = self._ctx.without_pending()
+            answered = self._answer(pending, u, control)
+            if answered is not None:
+                return answered
+        if control is not None:
+            last = self._ctx.last
+            if (
+                control.kind is ControlKind.REPEAT
+                and last is not None
+                and last.kind is LastKind.EXECUTED
+                and last.intent_id is not None
+            ):
+                return self._proceed(last.intent_id, last.slots, u)
+            if control.kind in (ControlKind.CONFIRM, ControlKind.DENY):
+                return self._not_understood(u)
         return self._understand(u)
 
     # understanding ---------------------------------------------------------------
@@ -166,6 +193,82 @@ class Assistant:
             return self._ask(spec, decision, u)
         return self._not_understood(u)
 
+    # dialogue ------------------------------------------------------------------
+
+    def _answer(self, pending: Pending, u: Utterance, control: Control | None) -> _Turn | None:
+        """Try `u` as the answer to `pending`. None means "not an answer": handle it normally."""
+        kind = control.kind if control is not None else None
+        if isinstance(pending, AwaitSlot):
+            if kind is ControlKind.DENY:
+                return self._cancelled()
+            if kind is not None:
+                return None
+            value = self._resolve_answer(pending, u)
+            if value is None:
+                return None
+            alias = None
+            if pending.candidates and pending.raw and isinstance(value, SlotValue):
+                alias = AliasCandidate(pending.slot, pending.raw, str(value.value))
+            slots = {**pending.slots, pending.slot: value}
+            return self._proceed(pending.intent_id, slots, u, alias=alias)
+        if kind is ControlKind.DENY:
+            if isinstance(pending, AwaitConfirm):
+                self._react(Reaction.DENIED)
+            return self._cancelled()
+        if kind is not ControlKind.CONFIRM:
+            return None
+        if isinstance(pending, AwaitConfirm):
+            self._react(Reaction.CONFIRMED)
+            _, spec = self._specs[pending.intent_id]
+            return self._execute(spec, pending.slots, u)
+        return None
+
+    def _resolve_answer(self, pending: AwaitSlot, u: Utterance) -> SlotValue | Unmatched | None:
+        if pending.candidates:
+            choice = pick_candidate(u.normalized, pending.candidates)
+            if choice is None:
+                return None
+            return SlotValue(pending.slot, choice, pending.raw or u.normalized, 1.0, exact=True)
+        aliases = self._aliases.get(pending.slot, {})
+        extracted = self._extractors[pending.slot](u.normalized, aliases)
+        if isinstance(extracted, SlotValue):
+            return extracted
+        if isinstance(extracted, Unmatched):
+            ranking = self._index.rank(u.normalized)
+            looks_like_a_command = (
+                bool(ranking) and ranking[0].score >= self._settings.thresholds.t_confirm
+            )
+            return None if looks_like_a_command else extracted
+        return None
+
+    def _proceed(
+        self, intent_id: str, slots: Slots, u: Utterance, *, alias: AliasCandidate | None = None
+    ) -> _Turn:
+        """Continue a command whose intent is already settled (answer, repeat, correction)."""
+        _, spec = self._specs[intent_id]
+        missing = sorted(spec.required - set(slots))
+        if missing:
+            return self._ask(spec, AskSlot(intent_id, slots, missing[0], (), ""), u)
+        if spec.requires_confirmation(slots):
+            decision = Confirm(intent_id, slots, ConfirmReason.DESTRUCTIVE)
+            return self._confirm(spec, decision, u, alias=alias)
+        turn = self._execute(spec, slots, u)
+        if turn.decision is None:
+            turn.decision = Execute(intent_id, slots)
+        return turn
+
+    def _cancelled(self) -> _Turn:
+        outcome = Cancelled()
+        return _Turn([self._say(outcome)], outcome=outcome)
+
+    def _react(self, reaction: Reaction) -> None:
+        if self._last_episode is None:
+            return
+        try:
+            self._store.set_reaction(self._last_episode, reaction)
+        except Exception:
+            log.exception("could not record the reaction")
+
     def _extract(self, spec: IntentSpec, text: str) -> dict[str, Extraction]:
         found: dict[str, Extraction] = {}
         for slot in spec.slots:
@@ -183,9 +286,26 @@ class Assistant:
         except Exception:
             log.exception("skill %s failed executing %s", skill.id, spec.id)
             outcome = ActionFailed(action=spec.describe(slots))
+        if isinstance(outcome, AmbiguousSlot):
+            ask = AskSlot(spec.id, slots, outcome.slot, outcome.candidates, "")
+            return self._ask(spec, ask, u)
         if isinstance(outcome, AppNotFound):
             last = LastTurn(LastKind.APP_NOT_FOUND, u.normalized, spec.id, slots, outcome.query)
             self._ctx = self._ctx.with_last(last, self._now)
+            if outcome.suggestion is not None:
+                # AppNotFound is specific to the "app" slot, so the slot name is fixed here.
+                fixed = {
+                    **slots,
+                    "app": SlotValue("app", outcome.suggestion, outcome.query, 1.0, exact=True),
+                }
+                offer = AwaitConfirm(
+                    spec.id,
+                    fixed,
+                    u.normalized,
+                    learn_example=False,
+                    alias=AliasCandidate("app", outcome.query, outcome.suggestion),
+                )
+                self._ctx = self._ctx.with_pending(offer, self._now)
         elif not is_failure(outcome):
             last = LastTurn(LastKind.EXECUTED, u.normalized, spec.id, slots, None)
             self._ctx = self._ctx.with_last(last, self._now)
