@@ -26,12 +26,18 @@ Sazed, the Terris Keeper from *Mistborn*. Read [`AGENTS.md`](./AGENTS.md) and
 - e5-small weighs the object (app name, number) over the verb: seeds deliberately share objects
   across opposing intents (open/close, up/down/set) so the verb decides. Keep that when adding seeds.
 - **Unverified:** `learning.t_conflict` / `t_dup` are placeholders (no fixture measures them yet);
-  Store (UWP) apps are not in the catalog; closing apps whose shortcut targets a launcher.
+  closing apps whose shortcut targets a launcher.
+- **Open finding (2026-10-15, by hand):** once "abre o whatsapp" is learned from a confirmation,
+  "fecha o whatsapp" ranks `abrir_app` (e5 weighs the object), so Sazed asks "abrir WhatsApp?".
+  The fixture cannot see it (evaluation never learns). Learned examples carrying an app name
+  pull the opposite verb.
 - 2026-10-15: sub-project 1 merged into `main`. Sub-project 2 split into 2a (one-shot PC skills:
   media, system, web, status, Store apps) and 2b (windows, files). 2a spec:
   [`docs/superpowers/specs/2026-10-15-sazed-pc-skills-2a-design.md`](./docs/superpowers/specs/2026-10-15-sazed-pc-skills-2a-design.md).
-- 2a plan: [`docs/superpowers/plans/2026-10-15-sazed-pc-skills-2a.md`](./docs/superpowers/plans/2026-10-15-sazed-pc-skills-2a.md) (16 tasks).
-- **Next step:** user review of the 2a plan, then implementation on `feat/sub-project-2a`.
+- 2a plan: [`docs/superpowers/plans/2026-10-15-sazed-pc-skills-2a.md`](./docs/superpowers/plans/2026-10-15-sazed-pc-skills-2a.md) (16 tasks),
+  implemented on `feat/sub-project-2a`. Proofs:
+  [`docs/superpowers/proofs/2026-10-15-sub-project-2a.md`](./docs/superpowers/proofs/2026-10-15-sub-project-2a.md).
+- **Next step:** final branch review of 2a, then merge; then brainstorm 2b (windows, files).
 
 ## Measurements
 
@@ -40,6 +46,9 @@ load 0.72 s, RSS +402 MB (process total 470 MB); 92 seed examples embedded in 16
 single sentence median 1.9 ms, p95 2.8 ms. Breakdown measured separately: the tokenizer
 (`tokenizer.json`, 250k-token vocabulary) alone is +277 MB, the ONNX session +139 MB. The spec's
 ~200 MB estimate is exceeded mainly by the tokenizer — a candidate fix for a later sub-project.
+
+2026-10-15, after 2a, `scripts/measure_app.py` (full app: model, 9 skills, 285 seed examples,
+Start-menu + Store catalogs, all adapters): startup 2.4–2.8 s, RSS +430 MB (process 473 MB).
 
 ## Commands
 
@@ -69,5 +78,17 @@ single sentence median 1.9 ms, p95 2.8 ms. Breakdown measured separately: the to
 `esquece isso` → that example forgotten. Volume restored afterwards.
 2026-10-15 (after a bug report from use): `abaixa o volume para 100` at 40% → 100%;
 `aumenta o volume pra 30` at 100% → 30%; `abaixa o volume pra zero` → 0%.
+2026-10-15, sub-project 2a, real model and desktop, through the real `Assistant` (temp data dir):
+`o que está tocando` → title and channel of the Vivaldi video; `pausa a música` / `continua a música`
+→ paused, resumed; `tira um print` → `Captura 2026-10-15 18-21-34.png` (2.1 MB) in
+`Pictures\Screenshots`; memory / CPU / disk → pt-BR numbers; `desliga o computador` → confirmation,
+`não` → nothing; `abre as configurações de bluetooth` → that page; `brilho em 50` → WMI reads 50
+(restored to 100); `abre o youtube`, `pesquisa lofi no youtube` → browser tabs;
+`abre a calculadora` / `fecha a calculadora` → opened, closed; `fecha o whatsapp` → confirmed,
+window closed (WhatsApp keeps running in the background, as with its own X); `fecha o youtube` →
+"não consigo fechar abas".
+**Unverified (2a):** `próxima música` / `música anterior` (not run: would skip the user's video),
+`recorta a tela` (opens an overlay that waits for the user), `bloqueia o computador` (needs the
+user present), whether brightness 50 was visibly dimmer (WMI accepted it).
 **Unverified:** typing in an interactive console (only piped stdin was used), Ctrl-C handling,
 `sazed aprendizado` / `revisar` against the real data dir (covered only by tests with fakes).
