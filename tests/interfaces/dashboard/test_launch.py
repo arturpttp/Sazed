@@ -70,3 +70,27 @@ def test_a_busy_port_is_a_pt_br_message(tmp_path: Path) -> None:
     assert said == [
         f"Não consegui abrir a porta {port}; talvez já esteja em uso. Escolha outra com --porta."
     ]
+
+
+class RecordingStream:
+    def __init__(self) -> None:
+        self.events: list[str] = []
+
+    def write(self, text: str) -> int:
+        self.events.append(f"write:{text}")
+        return len(text)
+
+    def flush(self) -> None:
+        self.events.append("flush")
+
+
+def test_messages_are_flushed_so_a_piped_console_sees_them(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from sazed.interfaces.dashboard import launch
+
+    stream = RecordingStream()
+    monkeypatch.setattr("sys.stdout", stream)
+    launch.say("Painel de Sazed em http://127.0.0.1:1/")
+    assert stream.events[-1] == "flush"
+    assert any(e.startswith("write:Painel") for e in stream.events)

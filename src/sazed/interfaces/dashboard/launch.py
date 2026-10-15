@@ -39,6 +39,11 @@ def build_api(view: ConfigView, config_path: Path, root: Path) -> DashboardApi:
     )
 
 
+def say(text: str) -> None:
+    """Flushed: with a piped stdout (a launcher, a log), unflushed text never shows up."""
+    print(text, flush=True)
+
+
 def _serve(server: ThreadingHTTPServer) -> None:
     server.serve_forever()
 
@@ -48,7 +53,7 @@ def run(
     *,
     port: int,
     root: Path | None,
-    out: Callable[[str], None] = print,
+    out: Callable[[str], None] = say,
     serve: Callable[[ThreadingHTTPServer], None] = _serve,
 ) -> int:
     path = config_path or DEFAULT_CONFIG_PATH
