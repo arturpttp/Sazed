@@ -47,7 +47,7 @@ single sentence median 1.9 ms, p95 2.8 ms. Breakdown measured separately: the to
 - `uv run pytest` — fast suite (excludes `model` and `windows` markers).
 - `uv run pytest -m model` — tests that need the downloaded embedder (`uv run python scripts/fetch_model.py` first).
 - `uv run pytest -m windows` — tests that open real apps and change the real volume.
-- `uv run ruff check . && uv run ruff format --check . && uv run mypy` — lint, format, strict types (`core`, `nlu`).
+- `uv run ruff check . && uv run ruff format --check . && uv run mypy` — lint, format, strict types (`core`, `nlu`, the dashboard and its reader/insight modules; list in `pyproject.toml`).
 - `uv run sazed` — the REPL.
 - `uv run sazed painel [--porta 8765] [--raiz <repo>]` — read-only local dashboard at
   http://127.0.0.1:8765 (see `src/sazed/interfaces/dashboard/CLAUDE.md`).
