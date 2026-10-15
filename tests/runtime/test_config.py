@@ -4,7 +4,13 @@ from pathlib import Path
 import pytest
 from pydantic import BaseModel
 
-from sazed.runtime.config import Config, ConfigError, load_config
+from sazed.runtime.config import (
+    BUILTIN_ENGINES,
+    BUILTIN_SITES,
+    Config,
+    ConfigError,
+    load_config,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 ENGLISH_MARKERS = ("Input should", "Field required", "Value error", "Extra inputs", "should be")
@@ -86,3 +92,48 @@ def test_valid_file_is_read(tmp_path: Path) -> None:
 
 def test_example_config_documents_the_real_defaults() -> None:
     assert load_config(ROOT / "config.example.toml") == Config()
+
+
+def test_builtin_sites_and_engines_are_there_by_default() -> None:
+    config = Config()
+    assert config.effective_sites()["YouTube"] == "https://www.youtube.com"
+    assert set(config.search.effective_engines()) == set(BUILTIN_ENGINES)
+    assert config.search.default == "Google"
+
+
+def test_a_user_site_overrides_a_builtin_ignoring_case_and_accents(tmp_path: Path) -> None:
+    text = '[sites]\nyoutube = "https://m.youtube.com"\n"meu blog" = "https://exemplo.com"\n'
+    sites = load_config(write(tmp_path, text)).effective_sites()
+    assert sites["youtube"] == "https://m.youtube.com"
+    assert "YouTube" not in sites
+    assert sites["meu blog"] == "https://exemplo.com"
+    assert len(sites) == len(BUILTIN_SITES) + 1
+
+
+@pytest.mark.parametrize(
+    ("text", "where", "message"),
+    [
+        ('[sites]\nnotas = "file:///C:/notas.txt"\n', "sites.notas", "http"),
+        ('[sites]\nnotas = "C:/notas.exe"\n', "sites.notas", "http"),
+        ('[search.engines]\nbing = "https://bing.com/search"\n', "search.engines.bing", "{q}"),
+        (
+            '[search.engines]\nbing = "https://bing.com/?q={q}&r={q}"\n',
+            "search.engines.bing",
+            "{q}",
+        ),
+        ('[search]\ndefault = "altavista"\n', "search", "altavista"),
+        ('[sites]\n"  " = "https://exemplo.com"\n', "sites", "vazio"),
+    ],
+)
+def test_invalid_sites_and_engines_stop_startup_in_pt_br(
+    tmp_path: Path, text: str, where: str, message: str
+) -> None:
+    with pytest.raises(ConfigError) as err:
+        load_config(write(tmp_path, text))
+    assert f"- {where}:" in str(err.value)
+    assert message in str(err.value)
+
+
+def test_default_engine_matches_ignoring_case_and_accents(tmp_path: Path) -> None:
+    config = load_config(write(tmp_path, '[search]\ndefault = "wikipedia"\n'))
+    assert config.search.default == "wikipedia"

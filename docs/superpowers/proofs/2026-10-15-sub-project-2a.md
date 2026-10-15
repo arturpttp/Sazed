@@ -45,3 +45,10 @@ Mutation: `verdict = Verdict.SAVE` instead of calling `judge_example` in `label_
 FAILED tests/runtime/test_admin.py::test_labelling_a_known_phrase_again_is_reported_and_not_duplicated
 FAILED tests/runtime/test_admin.py::test_labelling_a_phrase_that_belongs_to_another_intent_needs_force
 ```
+
+## Site URL scheme
+Mutation: remove the `http://`/`https://` check from `_http_url` in `runtime/config.py`.
+```
+FAILED tests/runtime/test_config.py::test_invalid_sites_and_engines_stop_startup_in_pt_br[[sites]\nnotas = "file:///C:/notas.txt"\n-sites.notas-http]
+FAILED tests/runtime/test_config.py::test_invalid_sites_and_engines_stop_startup_in_pt_br[[sites]\nnotas = "C:/notas.exe"\n-sites.notas-http]
+```
