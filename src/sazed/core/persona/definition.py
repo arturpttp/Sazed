@@ -26,6 +26,7 @@ class Prompt(Enum):
     CONFLICT_ASK = "conflict_ask"
     GREETING = "greeting"
     FAREWELL = "farewell"
+    LEARN_FAILED = "learn_failed"
 
 
 VARIANT_KEYS: dict[type, tuple[str, ...]] = {
@@ -108,4 +109,7 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
     ),
     "greeting": ("Às suas ordens, {mestre}.", "Estou aqui, {mestre}."),
     "farewell": ("Até logo, {mestre}.",),
+    "learn_failed": (
+        "Peço desculpas, {mestre}: não consegui guardar isso em minha mente de cobre.",
+    ),
 }

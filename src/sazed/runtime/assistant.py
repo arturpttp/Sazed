@@ -148,6 +148,7 @@ class Assistant:
         self._ctx = DialogueContext()
         self._now = datetime.min
         self._last_episode: int | None = None
+        self._command_episode: int | None = None
         for example in store.examples():
             index.add(example.intent_id, example.text, example.embedding)
         for alias in store.aliases():
@@ -159,6 +160,7 @@ class Assistant:
         self._now = self._clock()
         self._ctx = self._ctx.expire(self._now, self._settings.context_ttl_seconds)
         utterance = Utterance(text=text, normalized=normalize(text), received_at=self._now)
+        last_before = self._ctx.last
         try:
             turn = self._dispatch(utterance)
         except Exception:
@@ -169,6 +171,15 @@ class Assistant:
             return Response(self._say(failure), failure, None)
         log.debug("ranking for %r: %s", utterance.normalized, turn.ranking)
         self._last_episode = self._record(utterance, turn)
+        last = self._ctx.last
+        # Identity, not time: turns can share a timestamp, but a command creates a new LastTurn.
+        if (
+            last is not None
+            and last is not last_before
+            and last.kind is not LastKind.NOT_UNDERSTOOD
+        ):
+            # This turn ran (or tried to run) a command: a later correction refers to it.
+            self._command_episode = self._last_episode
         return Response(" ".join(turn.texts), turn.outcome, turn.decision)
 
     def _dispatch(self, u: Utterance) -> _Turn:
@@ -324,11 +335,12 @@ class Assistant:
         outcome = Cancelled()
         return _Turn([self._say(outcome)], outcome=outcome)
 
-    def _react(self, reaction: Reaction) -> None:
-        if self._last_episode is None:
+    def _react(self, reaction: Reaction, episode: int | None = None) -> None:
+        target = episode if episode is not None else self._last_episode
+        if target is None:
             return
         try:
-            self._store.set_reaction(self._last_episode, reaction)
+            self._store.set_reaction(target, reaction)
         except Exception:
             log.exception("could not record the reaction")
 
@@ -442,7 +454,13 @@ class Assistant:
             if self._aliases.get(a.slot, {}).get(_alias_key(a.alias)) != a.value
         ]
         if new_examples or new_aliases:
-            self._store.learn(new_examples, new_aliases, self._now)
+            try:
+                self._store.learn(new_examples, new_aliases, self._now)
+            except Exception:
+                # The action (if any) already happened; only remembering it failed.
+                log.exception("could not write learned items")
+                texts.append(self._say(Prompt.LEARN_FAILED))
+                return texts, outcome
             for ex in new_examples:
                 self._index.add(ex.intent_id, ex.text, ex.embedding)
             for al in new_aliases:
@@ -484,7 +502,7 @@ class Assistant:
             found = self._extractors["app"](rest_norm, self._aliases.get("app", {}))
             if found is None:
                 return self._not_understood(u, remember=False)
-            self._react(Reaction.CORRECTED)
+            self._react(Reaction.CORRECTED, self._command_episode)
             if isinstance(found, Ambiguous):
                 ask = AskSlot(spec.id, last.slots, "app", found.candidates, last.raw_query)
                 return self._ask(spec, ask, u)
@@ -511,14 +529,14 @@ class Assistant:
                 }
                 if not fixed:
                     return self._not_understood(u, remember=False)
-                self._react(Reaction.CORRECTED)
+                self._react(Reaction.CORRECTED, self._command_episode)
                 return self._proceed(spec.id, {**last.slots, **fixed}, u)
             # Another intent: the last command misfired. Learn the original phrase for the
             # right intent; resembling the misfired intent is expected, so it is ignored.
             _, spec = self._specs[top.intent_id]
             carried = {n: v for n, v in last.slots.items() if n in spec.slot_names}
             fresh = _given(self._extract(spec, rest_norm))
-            self._react(Reaction.CORRECTED)
+            self._react(Reaction.CORRECTED, self._command_episode)
             turn = self._proceed(spec.id, {**carried, **fresh}, u)
             texts, _ = self._learn(
                 [(last.utterance, spec.id, "corrected")], [], ignore=frozenset({last.intent_id})
