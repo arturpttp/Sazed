@@ -25,3 +25,10 @@ FAILED tests/core/test_policy.py::test_score_in_confirm_band_confirms_with_low_s
 FAILED tests/core/test_policy.py::test_score_exactly_at_t_confirm_still_confirms
 2 failed, 11 passed in 0.09s
 ```
+
+## Destructive-action confirmation
+Mutation: `_close_needs_confirmation` returns `not app.exact` (drops the several-instances clause).
+```
+FAILED tests/skills/test_apps.py::test_close_with_several_instances_needs_confirmation
+1 failed, 9 passed in 0.08s
+```
