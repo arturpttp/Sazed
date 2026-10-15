@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from fakes.ports import FakeCatalog, FakeLauncher
-from sazed.core.outcomes import AppClosed, AppNotFound, AppNotRunning, AppOpened
+from sazed.core.outcomes import ActionFailed, AppClosed, AppNotFound, AppNotRunning, AppOpened
 from sazed.core.skill import SkillContext
 from sazed.core.types import SlotValue, Unmatched
 from sazed.skills.pc.apps import AppsSkill
@@ -77,3 +77,9 @@ def test_describe_is_a_pt_br_infinitive() -> None:
     skill, _ = make()
     assert spec(skill, "fechar_app").describe({"app": CHROME}) == "fechar Google Chrome"
     assert spec(skill, "abrir_app").describe({}) == "abrir um programa"
+
+
+def test_close_that_closes_nothing_is_reported_as_a_failure() -> None:
+    launcher = FakeLauncher(running={"Google Chrome": 1}, unclosable={"Google Chrome"})
+    skill = AppsSkill(FakeCatalog(["Google Chrome"]), launcher)
+    assert skill.execute("fechar_app", {"app": CHROME}, CTX) == ActionFailed("fechar Google Chrome")

@@ -15,12 +15,16 @@ class FakeCatalog:
 
 class FakeLauncher:
     def __init__(
-        self, running: dict[str, int] | None = None, fail_with: Exception | None = None
+        self,
+        running: dict[str, int] | None = None,
+        fail_with: Exception | None = None,
+        unclosable: set[str] | None = None,
     ) -> None:
         self.running: dict[str, int] = dict(running or {})
         self.launched: list[str] = []
         self.closed: list[str] = []
         self.fail_with = fail_with
+        self.unclosable = set(unclosable or ())
 
     def launch(self, entry: AppEntry) -> None:
         if self.fail_with is not None:
@@ -33,6 +37,8 @@ class FakeLauncher:
 
     def close(self, entry: AppEntry) -> int:
         self.closed.append(entry.name)
+        if entry.name in self.unclosable:
+            return 0
         return self.running.pop(entry.name, 0)
 
 

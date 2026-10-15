@@ -37,3 +37,10 @@ def test_audio_records_state() -> None:
     audio.set_volume(70)
     audio.set_muted(True)
     assert (audio.get_volume(), audio.muted) == (70, True)
+
+
+def test_launcher_can_hold_apps_that_ignore_close() -> None:
+    (entry,) = FakeCatalog(["Spotify"]).entries()
+    launcher = FakeLauncher(running={"Spotify": 1}, unclosable={"Spotify"})
+    assert launcher.close(entry) == 0
+    assert launcher.instances(entry) == 1

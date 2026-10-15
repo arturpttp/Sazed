@@ -6,7 +6,14 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
-from sazed.core.outcomes import AppClosed, AppNotFound, AppNotRunning, AppOpened, Outcome
+from sazed.core.outcomes import (
+    ActionFailed,
+    AppClosed,
+    AppNotFound,
+    AppNotRunning,
+    AppOpened,
+    Outcome,
+)
 from sazed.core.skill import IntentSpec, SkillContext, SlotSpec
 from sazed.core.types import Slots, SlotValue, Unmatched
 
@@ -132,6 +139,8 @@ class AppsSkill:
         if intent_id == "fechar_app":
             if self._launcher.instances(entry) == 0:
                 return AppNotRunning(entry.name)
-            self._launcher.close(entry)
+            if self._launcher.close(entry) == 0:
+                # Nothing accepted the close request (e.g. a tray app with no window).
+                return ActionFailed(f"fechar {entry.name}")
             return AppClosed(entry.name)
         raise ValueError(f"unknown intent {intent_id}")

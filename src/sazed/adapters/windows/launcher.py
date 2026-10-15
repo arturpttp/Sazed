@@ -16,9 +16,23 @@ def _same_path(a: str | None, b: str) -> bool:
     )
 
 
+# Squirrel installers (Discord, Teams classic, …) point the shortcut at a launcher that
+# starts the real exe from a versioned subfolder, so the target never runs itself.
+_LAUNCHER_NAMES = {"update.exe"}
+
+
+def _matches(exe: str | None, target: str) -> bool:
+    if _same_path(exe, target):
+        return True
+    if exe is None or os.path.basename(target).lower() not in _LAUNCHER_NAMES:
+        return False
+    folder = os.path.normcase(os.path.normpath(os.path.dirname(target))) + os.sep
+    return os.path.normcase(os.path.normpath(exe)).startswith(folder)
+
+
 def root_pids(processes: Iterable[tuple[int, int, str | None]], target: str) -> list[int]:
     """PIDs running `target` whose parent is not also running it (one per app instance)."""
-    matching = {pid: ppid for pid, ppid, exe in processes if _same_path(exe, target)}
+    matching = {pid: ppid for pid, ppid, exe in processes if _matches(exe, target)}
     return sorted(pid for pid, ppid in matching.items() if ppid not in matching)
 
 
@@ -42,7 +56,7 @@ class WindowsLauncher:
         import win32gui
         import win32process
 
-        pids = {pid for pid, _, exe in _snapshot() if _same_path(exe, entry.target)}
+        pids = {pid for pid, _, exe in _snapshot() if _matches(exe, entry.target)}
         closed: set[int] = set()
 
         def on_window(hwnd: int, _: object) -> bool:

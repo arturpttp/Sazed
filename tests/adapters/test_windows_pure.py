@@ -41,3 +41,19 @@ def test_root_pids_ignore_child_processes_of_the_same_app() -> None:
         (400, 1, None),
     ]
     assert root_pids(processes, chrome) == [100, 200]
+
+
+def test_squirrel_launcher_targets_match_the_real_app_under_their_folder() -> None:
+    update = r"C:\Users\a\AppData\Local\Discord\Update.exe"
+    processes = [
+        (10, 1, r"C:\Users\a\AppData\Local\Discord\app-1.0.9\Discord.exe"),
+        (11, 10, r"C:\Users\a\AppData\Local\Discord\app-1.0.9\Discord.exe"),
+        (20, 1, r"C:\Users\a\AppData\Local\Other\Other.exe"),
+    ]
+    assert root_pids(processes, update) == [10]
+
+
+def test_ordinary_targets_do_not_match_neighbours_in_their_folder() -> None:
+    charmap = r"C:\Windows\System32\charmap.exe"
+    processes = [(10, 1, r"C:\Windows\System32\notepad.exe"), (11, 1, charmap)]
+    assert root_pids(processes, charmap) == [11]
