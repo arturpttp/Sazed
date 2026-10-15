@@ -14,7 +14,8 @@ Sazed, the Terris Keeper from *Mistborn*. Read [`AGENTS.md`](./AGENTS.md) and
 
 - 2026-10-14: brainstorm done. Roadmap and sub-project 1 design are in
   [`docs/superpowers/specs/2026-10-14-sazed-core-design.md`](./docs/superpowers/specs/2026-10-14-sazed-core-design.md).
-- **Next step:** the user reviews that spec. Once approved, write the implementation
-  plan for sub-project 1 (core + text CLI + PC slice). No code before the plan.
+- 2026-10-14: spec approved; implementation plan written in
+  [`docs/superpowers/plans/2026-10-14-sazed-core.md`](./docs/superpowers/plans/2026-10-14-sazed-core.md).
+- **Next step:** the user reviews the plan and picks an execution mode; then Task 1.
 
 Commands, layout and toolchain notes are added here as the project is scaffolded.

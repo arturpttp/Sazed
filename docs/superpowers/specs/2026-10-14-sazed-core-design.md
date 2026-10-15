@@ -1,7 +1,7 @@
 # Sazed — Sub-project 1: Core + text CLI + PC slice
 
 Date: 2026-10-14
-Status: Approved in brainstorm, pending written-spec review
+Status: Approved (2026-10-14). Implementation plan: ../plans/2026-10-14-sazed-core.md
 
 ## 1. Context and intent
 
