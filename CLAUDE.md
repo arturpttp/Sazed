@@ -48,8 +48,11 @@ Sazed, the Terris Keeper from *Mistborn*. Read [`AGENTS.md`](./AGENTS.md) and
   [`docs/superpowers/proofs/2026-10-16-sub-project-2b.md`](./docs/superpowers/proofs/2026-10-16-sub-project-2b.md).
   Fixture now 198 cases: accuracy 0.923, false-execute 0.000, executed 0.542 / asked 0.458
   (thresholds unchanged). Move-and-copy of files is sub-project 2c.
-- **Next step:** final review of `feat/sub-project-2b`, then the user's merge decision; then
-  brainstorm 2c (moving, renaming, deleting files).
+- 2b final review (fresh reviewer): 5 Important fixed (Explorer windows treated as Sazed's
+  console, minimised-window rects, restore target, an allow-list for opening found files, the
+  newest download read from the folder); minors deferred in the 2b ledger.
+- **Next step:** the user's merge decision for `feat/sub-project-2b`; check "move to the other
+  monitor" with the second monitor on; then brainstorm 2c (moving, renaming, deleting files).
 
 ## Measurements
 
