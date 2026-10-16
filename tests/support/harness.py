@@ -2,14 +2,18 @@
 
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from random import Random
 
 from fakes.clock import ManualClock
 from fakes.index import ScriptedIndex
 from fakes.ports import (
+    FAKE_AREA,
+    FAKE_FOLDERS,
     FakeAudio,
     FakeBrightness,
     FakeCatalog,
+    FakeChanger,
     FakeFileOpener,
     FakeFolders,
     FakeLauncher,
@@ -29,6 +33,7 @@ from sazed.core.skill import Skill
 from sazed.runtime.assistant import Assistant, Settings
 from sazed.runtime.config import Config
 from sazed.runtime.skills import PcPorts, build_skills
+from sazed.skills.pc.fileops import ItemState
 from sazed.skills.pc.files import FileHit
 from sazed.skills.pc.windows import Monitor, Rect, WindowRef
 
@@ -57,12 +62,18 @@ class Harness:
     windows: FakeWindows
     search: FakeSearch
     file_opener: FakeFileOpener
+    changer: FakeChanger
 
     def say(self, text: str) -> Response:
         return self.assistant.handle(text)
 
 
 Make = Callable[..., Harness]
+
+
+def _hit(item: ItemState) -> FileHit:
+    folder, name = item.path.rsplit("\\", 1)
+    return FileHit(item.path, name, folder.rsplit("\\", 1)[-1], datetime(2026, 10, 14, 9))
 
 
 def build_harness(
@@ -76,6 +87,7 @@ def build_harness(
     extra_skills: Sequence[Skill] = (),
     windows: dict[str | None, list[WindowRef]] | None = None,
     files: Sequence[FileHit] = (),
+    disk: Sequence[ItemState] = (),
 ) -> Harness:
     index = ScriptedIndex(script)
     store = store or SqliteCoppermind(":memory:")
@@ -87,7 +99,10 @@ def build_harness(
     desk = FakeWindows(windows or {}, [Monitor(1, Rect(0, 0, 1920, 1040), True)])
     search = FakeSearch(files)
     file_opener = FakeFileOpener({hit.path for hit in files})
-    folders = FakeFolders({"Downloads": "C:/U/Downloads"})
+    folders = FakeFolders(dict(FAKE_FOLDERS))
+    dirs = [ItemState(path, True, 0, 1.0, 0) for path in FAKE_FOLDERS.values()]
+    changer = FakeChanger([*dirs, *disk])
+    search.folder_hits = [_hit(item) for item in disk if item.is_dir]
     ports = PcPorts(
         catalog=FakeCatalog(APPS),
         launcher=launcher,
@@ -102,8 +117,10 @@ def build_harness(
         folders=folders,
         files=search,
         file_opener=file_opener,
+        changer=changer,
+        file_area=FAKE_AREA,
     )
-    skill_set = build_skills(ports, Config())
+    skill_set = build_skills(ports, Config(), change_log=store)
     assistant = Assistant(
         skills=[*skill_set.skills, *extra_skills],
         index=index,
@@ -129,4 +146,5 @@ def build_harness(
         desk,
         search,
         file_opener,
+        changer,
     )

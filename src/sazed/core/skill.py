@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from sazed.core.outcomes import Outcome
 from sazed.core.types import Slots
@@ -67,3 +67,12 @@ class Skill(Protocol):
     def intents(self) -> Sequence[IntentSpec]: ...
 
     def execute(self, intent_id: str, slots: Slots, ctx: SkillContext) -> Outcome: ...
+
+
+@runtime_checkable
+class PlanningSkill(Protocol):
+    """A skill whose commands are proposed as exact plans and applied only on "sim"."""
+
+    def apply_pending(self, ctx: SkillContext) -> Outcome: ...
+
+    def propose_undo(self, ctx: SkillContext) -> Outcome: ...

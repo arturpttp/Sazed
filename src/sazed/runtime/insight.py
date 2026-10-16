@@ -73,6 +73,15 @@ PORT_DESCRIPTIONS: dict[str, tuple[str, str]] = {
         "Procura arquivos pelo nome no índice da Pesquisa do Windows (nunca lê o conteúdo).",
         "WindowsFileSearch",
     ),
+    "FileChanger": (
+        "Move, copia, renomeia, cria pastas e manda para a Lixeira — só dentro das suas pastas,"
+        " sempre depois de você confirmar o plano exato.",
+        "WindowsFileChanger",
+    ),
+    "ChangeLog": (
+        'Registro das mudanças em arquivos, para o "desfaz isso".',
+        "SqliteCoppermind",
+    ),
     "FileOpener": (
         "Abre arquivos e pastas; programas encontrados na busca só são mostrados na pasta.",
         "WindowsFileOpener",

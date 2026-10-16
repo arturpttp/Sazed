@@ -25,6 +25,7 @@ from sazed.runtime.assistant import Assistant, Settings
 from sazed.runtime.config import Config
 from sazed.runtime.skills import PcPorts, SkillSet, build_skills
 from sazed.skills.pc.apps import AppEntry
+from sazed.skills.pc.fileops import Area, ItemState
 from sazed.skills.pc.files import KNOWN_FOLDERS, FileHit
 from sazed.skills.pc.media import NowPlayingInfo
 from sazed.skills.pc.windows import Monitor, Rect, WindowRef
@@ -221,6 +222,37 @@ class DryRunDesk:
         return False
 
 
+class DryRunChanger:
+    """File changes that never happen: nothing exists."""
+
+    def state(self, path: str) -> ItemState | None:
+        return None
+
+    def names_in(self, folder: str) -> set[str]:
+        return set()
+
+    def move(self, src: str, dst: str) -> None:
+        return None
+
+    def copy(self, src: str, dst: str) -> None:
+        return None
+
+    def rename(self, src: str, dst: str) -> None:
+        return None
+
+    def make_folder(self, path: str) -> None:
+        return None
+
+    def can_recycle(self, path: str) -> bool:
+        return True
+
+    def recycle(self, path: str) -> str:
+        return ""
+
+    def restore(self, ref: str) -> bool:
+        return False
+
+
 def dry_run_skills(app_names: Sequence[str]) -> SkillSet:
     p = DryRunPorts(app_names)
     desk = DryRunDesk()
@@ -238,6 +270,8 @@ def dry_run_skills(app_names: Sequence[str]) -> SkillSet:
         folders=desk,
         files=desk,
         file_opener=desk,
+        changer=DryRunChanger(),
+        file_area=Area((), (), (), str),
     )
     return build_skills(ports, Config())
 

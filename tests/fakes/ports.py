@@ -1,5 +1,6 @@
 """In-memory ports. Tests assert their state, not only the response text."""
 
+import ntpath
 import unicodedata
 from collections.abc import Collection, Sequence
 from dataclasses import replace
@@ -7,7 +8,7 @@ from datetime import datetime
 
 from sazed.runtime.skills import PcPorts
 from sazed.skills.pc.apps import AppEntry
-from sazed.skills.pc.fileops import ChangeBusy, ChangePlan, ItemState, LoggedChange
+from sazed.skills.pc.fileops import Area, ChangeBusy, ChangePlan, ItemState, LoggedChange
 from sazed.skills.pc.files import FileHit, SearchError
 from sazed.skills.pc.media import NowPlayingInfo
 from sazed.skills.pc.windows import Monitor, Rect, WindowRef
@@ -169,6 +170,20 @@ class FakeStatus:
         return list(self._disks)
 
 
+FAKE_PROFILE = r"C:\U"
+FAKE_FOLDERS = {
+    "Downloads": rf"{FAKE_PROFILE}\Downloads",
+    "Documentos": rf"{FAKE_PROFILE}\Documents",
+    "Área de Trabalho": rf"{FAKE_PROFILE}\Desktop",
+}
+FAKE_AREA = Area(
+    roots=(FAKE_PROFILE,),
+    fixed=(FAKE_PROFILE, *FAKE_FOLDERS.values()),
+    trees=(rf"{FAKE_PROFILE}\AppData",),
+    realpath=ntpath.normpath,
+)
+
+
 def fake_pc_ports(
     names: Sequence[str],
     *,
@@ -189,6 +204,8 @@ def fake_pc_ports(
         folders=FakeFolders({}),
         files=FakeSearch([]),
         file_opener=FakeFileOpener(set()),
+        changer=FakeChanger(),
+        file_area=FAKE_AREA,
     )
 
 

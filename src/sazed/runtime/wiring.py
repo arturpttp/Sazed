@@ -62,7 +62,7 @@ def build_app(
     clock = clock or datetime.now
     rng = rng or Random()
     store = SqliteCoppermind(config.data.dir / "coppermind.db")
-    skill_set = build_skills(ports, config)
+    skill_set = build_skills(ports, config, change_log=store)
     index = IntentMatcher(embedder)
     for skill in skill_set.skills:
         for spec in skill.intents:

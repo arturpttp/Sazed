@@ -23,6 +23,7 @@ def test_every_skill_is_built_once() -> None:
             "status",
             "windows",
             "files",
+            "fileops",
         ]
     )
 

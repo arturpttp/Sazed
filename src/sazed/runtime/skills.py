@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 
 from sazed.core.skill import Skill
 from sazed.runtime.config import Config
@@ -17,6 +18,15 @@ from sazed.skills.pc.apps import (
     site_entries,
 )
 from sazed.skills.pc.brightness import Brightness, BrightnessSkill
+from sazed.skills.pc.fileops import (
+    Area,
+    ChangeLog,
+    ChangePlan,
+    FileChanger,
+    FileOpsSkill,
+    ItemState,
+    LoggedChange,
+)
 from sazed.skills.pc.files import (
     FOLDER_SYNONYMS,
     KNOWN_FOLDERS,
@@ -50,6 +60,9 @@ class PcPorts:
     folders: KnownFolders
     files: FileSearch
     file_opener: FileOpener
+    changer: FileChanger
+    file_area: Area
+    """Where file changes may happen: the profile, [folders], minus the protected ones."""
 
 
 @dataclass(frozen=True)
@@ -71,7 +84,24 @@ class SkillSet:
         )
 
 
-def build_skills(ports: PcPorts, config: Config) -> SkillSet:
+class NoChangeLog:
+    """For builds that never apply a change (dashboard listing, evaluation)."""
+
+    def record(
+        self, plan: ChangePlan, after: ItemState | None, recycle_ref: str | None, at: datetime
+    ) -> int:
+        return 0
+
+    def latest_open(self) -> LoggedChange | None:
+        return None
+
+    def mark_undone(self, change_id: int, at: datetime) -> None:
+        return None
+
+
+def build_skills(
+    ports: PcPorts, config: Config, *, change_log: ChangeLog | None = None
+) -> SkillSet:
     catalog = CombinedCatalog(
         [ports.catalog, StaticCatalog(site_entries(config.effective_sites()))]
     )
@@ -88,6 +118,13 @@ def build_skills(ports: PcPorts, config: Config) -> SkillSet:
         StatusSkill(ports.status),
         WindowsSkill(catalog, ports.windows),
         FilesSkill(ports.folders, ports.files, ports.file_opener),
+        FileOpsSkill(
+            ports.folders,
+            ports.files,
+            ports.changer,
+            change_log or NoChangeLog(),
+            ports.file_area,
+        ),
     ]
     names = [entry.name for entry in catalog.entries()]
     known = set(names)

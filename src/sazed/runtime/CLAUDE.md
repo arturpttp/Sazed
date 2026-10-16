@@ -22,6 +22,11 @@ Wires config, adapters, skills and the assistant together; the only place the cl
 - Folder names for the extractor come from `KNOWN_FOLDERS` plus config, never from the
   folders port (the dashboard's inert ports raise when called).
 - `janela_focar` on a closed app leaves a pending "abrir?" with `learn_example=False`.
+- File changes: a `FileChangeProposed` outcome becomes `AwaitPlan`; only "sim" calls the
+  skill's `apply_pending` (re-checks the disk first). "desfaz isso" (`ControlKind.UNDO`) asks the
+  `PlanningSkill` for an undo plan, confirmed the same way. A pending plan never reaches `_learn`.
+  `build_skills(..., change_log=store)`: without a store (dashboard, evaluation) a no-op log.
+- `RAW_SLOTS` (`novo_nome`) get the original text, so a new file name keeps its case.
 
 ## Traps
 - Import onnxruntime before WinRT in any process that will load both (`build_default_app`

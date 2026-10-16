@@ -12,6 +12,7 @@ from sazed.core.context import (
     AliasCandidate,
     AwaitConfirm,
     AwaitLearn,
+    AwaitPlan,
     AwaitSlot,
     DialogueContext,
     LastKind,
@@ -44,9 +45,11 @@ from sazed.core.outcomes import (
     AppNotFound,
     Cancelled,
     ExampleLearned,
+    FileChangeProposed,
     Forgotten,
     NothingToForget,
     NothingToRepeat,
+    NothingToUndo,
     Outcome,
     WindowNotFound,
     is_failure,
@@ -54,7 +57,7 @@ from sazed.core.outcomes import (
 from sazed.core.persona import Prompt, render
 from sazed.core.policy import IntentRequirements, Thresholds, decide
 from sazed.core.response import Response
-from sazed.core.skill import IntentSpec, Skill, SkillContext
+from sazed.core.skill import IntentSpec, PlanningSkill, Skill, SkillContext
 from sazed.core.types import (
     Ambiguous,
     Extraction,
@@ -203,6 +206,8 @@ class Assistant:
             last = self._ctx.last
             if control.kind is ControlKind.FORGET:
                 return self._forget()
+            if control.kind is ControlKind.UNDO:
+                return self._undo(u)
             if control.kind is ControlKind.REPEAT:
                 # Never falls through to ranking: a bare "mais" is not a command by itself.
                 if (
@@ -288,6 +293,8 @@ class Assistant:
             return self._cancelled()
         if kind is not ControlKind.CONFIRM:
             return None
+        if isinstance(pending, AwaitPlan):
+            return self._apply_plan(pending)
         if isinstance(pending, AwaitConfirm):
             self._react(Reaction.CONFIRMED)
             _, spec = self._specs[pending.intent_id]
@@ -387,6 +394,10 @@ class Assistant:
         if isinstance(outcome, AmbiguousSlot):
             ask = AskSlot(spec.id, slots, outcome.slot, outcome.candidates, "")
             return self._ask(spec, ask, u)
+        if isinstance(outcome, FileChangeProposed):
+            # The plan is the question: nothing is remembered as run, nothing is learned.
+            self._ctx = self._ctx.with_pending(AwaitPlan(skill.id, u.normalized), self._now)
+            return _Turn([self._say(outcome)], outcome=outcome, intent_id=spec.id)
         if isinstance(outcome, WindowNotFound) and outcome.offer_open:
             app = slots.get("app")
             if isinstance(app, SlotValue):
@@ -523,6 +534,32 @@ class Assistant:
                 if isinstance(found, SlotValue | Unmatched):
                     text = mask_words(text, found.raw.split(), placeholder)
         return text
+
+    def _planner(self, skill_id: str | None = None) -> tuple[str, PlanningSkill] | None:
+        for skill, _ in self._specs.values():
+            if isinstance(skill, PlanningSkill) and skill_id in (None, skill.id):
+                return skill.id, skill
+        return None
+
+    def _apply_plan(self, pending: AwaitPlan) -> _Turn:
+        found = self._planner(pending.skill_id)
+        if found is None:
+            raise ValueError(f"no planning skill {pending.skill_id}")
+        try:
+            outcome = found[1].apply_pending(SkillContext(now=self._now))
+        except Exception:
+            log.exception("applying a plan of %s failed", pending.skill_id)
+            outcome = ActionFailed(action=GENERIC_ACTION)
+        return _Turn([self._say(outcome)], outcome=outcome)
+
+    def _undo(self, u: Utterance) -> _Turn:
+        found = self._planner()
+        outcome: Outcome = NothingToUndo()
+        if found is not None:
+            outcome = found[1].propose_undo(SkillContext(now=self._now))
+            if isinstance(outcome, FileChangeProposed):
+                self._ctx = self._ctx.with_pending(AwaitPlan(found[0], u.normalized), self._now)
+        return _Turn([self._say(outcome)], outcome=outcome)
 
     def _forget(self) -> _Turn:
         items = self._store.forget_latest()

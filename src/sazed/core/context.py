@@ -43,7 +43,15 @@ class AwaitLearn:
     intent_id: str
 
 
-Pending = AwaitConfirm | AwaitSlot | AwaitLearn
+@dataclass(frozen=True)
+class AwaitPlan:
+    """A skill proposed an exact change (a file change or its undo); "sim" applies it."""
+
+    skill_id: str
+    utterance: str
+
+
+Pending = AwaitConfirm | AwaitSlot | AwaitLearn | AwaitPlan
 
 
 class LastKind(Enum):

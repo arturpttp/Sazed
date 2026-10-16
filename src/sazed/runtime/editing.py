@@ -26,6 +26,7 @@ from sazed.runtime.config import Config
 from sazed.runtime.skills import PcPorts, build_skills
 from sazed.runtime.wiring import SazedApp, build_app
 from sazed.skills.pc.apps import AppCatalog, CombinedCatalog
+from sazed.skills.pc.fileops import Area
 
 log = logging.getLogger(__name__)
 
@@ -76,6 +77,8 @@ def inert_ports(catalog: AppCatalog) -> PcPorts:
         folders=inert,
         files=inert,
         file_opener=inert,
+        changer=inert,
+        file_area=Area((), (), (), str),
     )
 
 

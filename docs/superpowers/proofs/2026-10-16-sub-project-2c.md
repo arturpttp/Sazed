@@ -55,3 +55,11 @@ The four tests failed before the table and methods existed (`AttributeError: …
 version-2 database built through the writer upgrades to 3 with its examples intact; rows are
 re-read through a fresh connection. Two older tests pinned "version 2"; they now use
 `len(MIGRATIONS)` so the next migration does not break them again.
+
+## Task 7: nothing on disk changes before "sim" (derived from the specs)
+Mutation: apply the plan as soon as it is proposed → `20 failed` in
+`tests/runtime/test_fileops_safety.py` (every intent × every score).
+Mutation: `learnable=True` on the 2c intents → the 5 `test_no_file_change_phrase_can_be_taught`
+cases fail. Finding: `test_nothing_from_a_file_change_is_ever_learned` (conversation) still
+passed under that mutation — in conversation the guarantee lives in the pending plan, which never
+reaches `_learn`; `learnable=False` is what blocks the dashboard and `sazed revisar`.
