@@ -25,6 +25,7 @@ from sazed.runtime.wiring import SazedApp, build_app
 
 NAMES = ["WhatsApp", "Google Chrome", "Discord"]
 FRESH = "me mostra o mensageiro verde"
+T = datetime(2026, 10, 15, 12, 0)
 
 
 @pytest.fixture
@@ -122,7 +123,7 @@ def test_edit_of_a_missing_example(app: SazedApp) -> None:
 
 
 def test_add_alias_resolves_the_catalog_name(app: SazedApp) -> None:
-    assert add_alias(app, NAMES, " Zap ", "whatsapp") is AliasResult.SAVED
+    assert add_alias(app.store, NAMES, " Zap ", "whatsapp", T) is AliasResult.SAVED
     assert on_disk(app, "SELECT slot, alias, value FROM slot_aliases") == [
         ("app", "zap", "WhatsApp")
     ]
@@ -137,22 +138,22 @@ def test_add_alias_resolves_the_catalog_name(app: SazedApp) -> None:
     ],
 )
 def test_add_alias_refusals(app: SazedApp, alias: str, target: str, result: AliasResult) -> None:
-    assert add_alias(app, NAMES, alias, target) is result
+    assert add_alias(app.store, NAMES, alias, target, T) is result
     assert on_disk(app, "SELECT COUNT(*) FROM slot_aliases") == [(0,)]
 
 
 def test_add_alias_never_overwrites_an_existing_one(app: SazedApp) -> None:
     app.store.learn([], [NewAlias("app", "zap", "WhatsApp")], datetime(2026, 10, 15))
-    assert add_alias(app, NAMES, "Záp", "Discord") is AliasResult.EXISTS
+    assert add_alias(app.store, NAMES, "Záp", "Discord", T) is AliasResult.EXISTS
     assert on_disk(app, "SELECT value FROM slot_aliases") == [("WhatsApp",)]
 
 
 def test_edit_alias_target(app: SazedApp) -> None:
-    add_alias(app, NAMES, "zap", "WhatsApp")
-    assert edit_alias(app, NAMES, 1, "discord") is AliasResult.SAVED
+    add_alias(app.store, NAMES, "zap", "WhatsApp", T)
+    assert edit_alias(app.store, NAMES, 1, "discord", T) is AliasResult.SAVED
     assert on_disk(app, "SELECT id, alias, value FROM slot_aliases") == [(1, "zap", "Discord")]
-    assert edit_alias(app, NAMES, 1, "Telegram") is AliasResult.APP_UNKNOWN
-    assert edit_alias(app, NAMES, 9, "Discord") is AliasResult.UNKNOWN
+    assert edit_alias(app.store, NAMES, 1, "Telegram", T) is AliasResult.APP_UNKNOWN
+    assert edit_alias(app.store, NAMES, 9, "Discord", T) is AliasResult.UNKNOWN
 
 
 # forget ------------------------------------------------------------------------

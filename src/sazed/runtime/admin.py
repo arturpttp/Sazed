@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 
+from sazed.adapters.sqlite.coppermind import SqliteCoppermind
 from sazed.core.coppermind import LearnedItem, LearnedKind, NewAlias, NewExample, Reaction
 from sazed.core.learning import Verdict, judge_example
 from sazed.core.outcomes import FAILURE_NAMES
@@ -195,7 +196,9 @@ def _catalog_name(names: Sequence[str], target: str) -> str | None:
     return next((n for n in names if strip_accents(normalize(n)) == wanted), None)
 
 
-def add_alias(app: SazedApp, names: Sequence[str], alias: str, target: str) -> AliasResult:
+def add_alias(
+    store: SqliteCoppermind, names: Sequence[str], alias: str, target: str, now: datetime
+) -> AliasResult:
     """A new name for a catalog app (slot `app`). Never overwrites an existing alias."""
     alias = normalize(alias)
     if not alias:
@@ -204,17 +207,19 @@ def add_alias(app: SazedApp, names: Sequence[str], alias: str, target: str) -> A
     if value is None:
         return AliasResult.APP_UNKNOWN
     key = alias_key(alias)
-    if any(a.slot == "app" and alias_key(a.alias) == key for a in app.store.aliases()):
+    if any(a.slot == "app" and alias_key(a.alias) == key for a in store.aliases()):
         return AliasResult.EXISTS
-    app.store.learn([], [NewAlias("app", alias, value)], app.clock())
+    store.learn([], [NewAlias("app", alias, value)], now)
     return AliasResult.SAVED
 
 
-def edit_alias(app: SazedApp, names: Sequence[str], item_id: int, target: str) -> AliasResult:
-    value = _catalog_name(names, target)
-    if not any(a.id == item_id for a in app.store.aliases()):
+def edit_alias(
+    store: SqliteCoppermind, names: Sequence[str], item_id: int, target: str, now: datetime
+) -> AliasResult:
+    if not any(a.id == item_id for a in store.aliases()):
         return AliasResult.UNKNOWN
+    value = _catalog_name(names, target)
     if value is None:
         return AliasResult.APP_UNKNOWN
-    app.store.replace_alias(item_id, value, app.clock())
+    store.replace_alias(item_id, value, now)
     return AliasResult.SAVED

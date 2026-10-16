@@ -11,7 +11,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, NoReturn, Protocol
+from typing import Any, Protocol
 
 from sazed.adapters.sqlite.reader import CoppermindReader, CoppermindUnavailable
 from sazed.core.decisions import Confirm, ConfirmReason, Execute
@@ -21,7 +21,8 @@ from sazed.core.skill import IntentSpec, Skill, always, never
 from sazed.core.types import IntentScore, ParseResult, Utterance
 from sazed.nlu.normalize import normalize, strip_accents
 from sazed.runtime.config import Config, load_config
-from sazed.runtime.skills import PcPorts, build_skills
+from sazed.runtime.editing import inert_ports
+from sazed.runtime.skills import build_skills
 from sazed.skills.pc.apps import AppEntry, StaticCatalog
 
 __all__ = [
@@ -63,31 +64,12 @@ PORT_DESCRIPTIONS: dict[str, tuple[str, str]] = {
 NO_DESCRIPTION = ("Sem descrição.", "?")
 
 
-class _Inert:
-    """Stands in for every port: listing a skill must never reach the OS."""
-
-    def __getattr__(self, name: str) -> NoReturn:
-        raise RuntimeError(f"the dashboard never calls ports (tried {name})")
-
-
 def skills_for_listing(config: Config | None = None) -> list[Skill]:
     """The wired skills, built with inert ports (tests assert they match `build_app`).
 
     The catalog is empty here: listing must not scan the Start menu.
     """
-    inert: Any = _Inert()
-    ports = PcPorts(
-        catalog=StaticCatalog([]),
-        launcher=inert,
-        audio=inert,
-        media=inert,
-        power=inert,
-        screen=inert,
-        brightness=inert,
-        opener=inert,
-        status=inert,
-    )
-    return build_skills(ports, config or Config()).skills
+    return build_skills(inert_ports(StaticCatalog([])), config or Config()).skills
 
 
 @dataclass(frozen=True)

@@ -65,5 +65,6 @@ files = [
     "src/sazed/nlu",
     "src/sazed/interfaces/dashboard",
     "src/sazed/runtime/insight.py",
+    "src/sazed/runtime/editing.py",
     "src/sazed/adapters/sqlite/reader.py",
 ]
