@@ -17,8 +17,8 @@ from sazed.runtime.admin import LabelResult, learn_example
 from sazed.runtime.config import Config, DataConfig
 from sazed.runtime.skills import build_skills
 from sazed.runtime.wiring import build_app
-from sazed.skills.pc.files import FileHit
 from sazed.skills.pc.fileops import ItemState
+from sazed.skills.pc.files import FileHit
 from support.harness import Make
 
 SELF_CONFIRMING = sorted(

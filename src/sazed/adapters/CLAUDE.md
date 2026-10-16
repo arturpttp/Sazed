@@ -62,3 +62,9 @@ launcher, audio). This is the only package allowed to touch the OS, files, or mo
 - With the display asleep (user idle for hours) Windows suspends a just-launched Store app
   before its frame adopts it: the Calculator close test fails on any branch. Run `-m windows`
   with the screen on.
+- File changes (`windows/fileops.py`): a delete is always `SHFileOperation` with
+  `FOF_ALLOWUNDO` (Recycle Bin) and only on a fixed drive; `restore` finds the bin item by
+  original folder + name and the deletion time **closest** to the change (the same name may be
+  there twice), then the shell verb "undelete". A move to another drive copies, checks the
+  size, then removes the original; any failure removes the partial copy instead. `make_folder`
+  is `os.mkdir`, never `makedirs`. Error 5/32/33 or PermissionError → `ChangeBusy`.

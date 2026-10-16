@@ -63,3 +63,14 @@ Mutation: `learnable=True` on the 2c intents → the 5 `test_no_file_change_phra
 cases fail. Finding: `test_nothing_from_a_file_change_is_ever_learned` (conversation) still
 passed under that mutation — in conversation the guarantee lives in the pending plan, which never
 reaches `_learn`; `learnable=False` is what blocks the dashboard and `sazed revisar`.
+
+## Task 9: Windows file changes
+- A file held open is busy (Python opens without delete sharing, like Word). Mutation: never map
+  OSError to `ChangeBusy` → `FAILED …test_a_file_open_in_another_program_is_busy`.
+- A cross-drive move never loses the original. Mutation: always remove the source (`finally`)
+  → `FAILED …test_a_failed_copy_removes_the_partial_copy_and_keeps_the_original`,
+  `FAILED …test_a_copy_with_the_wrong_size_is_removed_and_the_original_kept`.
+- Real Recycle Bin (`-m windows`): a file and a folder recycled and restored. A same-named file
+  deleted twice: the first `restore` took whichever the bin listed first —
+  `test_restore_brings_back_the_copy_this_change_deleted` failed 1 run in 2
+  (`assert 'primeiro' == 'segundo'`); with the deletion time compared it passed 4 of 4.
