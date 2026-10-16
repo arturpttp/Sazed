@@ -69,3 +69,11 @@ E  AssertionError: assert WindowsPath('C:/Usuários/Usuario/Documentos/sazed2b43
 Fixed by reading `System.ItemUrl`; the test now also asserts the path exists, with a file name
 holding a space and an accent. Dates arrive as UTC (`TimeZoneInfo('GMT Standard Time', True)`)
 and are converted to local time (checked against the clock: created 00:35 local, read 00:35).
+
+## Task 9: snapping lands the *visible* window on the half (invisible borders compensated)
+Real desktop, a throwaway Tk window. Mutation: `SetWindowPos` with the target rect itself
+(no `outer_rect`). With the first tolerance (8 px) the test could not see it — a finding: the
+borders are 7 px. Tolerance cut to 2 px, then:
+```
+E  AssertionError: (Rect(left=7, top=0, right=673, bottom=761), Rect(left=0, top=0, right=680, bottom=768))
+```

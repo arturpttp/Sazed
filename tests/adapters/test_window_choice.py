@@ -58,3 +58,24 @@ def test_a_frame_hosting_sazeds_console_is_excluded() -> None:
     # Windows Terminal draws the console inside its own window: child pid is the console host.
     raw = [w(1, 99, child_pids=frozenset({CONSOLE_PID})), w(2, CHROME_PID)]
     assert choose_windows(raw, own_pids={CONSOLE_PID}, app_pids=None) == [2]
+
+
+def test_monitors_are_numbered_left_to_right_then_top_to_bottom() -> None:
+    from sazed.adapters.windows.windows import number_monitors
+    from sazed.skills.pc.windows import Monitor, Rect
+
+    main, left, above = Rect(0, 0, 1920, 1040), Rect(-1280, 0, 0, 984), Rect(0, -1080, 1920, 0)
+    assert number_monitors([(main, True), (left, False), (above, False)]) == [
+        Monitor(1, left, False),
+        Monitor(2, above, False),
+        Monitor(3, main, True),
+    ]
+
+
+def test_the_outer_rect_adds_the_invisible_borders() -> None:
+    from sazed.adapters.windows.windows import outer_rect
+    from sazed.skills.pc.windows import Rect
+
+    window = Rect(93, 100, 1007, 607)  # GetWindowRect
+    frame = Rect(100, 100, 1000, 600)  # the visible part (DWM extended frame bounds)
+    assert outer_rect(Rect(0, 0, 960, 1040), window, frame) == Rect(-7, 0, 967, 1047)

@@ -40,3 +40,14 @@ launcher, audio). This is the only package allowed to touch the OS, files, or mo
   `skills/pc/files.py` (escaped there).
 - `WindowsFileOpener.open` refuses `PROGRAM_EXTENSIONS` itself: that is the load-bearing guard,
   the skill's check only gives the better answer.
+- Windows (`windows/windows.py`): EnumWindows is z-order, frontmost first. A user window is
+  visible, not DWM-cloaked (suspended Store apps, other virtual desktops), not a tool window,
+  unowned, titled, and not a shell or CoreWindow class. Sazed's console = its own pid and every
+  ancestor (terminal, shell, uv), plus any frame hosting one of them as a child.
+- Windows 10/11 windows have ~7 px invisible borders: positions use
+  `DWMWA_EXTENDED_FRAME_BOUNDS` and `outer_rect`; the real test checks within 2 px (8 px hid
+  the bug). Restore a maximised/minimised window before `SetWindowPos`.
+- `SetForegroundWindow` is refused unless this process had the last input: `focus` retries
+  after a synthetic Alt key, then flashes the taskbar button and returns False.
+- The real window tests use a throwaway Tk window (Character Map cannot be resized). Showing
+  the desktop runs only with `SAZED_TEST_DESKTOP=1`: it minimises the user's windows too.
