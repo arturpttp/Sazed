@@ -146,3 +146,24 @@ def test_focus_needs_an_app_and_snap_needs_a_side() -> None:
     assert required["janela_focar"] == {"app"}
     assert required["janela_encaixar"] == {"lado"}
     assert required["janela_minimizar"] == frozenset()
+
+
+def test_restore_without_an_app_picks_the_minimised_window_not_the_front_one() -> None:
+    # Word was minimised behind a maximised Chrome: "desminimiza essa janela" means Word.
+    s, fake = skill(
+        {None: [ref(1, "Chrome", state="maximized"), ref(2, "Word", state="minimized")]}
+    )
+    assert s.execute("janela_restaurar", {}, CTX) == WindowRestored("Word")
+    assert fake.calls == [("restore", 2)]
+
+
+def test_restoring_an_app_prefers_its_window_that_needs_it() -> None:
+    s, fake = skill({"Spotify": [ref(7), ref(8, state="minimized")]})
+    s.execute("janela_restaurar", app("Spotify"), CTX)
+    assert fake.calls == [("restore", 8)]
+
+
+def test_restore_falls_back_to_a_maximised_window() -> None:
+    s, fake = skill({None: [ref(1), ref(2, state="maximized")]})
+    s.execute("janela_restaurar", {}, CTX)
+    assert fake.calls == [("restore", 2)]

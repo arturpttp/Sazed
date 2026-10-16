@@ -70,3 +70,49 @@ def test_a_configured_folder_with_a_known_name_overrides_it(tmp_path: Path) -> N
     folders = WindowsKnownFolders({"downloads": tmp_path}, lookup=lambda name: "C:/elsewhere")
     assert folders.resolve("Downloads") == str(tmp_path)
     assert list(folders.names()) == list(KNOWN_FOLDERS)
+
+
+@pytest.mark.parametrize("name", ["fatura.msc", "ajuda.chm", "app.application", "estranho.xyz"])
+def test_the_opener_refuses_what_is_not_a_known_document(
+    name: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    started: list[str] = []
+    monkeypatch.setattr(os, "startfile", started.append, raising=False)
+    with pytest.raises(ValueError):
+        WindowsFileOpener().open(f"C:/x/{name}")
+    assert started == []
+
+
+def test_the_opener_opens_a_folder(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    started: list[str] = []
+    monkeypatch.setattr(os, "startfile", started.append, raising=False)
+    WindowsFileOpener().open(str(tmp_path))
+    assert started == [str(tmp_path)]
+
+
+def test_newest_skips_downloads_still_in_progress() -> None:
+    t = datetime(2026, 10, 16, 12).timestamp()
+    entries = [
+        ("C:/d/filme.mp4.crdownload", t),
+        ("C:/d/iso.part", t - 1),
+        ("C:/d/x.tmp", t - 2),
+        ("C:/d/y.partial", t - 3),
+        ("C:/d/z.download", t - 4),
+        ("C:/d/pronto.pdf", t - 10),
+    ]
+    assert [h.name for h in newest_from_listing(entries, None, 1)] == ["pronto.pdf"]
+
+
+def test_newest_reads_the_folder_itself_not_the_lagging_index(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Final review: the index lags behind a just-finished download, so asking it first opened
+    # the previous file.
+    from sazed.adapters.windows.files import WindowsFileSearch
+    from sazed.skills.pc.files import FileHit
+
+    (tmp_path / "novo.pdf").write_text("x", encoding="utf-8")
+    stale = FileHit(str(tmp_path / "antigo.pdf"), "antigo.pdf", tmp_path.name, datetime(2020, 1, 1))
+    search = WindowsFileSearch([])
+    monkeypatch.setattr(search, "_query", lambda sql: [stale])
+    assert [h.name for h in search.newest(str(tmp_path), None, 1)] == ["novo.pdf"]

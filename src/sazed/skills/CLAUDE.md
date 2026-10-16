@@ -39,7 +39,9 @@ next to the skill that needs them and implemented in `sazed.adapters`.
 
 - `skills/pc/files.py` builds the Windows Search SQL itself: every word goes through
   `escape_sql_like` and every path through quote-doubling. Never format a user's words into
-  the SQL any other way. A hit with a `PROGRAM_EXTENSIONS` extension is revealed, never opened.
+  the SQL any other way. A hit whose type is not in `OPENABLE_EXTENSIONS` is revealed, never opened.
+- Restore targets a minimised window first, then a maximised one: a minimised window is at the
+  bottom of the z-order, so "the front window" would be the wrong one.
 
 - "programa" is the learning placeholder for app names: only `abrir_app`/`fechar_app` seeds
   may use it (tests/skills/test_specs.py). Window seeds that said "programa" made every learned

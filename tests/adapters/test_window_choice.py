@@ -79,3 +79,37 @@ def test_the_outer_rect_adds_the_invisible_borders() -> None:
     window = Rect(93, 100, 1007, 607)  # GetWindowRect
     frame = Rect(100, 100, 1000, 600)  # the visible part (DWM extended frame bounds)
     assert outer_rect(Rect(0, 0, 960, 1040), window, frame) == Rect(-7, 0, 967, 1047)
+
+
+def test_the_ancestor_walk_stops_before_the_shell() -> None:
+    # Seen in the final review: python → uv → bash → powershell → WindowsTerminal → explorer.
+    # Counting explorer.exe as "Sazed" hid every File Explorer window.
+    from sazed.adapters.windows.windows import own_chain
+
+    chain = [
+        (1, "python.exe"),
+        (2, "uv.exe"),
+        (3, "powershell.exe"),
+        (4, "WindowsTerminal.exe"),
+        (5, "explorer.exe"),
+        (6, "winlogon.exe"),
+    ]
+    assert own_chain(chain) == {1, 2, 3, 4}
+
+
+def test_a_file_explorer_window_is_a_target_while_sazed_runs_in_a_terminal() -> None:
+    from sazed.adapters.windows.windows import own_chain
+
+    own = own_chain([(1, "python.exe"), (4, "WindowsTerminal.exe"), (5, "explorer.exe")])
+    raw = [w(9, 4, class_name="CASCADIA_HOSTING_WINDOW_CLASS"), w(8, 5, class_name="CabinetWClass")]
+    assert choose_windows(raw, own_pids=own, app_pids=None) == [8]
+
+
+def test_the_normal_position_goes_from_workspace_to_screen_coordinates() -> None:
+    # rcNormalPosition is relative to the primary work area: a taskbar on the left or at the
+    # top shifts it. The invisible borders (7 px left/right/bottom) are taken off.
+    from sazed.adapters.windows.windows import normal_to_screen
+    from sazed.skills.pc.windows import Rect
+
+    assert normal_to_screen(Rect(193, 200, 807, 607), (0, 0)) == Rect(200, 200, 800, 600)
+    assert normal_to_screen(Rect(193, 200, 807, 607), (48, 0)) == Rect(248, 200, 848, 600)

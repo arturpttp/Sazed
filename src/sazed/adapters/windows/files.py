@@ -16,7 +16,6 @@ from sazed.skills.pc.files import (
     FileHit,
     SearchError,
     is_program,
-    newest_sql,
     search_sql,
 )
 
@@ -108,11 +107,19 @@ def hit_from_url(url: str, folder: str, modified: datetime) -> FileHit:
     return FileHit(path, ntpath.basename(path), folder, modified)
 
 
+PARTIAL_DOWNLOADS = (".crdownload", ".part", ".partial", ".tmp", ".download")
+
+
 def newest_from_listing(
     entries: Iterable[tuple[str, float]], since: datetime | None, limit: int
 ) -> list[FileHit]:
-    """(path, mtime) pairs of one folder → newest first, from `since` on."""
-    hits = [hit_from(path, datetime.fromtimestamp(mtime)) for path, mtime in entries]
+    """(path, mtime) pairs of one folder → newest first, from `since` on; never a download
+    still in progress (a browser's partial file would open the "how to open it?" dialog)."""
+    hits = [
+        hit_from(path, datetime.fromtimestamp(mtime))
+        for path, mtime in entries
+        if not path.lower().endswith(PARTIAL_DOWNLOADS)
+    ]
     hits = [h for h in hits if since is None or h.modified >= since]
     return sorted(hits, key=lambda h: h.modified, reverse=True)[:limit]
 
@@ -121,10 +128,6 @@ def _local(value: datetime) -> datetime:
     """The index reports UTC; Sazed works in naive local time."""
     aware = value if value.tzinfo is not None else value.replace(tzinfo=UTC)
     return aware.astimezone().replace(tzinfo=None)
-
-
-def _utc(local: datetime) -> datetime:
-    return local.astimezone(UTC).replace(tzinfo=None)
 
 
 class WindowsFileSearch:
@@ -162,10 +165,8 @@ class WindowsFileSearch:
         return self._query(search_sql(words, extensions, self._scopes, limit))
 
     def newest(self, folder: str, since: datetime | None, limit: int) -> list[FileHit]:
-        hits = self._query(newest_sql(folder, None if since is None else _utc(since), limit))
-        if hits:
-            return hits
-        # The folder may not be indexed: list that one folder (never a scan of the disk).
+        # One known folder: listing it is cheap and always current, while the index lags
+        # behind a just-finished download (it opened the previous file). Never a disk scan.
         try:
             with os.scandir(folder) as entries:
                 listing = [(e.path, e.stat().st_mtime) for e in entries if e.is_file()]
@@ -177,8 +178,8 @@ class WindowsFileSearch:
 class WindowsFileOpener:
     def open(self, path: str) -> None:
         # The load-bearing guard: the skill checks first only to give a better answer.
-        if is_program(path):
-            raise ValueError(f"refusing to run a program found by search: {path}")
+        if not os.path.isdir(path) and is_program(path):
+            raise ValueError(f"refusing to open a file that is not a known document: {path}")
         os.startfile(path)  # type: ignore[attr-defined]  # Windows only
 
     def reveal(self, path: str) -> None:

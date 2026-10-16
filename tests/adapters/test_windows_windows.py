@@ -79,8 +79,9 @@ def test_monitors_include_exactly_one_primary() -> None:
 
 def test_sazeds_own_console_is_never_listed() -> None:
     control = WindowsWindowControl()
-    own = {psutil.Process().pid, *(p.pid for p in psutil.Process().parents())}
-    assert own <= control.own_pids
+    assert psutil.Process().pid in control.own_pids
+    names = {psutil.Process(pid).name().lower() for pid in control.own_pids}
+    assert "explorer.exe" not in names  # File Explorer windows stay targets
 
 
 def test_minimise_restore_maximise(tk_window: tuple[WindowsWindowControl, AppEntry, str]) -> None:
@@ -143,3 +144,17 @@ def test_show_desktop_and_back(tk_window: tuple[WindowsWindowControl, AppEntry, 
     assert wait_for(control, entry, title, "minimized").state == "minimized"
     control.undo_show_desktop()
     assert wait_for(control, entry, title, "normal").state == "normal"
+
+
+@pytest.mark.parametrize("state", ["minimized", "maximized"])
+def test_a_minimised_or_maximised_window_reports_its_normal_rect(
+    tk_window: tuple[WindowsWindowControl, AppEntry, str], state: str
+) -> None:
+    # Final review: a minimised window reported the parking rectangle (-32000, -32000), so
+    # moving it to another monitor left a 160x28 sliver.
+    control, entry, title = tk_window
+    before = find(control, entry, title)
+    assert before is not None
+    (control.minimize if state == "minimized" else control.maximize)(before.hwnd)
+    after = wait_for(control, entry, title, state)
+    assert close_to(after.rect, before.rect, tolerance=3), (after.rect, before.rect)

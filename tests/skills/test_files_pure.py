@@ -6,6 +6,7 @@ import pytest
 from sazed.skills.pc.files import (
     KIND_EXTENSIONS,
     KIND_PHRASES,
+    OPENABLE_EXTENSIONS,
     PROGRAM_EXTENSIONS,
     FileHit,
     escape_sql_like,
@@ -23,15 +24,31 @@ def test_every_program_extension_is_a_program_in_any_case(ext: str) -> None:
     assert is_program(f"C:/x/SETUP{ext.upper()}")
 
 
-@pytest.mark.parametrize("path", ["C:/x/a.pdf", "C:/x/a.xlsx", "C:/x/a", "C:/x/a.exe.txt"])
+@pytest.mark.parametrize("path", ["C:/x/a.pdf", "C:/x/a.xlsx", "C:/x/a.exe.txt", "C:/x/B.JPG"])
 def test_documents_are_not_programs(path: str) -> None:
     assert not is_program(path)
 
 
-def test_the_program_list_covers_the_spec() -> None:
+@pytest.mark.parametrize("ext", sorted(OPENABLE_EXTENSIONS))
+def test_every_openable_extension_opens(ext: str) -> None:
+    assert not is_program(f"C:/x/a{ext}")
+
+
+@pytest.mark.parametrize("path", ["C:/x/sem extensao", "C:/x/a.xyz", "C:/x/a.msc", "C:/x/a."])
+def test_anything_not_known_to_be_a_document_is_not_opened(path: str) -> None:
+    # An allow-list: the final review found .msc (GrimResource), .chm, .application… missing
+    # from the first deny-list. Unknown means "show it in its folder".
+    assert is_program(path)
+
+
+def test_the_known_dangerous_types_include_the_spec_and_the_reviews_list() -> None:
     spec = ".exe .com .bat .cmd .ps1 .psm1 .vbs .vbe .js .jse .wsf .wsh .msi .msp .scr .pif .lnk"
-    spec += " .url .hta .cpl .jar .reg .appref-ms"
-    assert set(spec.split()) == PROGRAM_EXTENSIONS
+    spec += " .url .hta .cpl .jar .reg .appref-ms "
+    review = ".msc .chm .application .appinstaller .msix .appx .msixbundle .settingcontent-ms"
+    review += " .diagcab .scf .inf .gadget .xll .wsc .sct .hlp .ins .isp .mst .shb .website"
+    review += " .library-ms .search-ms"
+    assert set((spec + review).split()) <= PROGRAM_EXTENSIONS
+    assert not PROGRAM_EXTENSIONS & OPENABLE_EXTENSIONS
 
 
 def test_no_kind_lists_a_program_extension() -> None:

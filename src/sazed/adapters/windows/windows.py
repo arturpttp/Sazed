@@ -87,6 +87,27 @@ def outer_rect(target: Rect, window: Rect, frame: Rect) -> Rect:
     )
 
 
+# Invisible resize borders of a normal window at 100% scale (left, top, right, bottom). Used only
+# where DWM cannot report them: a minimised window has no frame to measure.
+FRAME_INSET = (7, 0, 7, 7)
+
+
+def normal_to_screen(normal: Rect, workspace_offset: tuple[int, int]) -> Rect:
+    """`rcNormalPosition` (outer rect, workspace coordinates) → visible rect on the screen.
+
+    Workspace coordinates start at the primary monitor's work area, so a taskbar on the left or
+    at the top shifts them by `workspace_offset`.
+    """
+    dx, dy = workspace_offset
+    left, top, right, bottom = FRAME_INSET
+    return Rect(
+        normal.left + dx + left,
+        normal.top + dy + top,
+        normal.right + dx - right,
+        normal.bottom + dy - bottom,
+    )
+
+
 def _rect(value: tuple[int, int, int, int]) -> Rect:
     return Rect(*value)
 
@@ -120,13 +141,30 @@ def _cloaked(hwnd: int) -> bool:
     return result == 0 and value.value != 0
 
 
+# The shell and session processes that start terminals. The ancestor walk stops at the first of
+# them: explorer.exe owns every File Explorer window, which must stay a target.
+SHELL_PROCESSES = frozenset(
+    {"explorer.exe", "sihost.exe", "svchost.exe", "services.exe", "winlogon.exe", "wininit.exe"}
+)
+
+
+def own_chain(chain: Sequence[tuple[int, str]]) -> set[int]:
+    """Pids of Sazed and its ancestors (self first), up to but excluding the Windows shell."""
+    pids: set[int] = set()
+    for pid, name in chain:
+        if name.lower() in SHELL_PROCESSES:
+            break
+        pids.add(pid)
+    return pids
+
+
 def _own_pids() -> set[int]:
     """Sazed's process and its ancestors: the console, the terminal, the shell, uv."""
     me = psutil.Process()
-    pids = {me.pid}
+    chain = [(me.pid, me.name())]
     with contextlib.suppress(psutil.Error):
-        pids |= {p.pid for p in me.parents()}
-    return pids
+        chain += [(p.pid, p.name()) for p in me.parents()]
+    return own_chain(chain)
 
 
 class WindowsWindowControl:
@@ -193,12 +231,27 @@ class WindowsWindowControl:
                 state = "minimized"
             elif placement[1] == SW_SHOWMAXIMIZED:
                 state = "maximized"
-            rect = _dwm_rect(hwnd) or _rect(win32gui.GetWindowRect(hwnd))
-            handle = win32api.MonitorFromWindow(hwnd, win32con.MONITOR_DEFAULTTONEAREST)
+            if state == "normal":
+                rect = _dwm_rect(hwnd) or _rect(win32gui.GetWindowRect(hwnd))
+            else:
+                # Minimised: parked at (-32000, -32000). Maximised: the whole work area. Moves
+                # and restores need the size the window returns to.
+                rect = normal_to_screen(_rect(placement[4]), self._workspace_offset())
+            handle = win32api.MonitorFromRect(
+                (rect.left, rect.top, rect.right, rect.bottom), win32con.MONITOR_DEFAULTTONEAREST
+            )
             work = _rect(win32api.GetMonitorInfo(handle)["Work"])
             number = next((m.number for m in monitors if m.work == work), 1)
             refs.append(WindowRef(hwnd, win32gui.GetWindowText(hwnd), state, rect, number))
         return refs
+
+    def _workspace_offset(self) -> tuple[int, int]:
+        import win32api
+        import win32con
+
+        primary = win32api.MonitorFromPoint((0, 0), win32con.MONITOR_DEFAULTTOPRIMARY)
+        info = win32api.GetMonitorInfo(primary)
+        return info["Work"][0] - info["Monitor"][0], info["Work"][1] - info["Monitor"][1]
 
     def monitors(self) -> list[Monitor]:
         import win32api

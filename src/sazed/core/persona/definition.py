@@ -115,8 +115,8 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
     "FolderOpened": ("Abrindo {folder}, {mestre}.",),
     "FileOpened": ("Abrindo {name}, {mestre}.",),
     "ProgramRevealed": (
-        "Por segurança, não executo programas encontrados na busca, {mestre}; "
-        "abri a pasta de {name}.",
+        "Por segurança, só abro documentos, imagens, vídeos e músicas encontrados na busca, "
+        "{mestre}; abri a pasta de {name}.",
     ),
     "RecentFiles": ("Hoje você baixou {count} arquivos, {mestre}: {names}.",),
     # Outcomes: failures

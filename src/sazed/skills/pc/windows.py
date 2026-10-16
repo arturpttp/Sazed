@@ -325,6 +325,14 @@ class WindowsSkill:
                 return NoWindow()
             return WindowNotFound(entry.name, offer_open=intent_id == "janela_focar")
         window = windows[0]
+        if intent_id == "janela_restaurar":
+            # A minimised window sits at the bottom of the z-order: restoring means it, then a
+            # maximised one, and only then the window in front.
+            for state in ("minimized", "maximized"):
+                found = next((w for w in windows if w.state == state), None)
+                if found is not None:
+                    window = found
+                    break
         return window, entry.name if entry is not None else window.title[:TITLE_LIMIT]
 
     def execute(self, intent_id: str, slots: Slots, ctx: SkillContext) -> Outcome:

@@ -35,11 +35,17 @@ launcher, audio). This is the only package allowed to touch the OS, files, or mo
   sentence per run. Batching again makes a vector depend on its batch-mates (see proofs).
 - Windows Search (`windows/files.py`): `System.ItemPathDisplay` is a localised *display* path
   ("C:\Usuários\…\Documentos") that does not exist on disk — read `System.ItemUrl`.
-  Dates come back in UTC; `_local`/`_utc` convert, and `newest` sends its "since" in UTC.
+  Dates come back in UTC; `_local` converts. `newest` lists its one folder with `os.scandir`
+  (the index lags behind a fresh download) and skips partial downloads.
   COM is initialised per call (the REPL and dashboard threads differ). The SQL is built only by
   `skills/pc/files.py` (escaped there).
-- `WindowsFileOpener.open` refuses `PROGRAM_EXTENSIONS` itself: that is the load-bearing guard,
-  the skill's check only gives the better answer.
+- `WindowsFileOpener.open` opens a folder or a file whose type is in `OPENABLE_EXTENSIONS` (an
+  allow-list; a deny-list missed `.msc`/`.chm`) and refuses the rest itself: that is the
+  load-bearing guard, the skill's check only gives the better answer.
+- The ancestor walk for "Sazed's own console" stops at the shell (`SHELL_PROCESSES`):
+  explorer.exe starts terminals and owns every File Explorer window.
+- Minimised and maximised windows report `rcNormalPosition` (workspace → screen, minus
+  `FRAME_INSET`): the minimised rect is the (-32000, -32000) parking spot.
 - Windows (`windows/windows.py`): EnumWindows is z-order, frontmost first. A user window is
   visible, not DWM-cloaked (suspended Store apps, other virtual desktops), not a tool window,
   unowned, titled, and not a shell or CoreWindow class. Sazed's console = its own pid and every

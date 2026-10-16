@@ -135,3 +135,22 @@ programa" → `area_trabalho_mostrar` "minimiza tudo" 0.939; "restaura o program
 taught as `abrir_app`). With 0.92, `test_a_confirmed_window_command_is_learned_without_a_conflict_question`
 fails for both cases (`assert [] == [('minimiza aí o programa', 'janela_minimizar')]`); with
 0.95 they pass and `test_a_real_conflict_is_still_asked_before_learning` still passes.
+
+## Final review fixes (each test watched failing before the fix)
+1. **Explorer windows were "Sazed".** The ancestor walk reached explorer.exe (python → uv → bash
+   → powershell → WindowsTerminal → explorer). `test_the_ancestor_walk_stops_before_the_shell`
+   and `test_a_file_explorer_window_is_a_target_while_sazed_runs_in_a_terminal` failed (no
+   `own_chain`), pass now. By hand: "abre a pasta downloads", "minimiza essa janela" → "Downloads
+   – Explorador de Arquivos minimizado"; "desminimiza essa janela" → restored.
+2. **A minimised window reported the (-32000, -32000) parking rect.** Real Tk test
+   `test_a_minimised_or_maximised_window_reports_its_normal_rect[minimized|maximized]` failed
+   (2 failed), passes within 3 px with `rcNormalPosition` → screen − `FRAME_INSET`; pure
+   `test_the_normal_position_goes_from_workspace_to_screen_coordinates`.
+3. **Restore acted on the front window.** `test_restore_without_an_app_picks_the_minimised_window_not_the_front_one`
+   and two siblings failed (3 failed), pass now.
+4. **Deny-list missed .msc/.chm/….** Now an allow-list (`OPENABLE_EXTENSIONS`); the reviewer's
+   list is in `PROGRAM_EXTENSIONS` and proven never openable. Mutation: drop the adapter guard →
+   50 failed in `tests/adapters/test_files_adapter.py`.
+5. **"o último download" came from the lagging index; partial downloads could open.**
+   `test_newest_reads_the_folder_itself_not_the_lagging_index` and
+   `test_newest_skips_downloads_still_in_progress` failed (2 failed), pass now.

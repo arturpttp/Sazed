@@ -39,7 +39,8 @@ class FileHit:
     modified: datetime
 
 
-# A file found by a search is never run: these open their folder instead. Spec §6.
+# Known to run code when opened. Not the rule (that is OPENABLE_EXTENSIONS, an allow-list):
+# the tests prove none of these is ever openable. Spec §6 plus the final review's list.
 PROGRAM_EXTENSIONS: frozenset[str] = frozenset(
     [
         ".exe",
@@ -65,6 +66,29 @@ PROGRAM_EXTENSIONS: frozenset[str] = frozenset(
         ".jar",
         ".reg",
         ".appref-ms",
+        ".msc",
+        ".chm",
+        ".application",
+        ".appinstaller",
+        ".msix",
+        ".appx",
+        ".msixbundle",
+        ".settingcontent-ms",
+        ".diagcab",
+        ".scf",
+        ".inf",
+        ".gadget",
+        ".xll",
+        ".wsc",
+        ".sct",
+        ".hlp",
+        ".ins",
+        ".isp",
+        ".mst",
+        ".shb",
+        ".website",
+        ".library-ms",
+        ".search-ms",
     ]
 )
 
@@ -78,6 +102,14 @@ KIND_EXTENSIONS: dict[str, tuple[str, ...]] = {
     "musica": (".mp3", ".flac", ".wav", ".m4a", ".ogg"),
     "texto": (".txt", ".md"),
 }
+
+# A file reached by search or "the latest download" is opened only when its type is one of
+# these; anything else is shown in its folder (an allow-list: a deny-list missed .msc, .chm…).
+OPENABLE_EXTENSIONS: frozenset[str] = frozenset(
+    {ext for exts in KIND_EXTENSIONS.values() for ext in exts}
+    | {".zip", ".7z", ".rar", ".epub", ".bmp", ".tif", ".tiff", ".log", ".aac", ".wma", ".wmv"}
+    | {".m4v"}
+)
 
 KIND_PHRASES: dict[str | None, str] = {
     None: "nenhum arquivo chamado",
@@ -98,8 +130,8 @@ _ORDER = "ORDER BY System.DateModified DESC"
 
 
 def is_program(path: str) -> bool:
-    name = os.path.basename(path).lower()
-    return any(name.endswith(ext) for ext in PROGRAM_EXTENSIONS)
+    """True unless the file's type is known to be a document, image, video, audio or archive."""
+    return os.path.splitext(os.path.basename(path))[1].lower() not in OPENABLE_EXTENSIONS
 
 
 def _plain(text: str) -> str:
