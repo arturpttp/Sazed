@@ -30,6 +30,8 @@ launcher, audio). This is the only package allowed to touch the OS, files, or mo
   deletes the item's notes in the same transaction; `replace_example`/`replace_alias` delete and
   re-insert the same id in ONE transaction (a failure midway leaves the old row: tested).
   Check a conflict with a query before writing (`restore`), never by catching IntegrityError.
+- Schema 3 adds `file_changes` (the log behind "desfaz isso"): one row per applied change,
+  `undone_at` set when undone; a delete keeps no source (its old place is the target).
 - e5 needs the `"query: "` prefix on both sides; it is applied only in `OnnxEmbedder`.
 - The int8 e5 model quantizes activations over the whole batch, so `OnnxEmbedder` embeds one
   sentence per run. Batching again makes a vector depend on its batch-mates (see proofs).

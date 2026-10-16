@@ -49,3 +49,9 @@ FAILED tests/skills/test_fileops_skill.py::test_a_file_removed_after_the_questio
 FAILED tests/skills/test_fileops_skill.py::test_a_target_taken_after_the_question_is_left_alone
 ```
 `FileSearch.folders` (new on 2b's port) checked on the real index: "documents" → 1 folder.
+
+## Task 8: change log (migration 3)
+The four tests failed before the table and methods existed (`AttributeError: … 'record'`). A
+version-2 database built through the writer upgrades to 3 with its examples intact; rows are
+re-read through a fresh connection. Two older tests pinned "version 2"; they now use
+`len(MIGRATIONS)` so the next migration does not break them again.

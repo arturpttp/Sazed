@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from sazed.adapters.sqlite.coppermind import SqliteCoppermind
+from sazed.adapters.sqlite.coppermind import MIGRATIONS, SqliteCoppermind
 from sazed.core.coppermind import (
     Episode,
     LearnedKind,
@@ -39,7 +39,7 @@ def raw_rows(path: Path, sql: str) -> list[tuple[object, ...]]:
 
 
 def test_schema_has_a_notes_table(store: SqliteCoppermind, tmp_path: Path) -> None:
-    assert store.schema_version == 2
+    assert store.schema_version == len(MIGRATIONS)
     tables = {r[0] for r in raw_rows(tmp_path / "c.db", "SELECT name FROM sqlite_master")}
     assert "notes" in tables
 
@@ -57,7 +57,7 @@ def test_a_version_1_database_is_migrated_and_keeps_its_rows(tmp_path: Path) -> 
     conn.commit()
     conn.close()
     store = SqliteCoppermind(path)
-    assert store.schema_version == 2
+    assert store.schema_version == len(MIGRATIONS)
     assert [a.alias for a in store.aliases()] == ["zap"]
     store.close()
 

@@ -28,6 +28,7 @@ from sazed.core.coppermind import (
 )
 from sazed.core.outcomes import FAILURE_NAMES
 from sazed.core.types import IntentScore
+from sazed.skills.pc.fileops import ChangePlan, ItemState, LoggedChange
 
 MIGRATIONS: tuple[str, ...] = (
     """
@@ -71,6 +72,20 @@ MIGRATIONS: tuple[str, ...] = (
         updated_at TEXT
     );
     CREATE INDEX notes_target ON notes (target_kind, target_id);
+    """,
+    """
+    CREATE TABLE file_changes (
+        id INTEGER PRIMARY KEY,
+        kind TEXT NOT NULL,
+        source TEXT,
+        target TEXT NOT NULL,
+        is_dir INTEGER NOT NULL,
+        size INTEGER NOT NULL,
+        mtime REAL NOT NULL,
+        recycle_ref TEXT,
+        at TEXT NOT NULL,
+        undone_at TEXT
+    );
     """,
 )
 
@@ -441,3 +456,46 @@ class SqliteCoppermind:
                 reaction,
             ) in rows
         ]
+
+    # file changes (the log behind "desfaz isso") ---------------------------------------
+
+    def record(
+        self, plan: ChangePlan, after: ItemState | None, recycle_ref: str | None, at: datetime
+    ) -> int:
+        """One applied change. A delete keeps no source: the item's old place is its target."""
+        source = None if plan.kind == "apagar" else plan.source
+        with self._conn:
+            cursor = self._conn.execute(
+                "INSERT INTO file_changes"
+                " (kind, source, target, is_dir, size, mtime, recycle_ref, at)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    plan.kind,
+                    source,
+                    plan.target,
+                    int(plan.is_dir),
+                    after.size if after is not None else 0,
+                    after.mtime if after is not None else 0.0,
+                    recycle_ref,
+                    at.isoformat(),
+                ),
+            )
+        return int(cursor.lastrowid or 0)
+
+    def latest_open(self) -> LoggedChange | None:
+        row = self._conn.execute(
+            "SELECT id, kind, source, target, is_dir, size, mtime, recycle_ref FROM file_changes"
+            " WHERE undone_at IS NULL ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+        if row is None:
+            return None
+        change_id, kind, source, target, is_dir, size, mtime, ref = row
+        return LoggedChange(
+            int(change_id), kind, source, target, bool(is_dir), int(size), float(mtime), ref
+        )
+
+    def mark_undone(self, change_id: int, at: datetime) -> None:
+        with self._conn:
+            self._conn.execute(
+                "UPDATE file_changes SET undone_at = ? WHERE id = ?", (at.isoformat(), change_id)
+            )
