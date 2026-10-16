@@ -51,8 +51,9 @@ Sazed, the Terris Keeper from *Mistborn*. Read [`AGENTS.md`](./AGENTS.md) and
 - 2b final review (fresh reviewer): 5 Important fixed (Explorer windows treated as Sazed's
   console, minimised-window rects, restore target, an allow-list for opening found files, the
   newest download read from the folder); minors deferred in the 2b ledger.
-- **Next step:** the user's merge decision for `feat/sub-project-2b`; check "move to the other
-  monitor" with the second monitor on; then brainstorm 2c (moving, renaming, deleting files).
+- 2026-10-16: 2b merged into `main`. 2c (move, copy, rename, delete, new folder, undo) spec:
+  [`docs/superpowers/specs/2026-10-16-sazed-file-changes-2c-design.md`](./docs/superpowers/specs/2026-10-16-sazed-file-changes-2c-design.md).
+- **Next step:** user review of the 2c spec, then its plan.
 
 ## Measurements
 
@@ -125,7 +126,9 @@ aberto… Devo abrir?", "não" → nothing; "abre a pasta downloads" → Explore
 `.bat` found by name → its folder shown, never run; "abre o último print" → the newest
 screenshot; "quais arquivos baixei hoje" → "Você não baixou nada hoje". Confirmed window
 commands are learned without a conflict question (after `t_conflict` 0.95).
-**Unverified (2b):** moving a window to the second monitor on the real desktop (it was off);
+Verified by the user (2026-10-16): moving a window to the second monitor, and the `-m windows`
+suite (incl. the Calculator test) with the screen on.
+**Unverified (2b):**
 a real foreground refusal (covered with fakes); `test_store_calculator_opens_and_closes`
 (2a) failed on `main` and on this branch alike after ~3 h without user input — the display
 was asleep and Windows suspended each new Calculator before its frame appeared; re-run it with
