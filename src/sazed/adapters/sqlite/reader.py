@@ -60,6 +60,16 @@ class AliasRecord:
     created_at: str
 
 
+@dataclass(frozen=True)
+class NoteRecord:
+    id: int
+    target: str
+    target_id: int
+    text: str
+    created_at: str
+    updated_at: str | None
+
+
 def _ranking(raw: str) -> list[tuple[str, float]]:
     try:
         return [(str(intent), float(score)) for intent, score in json.loads(raw)]
@@ -214,3 +224,18 @@ class CoppermindReader:
             " UNION ALL SELECT 'alias', created_at FROM slot_aliases"
         )
         return [(str(kind), str(at)) for kind, at in rows]
+
+    def notes(self) -> list[NoteRecord]:
+        """Every note. A database Sazed has not migrated yet simply has none."""
+        tables = self._rows("SELECT name FROM sqlite_master WHERE type = 'table'")
+        if ("notes",) not in tables:
+            return []
+        rows = self._rows(
+            "SELECT id, target_kind, target_id, text, created_at, updated_at FROM notes ORDER BY id"
+        )
+        return [
+            NoteRecord(
+                int(str(i)), str(k), int(str(t)), str(x), str(c), None if u is None else str(u)
+            )
+            for i, k, t, x, c, u in rows
+        ]

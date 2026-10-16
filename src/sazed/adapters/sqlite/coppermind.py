@@ -18,7 +18,10 @@ from sazed.core.coppermind import (
     LearnedKind,
     NewAlias,
     NewExample,
+    Note,
+    NoteTarget,
     Reaction,
+    Snapshot,
     StoredAlias,
     StoredEpisode,
     StoredExample,
@@ -58,6 +61,17 @@ MIGRATIONS: tuple[str, ...] = (
         reaction TEXT NOT NULL
     );
     """,
+    """
+    CREATE TABLE notes (
+        id INTEGER PRIMARY KEY,
+        target_kind TEXT NOT NULL CHECK (target_kind IN ('example', 'alias', 'episode')),
+        target_id INTEGER NOT NULL,
+        text TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT
+    );
+    CREATE INDEX notes_target ON notes (target_kind, target_id);
+    """,
 )
 
 _LEARNED = """
@@ -67,6 +81,30 @@ _LEARNED = """
     SELECT 'alias', id, alias, value, slot, created_at, batch FROM slot_aliases
 """
 _FAILURE_OUTCOMES = sorted(FAILURE_NAMES)
+_TABLES = {LearnedKind.EXAMPLE: "learned_examples", LearnedKind.ALIAS: "slot_aliases"}
+_TARGET_TABLES = {
+    NoteTarget.EXAMPLE: "learned_examples",
+    NoteTarget.ALIAS: "slot_aliases",
+    NoteTarget.EPISODE: "episodes",
+}
+_NEXT_BATCH = (
+    "SELECT COALESCE(MAX(b), 0) + 1 FROM ("
+    " SELECT MAX(batch) AS b FROM learned_examples"
+    " UNION ALL SELECT MAX(batch) FROM slot_aliases)"
+)
+_NOTE_COLUMNS = "id, target_kind, target_id, text, created_at, updated_at"
+
+
+def _note(row: tuple[object, ...]) -> Note:
+    note_id, kind, target_id, text, created, updated = row
+    return Note(
+        int(str(note_id)),
+        NoteTarget(kind),
+        int(str(target_id)),
+        str(text),
+        datetime.fromisoformat(str(created)),
+        None if updated is None else datetime.fromisoformat(str(updated)),
+    )
 
 
 class CoppermindVersionError(Exception):
@@ -119,11 +157,7 @@ class SqliteCoppermind:
         stamp = now.isoformat()
         items: list[LearnedItem] = []
         with self._conn:  # one transaction: commits on success, rolls back on any error
-            (batch,) = self._conn.execute(
-                "SELECT COALESCE(MAX(b), 0) + 1 FROM ("
-                " SELECT MAX(batch) AS b FROM learned_examples"
-                " UNION ALL SELECT MAX(batch) FROM slot_aliases)"
-            ).fetchone()
+            (batch,) = self._conn.execute(_NEXT_BATCH).fetchone()
             for ex in examples:
                 cur = self._conn.execute(
                     "INSERT INTO learned_examples"
@@ -172,14 +206,17 @@ class SqliteCoppermind:
         return [_item(r) for r in rows]
 
     def forget(self, kind: LearnedKind, item_id: int) -> LearnedItem | None:
-        table = "learned_examples" if kind is LearnedKind.EXAMPLE else "slot_aliases"
         row = self._conn.execute(
             f"SELECT * FROM ({_LEARNED}) WHERE kind = ? AND id = ?", (kind.value, item_id)
         ).fetchone()
         if row is None:
             return None
-        with self._conn:
-            self._conn.execute(f"DELETE FROM {table} WHERE id = ?", (item_id,))
+        with self._conn:  # the item and its notes go together, or neither does
+            self._conn.execute(f"DELETE FROM {_TABLES[kind]} WHERE id = ?", (item_id,))
+            self._conn.execute(
+                "DELETE FROM notes WHERE target_kind = ? AND target_id = ?",
+                (kind.value, item_id),
+            )
         return _item(row)
 
     def forget_latest(self) -> list[LearnedItem]:
@@ -190,9 +227,143 @@ class SqliteCoppermind:
             return []
         batch = rows[0][6]
         with self._conn:
+            for kind, table in _TABLES.items():
+                self._conn.execute(
+                    "DELETE FROM notes WHERE target_kind = ?"
+                    f" AND target_id IN (SELECT id FROM {table} WHERE batch = ?)",
+                    (kind.value, batch),
+                )
             self._conn.execute("DELETE FROM learned_examples WHERE batch = ?", (batch,))
             self._conn.execute("DELETE FROM slot_aliases WHERE batch = ?", (batch,))
         return [_item(r) for r in rows]
+
+    def replace_example(
+        self, item_id: int, example: NewExample, now: datetime
+    ) -> LearnedItem | None:
+        """Forget and relearn in ONE transaction, keeping the id (so notes and refs stay)."""
+        with self._conn:
+            if not self._exists("learned_examples", item_id):
+                return None
+            (batch,) = self._conn.execute(_NEXT_BATCH).fetchone()
+            self._conn.execute("DELETE FROM learned_examples WHERE id = ?", (item_id,))
+            self._conn.execute(
+                "INSERT INTO learned_examples"
+                " (id, text, intent_id, embedding, origin, batch, created_at)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    item_id,
+                    example.text,
+                    example.intent_id,
+                    example.embedding,
+                    example.origin,
+                    batch,
+                    now.isoformat(),
+                ),
+            )
+        return LearnedItem(LearnedKind.EXAMPLE, item_id, example.text, example.intent_id, None, now)
+
+    def replace_alias(self, item_id: int, value: str, now: datetime) -> LearnedItem | None:
+        """Point an alias at another value in ONE transaction, keeping the id."""
+        with self._conn:
+            row = self._conn.execute(
+                "SELECT slot, alias FROM slot_aliases WHERE id = ?", (item_id,)
+            ).fetchone()
+            if row is None:
+                return None
+            slot, alias = row
+            (batch,) = self._conn.execute(_NEXT_BATCH).fetchone()
+            self._conn.execute("DELETE FROM slot_aliases WHERE id = ?", (item_id,))
+            self._conn.execute(
+                "INSERT INTO slot_aliases (id, slot, alias, value, batch, created_at)"
+                " VALUES (?, ?, ?, ?, ?, ?)",
+                (item_id, slot, alias, value, batch, now.isoformat()),
+            )
+        return LearnedItem(LearnedKind.ALIAS, item_id, alias, value, slot, now)
+
+    def snapshot(self, kind: LearnedKind, item_id: int) -> Snapshot | None:
+        row = self._conn.execute(
+            f"SELECT * FROM {_TABLES[kind]} WHERE id = ?", (item_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        return Snapshot(kind, tuple(row), tuple(self.notes(NoteTarget(kind.value), item_id)))
+
+    def restore(self, snap: Snapshot) -> bool:
+        """Put a forgotten item back with its id and notes. False if its place was taken."""
+        table = _TABLES[snap.kind]
+        with self._conn:
+            if self._exists(table, int(str(snap.row[0]))):
+                return False
+            if snap.kind is LearnedKind.ALIAS:
+                taken = self._conn.execute(
+                    "SELECT 1 FROM slot_aliases WHERE slot = ? AND alias = ?",
+                    (snap.row[1], snap.row[2]),
+                ).fetchone()
+                if taken:
+                    return False
+            marks = ", ".join("?" for _ in snap.row)
+            self._conn.execute(f"INSERT INTO {table} VALUES ({marks})", snap.row)
+            for note in snap.notes:
+                self._conn.execute(
+                    f"INSERT INTO notes ({_NOTE_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?)",
+                    (
+                        note.id,
+                        note.target.value,
+                        note.target_id,
+                        note.text,
+                        note.created_at.isoformat(),
+                        None if note.updated_at is None else note.updated_at.isoformat(),
+                    ),
+                )
+        return True
+
+    def _exists(self, table: str, row_id: int) -> bool:
+        found = self._conn.execute(f"SELECT 1 FROM {table} WHERE id = ?", (row_id,)).fetchone()
+        return found is not None
+
+    # notes -------------------------------------------------------------------
+
+    def add_note(self, target: NoteTarget, target_id: int, text: str, now: datetime) -> Note | None:
+        with self._conn:
+            if not self._exists(_TARGET_TABLES[target], target_id):
+                return None
+            cur = self._conn.execute(
+                "INSERT INTO notes (target_kind, target_id, text, created_at) VALUES (?, ?, ?, ?)",
+                (target.value, target_id, text, now.isoformat()),
+            )
+        assert cur.lastrowid is not None
+        return Note(cur.lastrowid, target, target_id, text, now)
+
+    def edit_note(self, note_id: int, text: str, now: datetime) -> Note | None:
+        with self._conn:
+            self._conn.execute(
+                "UPDATE notes SET text = ?, updated_at = ? WHERE id = ?",
+                (text, now.isoformat(), note_id),
+            )
+        return self._one_note(note_id)
+
+    def remove_note(self, note_id: int) -> Note | None:
+        note = self._one_note(note_id)
+        if note is not None:
+            with self._conn:
+                self._conn.execute("DELETE FROM notes WHERE id = ?", (note_id,))
+        return note
+
+    def notes(self, target: NoteTarget | None = None, target_id: int | None = None) -> list[Note]:
+        where: str = "1 = 1"
+        params: tuple[object, ...] = ()
+        if target is not None:
+            where, params = "target_kind = ? AND target_id = ?", (target.value, target_id)
+        rows = self._conn.execute(
+            f"SELECT {_NOTE_COLUMNS} FROM notes WHERE {where} ORDER BY id", params
+        ).fetchall()
+        return [_note(r) for r in rows]
+
+    def _one_note(self, note_id: int) -> Note | None:
+        row = self._conn.execute(
+            f"SELECT {_NOTE_COLUMNS} FROM notes WHERE id = ?", (note_id,)
+        ).fetchone()
+        return None if row is None else _note(row)
 
     # episodes ----------------------------------------------------------------
 

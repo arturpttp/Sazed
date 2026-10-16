@@ -134,3 +134,29 @@ def test_malformed_json_columns_are_tolerated(db: Path) -> None:
     conn.close()
     oldest = CoppermindReader(db).episodes(10)[-1]
     assert (oldest.ranking, oldest.slots) == ([], {})
+
+
+def test_notes_are_read(db: Path) -> None:
+    from sazed.core.coppermind import NoteTarget
+
+    store = SqliteCoppermind(db)
+    store.add_note(NoteTarget.EPISODE, 1, "lembrar disto", T0)
+    store.close()
+    (note,) = CoppermindReader(db).notes()
+    assert (note.target, note.target_id, note.text, note.created_at, note.updated_at) == (
+        "episode",
+        1,
+        "lembrar disto",
+        T0.isoformat(),
+        None,
+    )
+
+
+def test_a_database_without_notes_table_reads_no_notes(tmp_path: Path) -> None:
+    from sazed.adapters.sqlite.coppermind import MIGRATIONS
+
+    path = tmp_path / "v1.db"
+    conn = sqlite3.connect(path)
+    conn.executescript(f"BEGIN;\n{MIGRATIONS[0]}\nPRAGMA user_version = 1;\nCOMMIT;")
+    conn.close()
+    assert CoppermindReader(path).notes() == []

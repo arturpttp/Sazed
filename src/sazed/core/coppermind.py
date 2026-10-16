@@ -82,6 +82,33 @@ class StoredEpisode:
     episode: Episode
 
 
+class NoteTarget(Enum):
+    """What a note is attached to. Notes are for the user; Sazed itself never reads them."""
+
+    EXAMPLE = "example"
+    ALIAS = "alias"
+    EPISODE = "episode"
+
+
+@dataclass(frozen=True)
+class Note:
+    id: int
+    target: NoteTarget
+    target_id: int
+    text: str
+    created_at: datetime
+    updated_at: datetime | None = None
+
+
+@dataclass(frozen=True)
+class Snapshot:
+    """Everything needed to put a forgotten item back exactly: its row and its notes."""
+
+    kind: LearnedKind
+    row: tuple[object, ...]
+    notes: tuple[Note, ...]
+
+
 class Coppermind(Protocol):
     def learn(
         self, examples: Sequence[NewExample], aliases: Sequence[NewAlias], now: datetime
