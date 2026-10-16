@@ -89,3 +89,27 @@ def test_empty_ranking_is_not_understood() -> None:
 
 def test_single_intent_gap_is_measured_against_zero() -> None:
     assert decide(parse(("volume_mudo", 0.95)), NO_SLOTS, TH) == Execute("volume_mudo", {})
+
+
+SELF = IntentRequirements(required=frozenset(), requires_confirmation=False, confirms_itself=True)
+
+
+def test_an_intent_that_confirms_itself_is_not_asked_twice_for_a_low_score() -> None:
+    d = decide(parse(("arquivo_mover", 0.85), ("abrir_app", 0.50)), SELF, TH)
+    assert d == Execute("arquivo_mover", {})
+
+
+def test_an_intent_that_confirms_itself_is_not_asked_twice_for_a_small_gap() -> None:
+    d = decide(parse(("arquivo_mover", 0.95), ("arquivo_copiar", 0.94)), SELF, TH)
+    assert d == Execute("arquivo_mover", {})
+
+
+def test_confirming_itself_never_rescues_a_score_below_t_confirm() -> None:
+    d = decide(parse(("arquivo_mover", 0.60)), SELF, TH)
+    assert d == NotUnderstood()
+
+
+def test_confirming_itself_still_asks_for_a_missing_slot() -> None:
+    req = IntentRequirements(frozenset({"item"}), False, confirms_itself=True)
+    d = decide(parse(("arquivo_apagar", 0.85)), req, TH)
+    assert isinstance(d, AskSlot) and d.slot == "item"

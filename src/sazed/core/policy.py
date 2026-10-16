@@ -19,6 +19,8 @@ class Thresholds:
 class IntentRequirements:
     required: frozenset[str]
     requires_confirmation: bool
+    confirms_itself: bool = False
+    """The skill answers with a plan to confirm (file changes): never a second question."""
 
 
 def decide(parse: ParseResult, req: IntentRequirements, th: Thresholds) -> Decision:
@@ -37,6 +39,8 @@ def decide(parse: ParseResult, req: IntentRequirements, th: Thresholds) -> Decis
         if isinstance(extraction, Ambiguous):
             return AskSlot(top.intent_id, given, name, extraction.candidates, extraction.raw)
 
+    if req.confirms_itself:
+        return Execute(top.intent_id, given)
     if top.score < th.t_exec:
         return Confirm(top.intent_id, given, ConfirmReason.LOW_SCORE)
     if top.score - second < th.g_min:

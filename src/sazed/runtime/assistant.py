@@ -229,7 +229,11 @@ class Assistant:
         _, spec = self._specs[ranking[0].intent_id]
         slots = self._extract(spec, u.normalized, raw=u.text)
         parse = ParseResult(u, ranking, slots, frozenset(spec.required - set(slots)))
-        requirements = IntentRequirements(spec.required, spec.requires_confirmation(_given(slots)))
+        requirements = IntentRequirements(
+            spec.required,
+            spec.requires_confirmation(_given(slots)),
+            spec.confirms_itself,
+        )
         decision = decide(parse, requirements, self._settings.thresholds)
         turn = self._enact(decision, spec, u)
         turn.ranking, turn.slots = ranking, slots

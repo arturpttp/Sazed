@@ -36,3 +36,7 @@ FAILED …[copia a foto da praia no rio pra pasta imagens-arquivo:praia rio]
 ## Task 4: a new name comes from the original text
 Mutation: `_extract` passes the normalised text to `novo_nome` →
 `FAILED tests/runtime/test_assistant_basic.py::test_a_new_name_is_read_from_the_original_text`.
+
+## Task 5: a self-confirming intent is never asked twice
+Mutation: only the LOW_SCORE confirm is turned into Execute →
+`FAILED tests/core/test_policy.py::test_an_intent_that_confirms_itself_is_not_asked_twice_for_a_small_gap`.

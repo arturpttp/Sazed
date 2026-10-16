@@ -44,6 +44,8 @@ class IntentSpec:
     """False: no phrase is ever learned for this intent (power actions)."""
     repeatable: bool = False
     """True: "de novo"/"mais" may rerun it (level steps, next track). Opt-in on purpose."""
+    confirms_itself: bool = False
+    """True: `execute` only proposes a plan that the user confirms (file changes)."""
 
     @property
     def required(self) -> frozenset[str]:
