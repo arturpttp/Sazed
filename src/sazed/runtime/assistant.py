@@ -68,11 +68,14 @@ from sazed.nlu.control import Control, ControlKind, parse_control, pick_candidat
 from sazed.nlu.matcher import IntentIndex
 from sazed.nlu.normalize import normalize, strip_accents
 from sazed.nlu.slots.app import mask_app
+from sazed.nlu.slots.mask import mask_words
 from sazed.runtime.extractors import SlotExtractor
 
 log = logging.getLogger(__name__)
 
 GENERIC_ACTION = "atender a esse pedido"
+# Slots that name a thing, and the word that stands for any such thing in a learned phrase.
+_NAMED_SLOTS = {"pasta": "pasta", "arquivo": "arquivo"}
 
 
 @dataclass(frozen=True)
@@ -488,10 +491,18 @@ class Assistant:
     def learnable_text(self, text: str, intent_id: str) -> str:
         """The form of `text` that is learned: the app it names becomes a placeholder."""
         entry = self._specs.get(intent_id)
-        if entry is None or not any(slot.name == "app" for slot in entry[1].slots):
+        if entry is None:
             return text
-        aliases = self._aliases.get("app", {})
-        return mask_app(text, self._extractors["app"](text, aliases), aliases)
+        names = entry[1].slot_names
+        if "app" in names:
+            aliases = self._aliases.get("app", {})
+            text = mask_app(text, self._extractors["app"](text, aliases), aliases)
+        for slot, placeholder in _NAMED_SLOTS.items():
+            if slot in names:
+                found = self._extractors[slot](text, self._aliases.get(slot, {}))
+                if isinstance(found, SlotValue | Unmatched):
+                    text = mask_words(text, found.raw.split(), placeholder)
+        return text
 
     def _forget(self) -> _Turn:
         items = self._store.forget_latest()

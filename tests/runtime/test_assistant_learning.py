@@ -12,7 +12,7 @@ from sazed.core.outcomes import (
     NothingToForget,
     Outcome,
 )
-from sazed.core.skill import IntentSpec, SkillContext
+from sazed.core.skill import IntentSpec, SkillContext, SlotSpec
 from sazed.core.types import Slots
 from support.harness import Make
 
@@ -266,3 +266,48 @@ def test_correcting_towards_an_unlearnable_intent_learns_nothing(make: Make) -> 
     h.say("não, era pra proteger")
     assert guarded.ran == 1
     assert h.store.learned() == []
+
+
+class NamedThingsSkill:
+    """Stands in for the folder and file intents: one slot each."""
+
+    id = "named"
+
+    def __init__(self) -> None:
+        self.intents = (
+            IntentSpec(
+                "abrir_pasta_t",
+                ("abre a pasta",),
+                (SlotSpec("pasta", True, "Qual pasta?"),),
+                lambda s: "abrir a pasta",
+            ),
+            IntentSpec(
+                "abrir_arquivo_t",
+                ("abre o arquivo",),
+                (SlotSpec("arquivo", True, "Qual arquivo?"),),
+                lambda s: "abrir o arquivo",
+            ),
+        )
+
+    def execute(self, intent_id: str, slots: Slots, ctx: SkillContext) -> Outcome:
+        return Cancelled()
+
+
+def test_a_learned_folder_phrase_keeps_the_wording_not_the_folder(make: Make) -> None:
+    h = make(
+        {"abre a pasta projetos agora": {"abrir_pasta_t": 0.80}},
+        extra_skills=[NamedThingsSkill()],
+    )
+    assert isinstance(h.say("abre a pasta projetos agora").decision, Confirm)
+    h.say("sim")
+    assert learned(h) == [(LearnedKind.EXAMPLE, "abre a pasta agora", "abrir_pasta_t")]
+
+
+def test_a_learned_file_phrase_keeps_the_wording_not_the_file(make: Make) -> None:
+    h = make(
+        {"acha o arquivo gastos de outubro": {"abrir_arquivo_t": 0.80}},
+        extra_skills=[NamedThingsSkill()],
+    )
+    assert isinstance(h.say("acha o arquivo gastos de outubro").decision, Confirm)
+    h.say("sim")
+    assert learned(h) == [(LearnedKind.EXAMPLE, "acha o arquivo", "abrir_arquivo_t")]

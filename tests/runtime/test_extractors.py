@@ -18,3 +18,16 @@ def test_app_extractor_uses_catalog_names_and_aliases() -> None:
     assert extract("abre o zap", {"zap": "WhatsApp"}) == SlotValue(
         "app", "WhatsApp", "zap", 1.0, exact=True
     )
+
+
+def test_window_and_file_slots_have_extractors() -> None:
+    found = build_extractors(
+        [], folder_names=["Downloads"], folder_synonyms={"baixados": "Downloads"}
+    )
+    assert found["lado"]("joga pra esquerda", {}) == SlotValue("lado", "esquerda", "esquerda", 1.0)
+    assert found["monitor"]("pro monitor 2", {}) == SlotValue("monitor", 2, "monitor 2", 1.0)
+    assert found["pasta"]("abre os baixados", {}) == SlotValue(
+        "pasta", "Downloads", "baixados", 1.0
+    )
+    assert found["tipo"]("acha a planilha x", {}) == SlotValue("tipo", "planilha", "planilha", 1.0)
+    assert found["arquivo"]("acha a planilha x", {}) == SlotValue("arquivo", "x", "x", 1.0)

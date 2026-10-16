@@ -23,6 +23,11 @@ dialogue-control phrases. Pure functions over already-loaded data; no OS access,
   also an app-name word: "poe" (stripped "põe") would make "abre o poe" name no app.
 - `mask_app` (used before learning) must keep the verb: command words are never masked, even
   when one is a fuzzy match for a word of the app name ("roda" vs "Rodas").
+- Folder and file names are masked before learning with `mask_words` (slots `pasta`,
+  `arquivo`): the span from the first to the last named word becomes one placeholder, so the
+  inner fillers of a name ("gastos de outubro") go too.
+- `arquivo` is "whatever is left" after verbs, fillers and type words: add a new filler to
+  `files._FILLERS`, or it becomes part of every file name ("agora" was one).
 - `IntentMatcher.add_examples` embeds in one batch; adding seeds one at a time is ~N× slower with the real model.
 
 ## Not here
