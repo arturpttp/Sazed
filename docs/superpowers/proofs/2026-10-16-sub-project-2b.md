@@ -32,3 +32,9 @@ Terminal draws the console inside its own process's window).
 ```
 FAILED tests/adapters/test_window_choice.py::test_a_frame_hosting_sazeds_console_is_excluded
 ```
+
+## Task 5: a maximised window stays maximised after moving to another monitor
+Mutation: drop the final `maximize` after `place`.
+```
+FAILED tests/skills/test_windows_skill.py::test_moving_a_maximised_window_keeps_it_maximised
+```

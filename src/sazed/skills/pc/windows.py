@@ -10,8 +10,26 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
-from sazed.core.outcomes import NoSuchMonitor, SingleMonitor
-from sazed.skills.pc.apps import AppEntry
+from sazed.core.outcomes import (
+    AppNotFound,
+    DesktopRestored,
+    DesktopShown,
+    FocusRefused,
+    NoSuchMonitor,
+    NoWindow,
+    Outcome,
+    SingleMonitor,
+    WindowFocused,
+    WindowMaximized,
+    WindowMinimized,
+    WindowMoved,
+    WindowNotFound,
+    WindowRestored,
+    WindowSnapped,
+)
+from sazed.core.skill import IntentSpec, SkillContext, SlotSpec
+from sazed.core.types import Slots, SlotValue, Unmatched
+from sazed.skills.pc.apps import AppCatalog, AppEntry
 
 Side = Literal["esquerda", "direita"]
 WindowState = Literal["normal", "minimized", "maximized"]
@@ -117,3 +135,237 @@ def target_monitor(
         return found if found is not None else NoSuchMonitor(wanted, len(ordered))
     index = next((i for i, m in enumerate(ordered) if m.number == current), -1)
     return ordered[(index + 1) % len(ordered)]
+
+
+MINIMIZE_EXAMPLES = (
+    "minimiza o chrome",
+    "minimiza o spotify",
+    "minimizar o discord",
+    "minimiza essa janela",
+    "minimiza a janela",
+    "esconde o chrome",
+    "manda o spotify pra barra de tarefas",
+    "minimiza o programa",
+    "abaixa a janela do discord",
+    "minimiza aí o chrome",
+)
+MAXIMIZE_EXAMPLES = (
+    "maximiza o chrome",
+    "maximiza o spotify",
+    "maximizar o discord",
+    "maximiza essa janela",
+    "maximiza a janela",
+    "deixa o chrome em tela cheia",
+    "aumenta a janela do spotify",
+    "maximiza o programa",
+    "tela cheia no discord",
+    "maximiza aí o chrome",
+)
+RESTORE_EXAMPLES = (
+    "restaura o chrome",
+    "restaura o spotify",
+    "restaurar o discord",
+    "restaura essa janela",
+    "desmaximiza a janela",
+    "volta o chrome ao tamanho normal",
+    "tira o spotify da tela cheia",
+    "restaura o programa",
+    "desminimiza o discord",
+    "restaura aí o chrome",
+)
+FOCUS_EXAMPLES = (
+    "vai pro chrome",
+    "mostra o spotify",
+    "troca pro discord",
+    "traz o chrome pra frente",
+    "muda pra janela do spotify",
+    "alterna pro discord",
+    "foca no chrome",
+    "me mostra o programa",
+    "vai pra janela do chrome",
+    "volta pro spotify",
+)
+SNAP_EXAMPLES = (
+    "joga o chrome pra esquerda",
+    "joga o spotify pra direita",
+    "encaixa o discord na esquerda",
+    "encaixa essa janela na direita",
+    "coloca a janela na metade esquerda",
+    "manda o chrome pro lado direito",
+    "divide a tela com o spotify na esquerda",
+    "encaixa o programa na direita",
+    "joga a janela pra esquerda",
+    "põe o discord na metade direita",
+)
+MOVE_EXAMPLES = (
+    "manda o chrome pro outro monitor",
+    "joga o spotify pra outra tela",
+    "move o discord pro monitor 2",
+    "manda essa janela pro outro monitor",
+    "move a janela pra outra tela",
+    "passa o chrome pro segundo monitor",
+    "leva o spotify pro primeiro monitor",
+    "manda o programa pra outra tela",
+    "joga a janela pro monitor 1",
+    "move o chrome de monitor",
+)
+DESKTOP_EXAMPLES = (
+    "mostra a área de trabalho",
+    "minimiza tudo",
+    "minimiza todas as janelas",
+    "esconde todas as janelas",
+    "vai pra área de trabalho",
+    "limpa a tela",
+    "quero ver a área de trabalho",
+    "abaixa todas as janelas",
+    "mostra o desktop",
+    "some com as janelas",
+)
+DESKTOP_BACK_EXAMPLES = (
+    "volta as janelas",
+    "restaura tudo",
+    "restaura todas as janelas",
+    "traz as janelas de volta",
+    "desfaz o minimizar tudo",
+    "volta tudo como estava",
+    "devolve as janelas",
+    "reabre as janelas minimizadas",
+    "traz tudo de volta",
+    "volta as janelas pra tela",
+)
+
+TITLE_LIMIT = 60
+_WINDOW = SlotSpec("app", False, "De qual programa é a janela?")
+
+
+def _side(slots: Slots) -> Side:
+    side = slots.get("lado")
+    return "direita" if isinstance(side, SlotValue) and side.value == "direita" else "esquerda"
+
+
+def _label(slots: Slots, verb: str) -> str:
+    app = slots.get("app")
+    if isinstance(app, SlotValue):
+        return f"{verb} {app.value}"
+    return f"{verb} a janela"
+
+
+class WindowsSkill:
+    id = "windows"
+
+    def __init__(self, catalog: AppCatalog, control: WindowControl) -> None:
+        self._catalog = catalog
+        self._control = control
+        self.intents: tuple[IntentSpec, ...] = (
+            IntentSpec(
+                "janela_minimizar",
+                MINIMIZE_EXAMPLES,
+                (_WINDOW,),
+                lambda s: _label(s, "minimizar"),
+                repeatable=True,
+            ),
+            IntentSpec(
+                "janela_maximizar", MAXIMIZE_EXAMPLES, (_WINDOW,), lambda s: _label(s, "maximizar")
+            ),
+            IntentSpec(
+                "janela_restaurar", RESTORE_EXAMPLES, (_WINDOW,), lambda s: _label(s, "restaurar")
+            ),
+            IntentSpec(
+                "janela_focar",
+                FOCUS_EXAMPLES,
+                (SlotSpec("app", True, "Para qual programa devo ir?"),),
+                lambda s: _label(s, "mostrar"),
+            ),
+            IntentSpec(
+                "janela_encaixar",
+                SNAP_EXAMPLES,
+                (_WINDOW, SlotSpec("lado", True, "Para qual lado?")),
+                lambda s: f"{_label(s, 'encaixar')} na {_side(s)}",
+                repeatable=True,
+            ),
+            IntentSpec(
+                "janela_mover_monitor",
+                MOVE_EXAMPLES,
+                (_WINDOW, SlotSpec("monitor", False, "Para qual monitor?")),
+                lambda s: f"{_label(s, 'mover')} de monitor",
+                repeatable=True,
+            ),
+            IntentSpec(
+                "area_trabalho_mostrar",
+                DESKTOP_EXAMPLES,
+                (),
+                lambda s: "mostrar a área de trabalho",
+            ),
+            IntentSpec(
+                "area_trabalho_voltar",
+                DESKTOP_BACK_EXAMPLES,
+                (),
+                lambda s: "trazer as janelas de volta",
+            ),
+        )
+
+    def _target(self, intent_id: str, slots: Slots) -> tuple[WindowRef, str] | Outcome:
+        """The window a command means and the name to answer with, or why there is none."""
+        app = slots.get("app")
+        if isinstance(app, Unmatched):
+            return AppNotFound(app.raw, app.suggestion)
+        entry = None
+        if isinstance(app, SlotValue):
+            entry = next((e for e in self._catalog.entries() if e.name == app.value), None)
+            if entry is None:
+                return AppNotFound(app.raw, None)
+        windows = self._control.windows(entry)
+        if not windows:
+            if entry is None:
+                return NoWindow()
+            return WindowNotFound(entry.name, offer_open=intent_id == "janela_focar")
+        window = windows[0]
+        return window, entry.name if entry is not None else window.title[:TITLE_LIMIT]
+
+    def execute(self, intent_id: str, slots: Slots, ctx: SkillContext) -> Outcome:
+        if intent_id == "area_trabalho_mostrar":
+            self._control.show_desktop()
+            return DesktopShown()
+        if intent_id == "area_trabalho_voltar":
+            self._control.undo_show_desktop()
+            return DesktopRestored()
+        found = self._target(intent_id, slots)
+        if not isinstance(found, tuple):
+            return found
+        window, label = found
+        hwnd = window.hwnd
+        if intent_id == "janela_minimizar":
+            self._control.minimize(hwnd)
+            return WindowMinimized(label)
+        if intent_id == "janela_maximizar":
+            self._control.maximize(hwnd)
+            return WindowMaximized(label)
+        if intent_id == "janela_restaurar":
+            self._control.restore(hwnd)
+            return WindowRestored(label)
+        if intent_id == "janela_focar":
+            return WindowFocused(label) if self._control.focus(hwnd) else FocusRefused(label)
+        monitors = self._control.monitors()
+        current = next((m for m in monitors if m.number == window.monitor), None)
+        if current is None:
+            return NoWindow()
+        if intent_id == "janela_encaixar":
+            side = _side(slots)
+            self._control.place(hwnd, half(current.work, side))
+            return WindowSnapped(label, side)
+        if intent_id == "janela_mover_monitor":
+            wanted = slots.get("monitor")
+            choice = wanted.value if isinstance(wanted, SlotValue) else "outro"
+            if isinstance(choice, bool):
+                choice = "outro"
+            dst = target_monitor(monitors, current.number, choice)
+            if not isinstance(dst, Monitor):
+                return dst
+            maximized = window.state == "maximized"
+            if maximized:
+                self._control.restore(hwnd)
+            self._control.place(hwnd, move_between(window.rect, current.work, dst.work))
+            if maximized:
+                self._control.maximize(hwnd)
+            return WindowMoved(label, dst.number)
+        raise ValueError(f"unknown intent {intent_id}")
