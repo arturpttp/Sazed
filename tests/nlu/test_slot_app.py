@@ -177,3 +177,46 @@ def test_a_verb_close_to_a_name_word_is_kept() -> None:
 
     value = SlotValue("app", "Rodas", "rodas", 1.0)
     assert mask_app("roda o rodas", value, {}) == "roda o programa"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "minimiza essa janela",
+        "joga a janela pra esquerda",
+        "maximiza a janela",
+        "manda essa janela pro outro monitor",
+        "encaixa na direita",
+        "restaura essa janela ao tamanho normal",
+        "minimiza tudo",
+    ],
+)
+def test_window_words_name_no_app(text: str) -> None:
+    assert extract_app(text, NAMES, {}) is None
+
+
+@pytest.mark.parametrize(
+    ("text", "name"),
+    [
+        ("joga o spotify pra esquerda", "Spotify"),
+        ("manda o discord pro outro monitor", "Discord"),
+        ("vai pro discord", "Discord"),
+        ("minimiza o steam", "Steam"),
+        ("traz o spotify pra frente", "Spotify"),
+        ("deixa o discord em tela cheia", "Discord"),
+    ],
+)
+def test_window_commands_still_find_the_app(text: str, name: str) -> None:
+    found = extract_app(text, NAMES, {})
+    assert isinstance(found, SlotValue) and found.value == name
+
+
+def test_resource_monitor_is_still_found_by_its_other_word() -> None:
+    found = extract_app("abre o resource monitor", [*NAMES, "Resource Monitor"], {})
+    assert isinstance(found, SlotValue) and found.value == "Resource Monitor"
+
+
+def test_com_is_not_a_command_word_since_an_app_name_uses_it() -> None:
+    from sazed.nlu.slots.app import COMMAND_WORDS
+
+    assert "com" not in COMMAND_WORDS

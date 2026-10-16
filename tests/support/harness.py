@@ -10,12 +10,16 @@ from fakes.ports import (
     FakeAudio,
     FakeBrightness,
     FakeCatalog,
+    FakeFileOpener,
+    FakeFolders,
     FakeLauncher,
     FakeMedia,
     FakeOpener,
     FakePower,
     FakeScreen,
+    FakeSearch,
     FakeStatus,
+    FakeWindows,
 )
 from sazed.adapters.sqlite.coppermind import SqliteCoppermind
 from sazed.core.learning import LearningThresholds
@@ -25,6 +29,8 @@ from sazed.core.skill import Skill
 from sazed.runtime.assistant import Assistant, Settings
 from sazed.runtime.config import Config
 from sazed.runtime.skills import PcPorts, build_skills
+from sazed.skills.pc.files import FileHit
+from sazed.skills.pc.windows import Monitor, Rect, WindowRef
 
 APPS = ["Google Chrome", "Spotify", "Discord", "Visual Studio Code", "Claude Code"]
 SETTINGS = Settings(
@@ -48,6 +54,9 @@ class Harness:
     screen: FakeScreen
     brightness: FakeBrightness
     status: FakeStatus
+    windows: FakeWindows
+    search: FakeSearch
+    file_opener: FakeFileOpener
 
     def say(self, text: str) -> Response:
         return self.assistant.handle(text)
@@ -65,6 +74,8 @@ def build_harness(
     launcher_error: Exception | None = None,
     store: SqliteCoppermind | None = None,
     extra_skills: Sequence[Skill] = (),
+    windows: dict[str | None, list[WindowRef]] | None = None,
+    files: Sequence[FileHit] = (),
 ) -> Harness:
     index = ScriptedIndex(script)
     store = store or SqliteCoppermind(":memory:")
@@ -73,6 +84,10 @@ def build_harness(
     clock = ManualClock()
     opener, power, screen = FakeOpener(), FakePower(), FakeScreen()
     brightness, status = FakeBrightness(), FakeStatus()
+    desk = FakeWindows(windows or {}, [Monitor(1, Rect(0, 0, 1920, 1040), True)])
+    search = FakeSearch(files)
+    file_opener = FakeFileOpener({hit.path for hit in files})
+    folders = FakeFolders({"Downloads": "C:/U/Downloads"})
     ports = PcPorts(
         catalog=FakeCatalog(APPS),
         launcher=launcher,
@@ -83,6 +98,10 @@ def build_harness(
         brightness=brightness,
         opener=opener,
         status=status,
+        windows=desk,
+        folders=folders,
+        files=search,
+        file_opener=file_opener,
     )
     skill_set = build_skills(ports, Config())
     assistant = Assistant(
@@ -96,5 +115,18 @@ def build_harness(
         rng=Random(0),
     )
     return Harness(
-        assistant, index, store, launcher, audio, clock, opener, power, screen, brightness, status
+        assistant,
+        index,
+        store,
+        launcher,
+        audio,
+        clock,
+        opener,
+        power,
+        screen,
+        brightness,
+        status,
+        desk,
+        search,
+        file_opener,
     )

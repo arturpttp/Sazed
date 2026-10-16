@@ -70,3 +70,16 @@ def test_file_and_kind(text: str, words: str, kind: str | None) -> None:
 def test_only_command_words_is_no_file() -> None:
     assert extract_file(normalize("abre o arquivo")) is None
     assert extract_file(normalize("acha a planilha")) is None
+
+
+@pytest.mark.parametrize(
+    ("text", "name"),
+    [
+        ("abre o último print que eu tirei", "Capturas de Tela"),
+        ("abre o download mais novo", "Downloads"),
+        ("abre a pasta de imagens do celular", "Imagens"),
+    ],
+)
+def test_a_folder_named_inside_a_longer_phrase(text: str, name: str) -> None:
+    found = extract_folder(normalize(text), NAMES, SYN)
+    assert isinstance(found, SlotValue) and found.value == name

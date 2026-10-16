@@ -77,3 +77,51 @@ borders are 7 px. Tolerance cut to 2 px, then:
 ```
 E  AssertionError: (Rect(left=7, top=0, right=673, bottom=761), Rect(left=0, top=0, right=680, bottom=768))
 ```
+
+## Task 10: window words never become an app name (found while wiring the evaluation)
+Before `WINDOW_WORDS`, "minimiza essa janela" / "joga a janela pra esquerda" extracted the app
+query "essa janela" / "janela esquerda" → `Unmatched` → Sazed would answer "não encontrei". The
+seven `test_window_words_name_no_app` cases failed (`assert Unmatched(...) is None`); all pass
+with the window verbs and words in `COMMAND_WORDS`. Real-catalog check: "com" collides with
+"Ação com um clique" (left out, guarded by a test); "monitor" with "Resource Monitor" (kept;
+`test_resource_monitor_is_still_found_by_its_other_word`).
+
+## Task 10: the focus offer is never learned as "open"
+Mutation: `learn_example=True` on the "abrir?" offer after `janela_focar`.
+```
+FAILED tests/runtime/test_assistant_dialogue.py::test_going_to_a_closed_app_offers_to_open_it_and_learns_nothing
+```
+Mutation: drop the `pasta` check from `_is_false_execute` →
+`test_executing_with_the_wrong_folder_file_or_side_is_a_false_execute` fails on the Documentos case.
+
+## Task 10: fixture with the real model (qint8), thresholds unchanged (0.94 / 0.88 / 0.01)
+| | cases | accuracy | false-execute | executed | asked |
+|---|---|---|---|---|---|
+| main before 2b | 150 | 0.928 | 0.000 | 0.496 | 0.504 |
+| 2b, first seeds | 150 | 0.896 | 0.007 ("desliga o discord" → `janela_restaurar`, seed "desminimiza o discord") | 0.496 | 0.496 |
+| 2b + 48 new cases, first seeds | 198 | 0.887 | 0.020 | 0.518 | 0.458 |
+| 2b final | 198 | 0.923 | 0.000 | 0.542 | 0.458 |
+
+Seed changes, each measured: window seeds name Word/Excel/Notion/"janela" instead of the apps the
+open/close seeds use (Spotify/Discord pulled "bota o spotify pra rodar" to restore, "desliga o
+discord" to restore); file seeds say "arquivo" or a type word; folder seeds say "pasta"; added
+`abrir_app` "pode iniciar o chrome", "abre o gerenciador de tarefas"; `fechar_app` "fecha a
+janela do discord"; minimise "esconde a janela"; restore "sai da tela cheia no chrome", "volta a
+janela ao tamanho normal"; focus "vai pro discord", "me leva pro spotify"; files "abre o arquivo
+documentos", "abre a foto da viagem".
+Remaining 2b misrankings all *ask* (none executes): "abre o bloco de notas" (0.914 file vs
+open), "me leva pro discord", "abre o arquivo downloads" (0.954 vs 0.947: gap under g_min),
+"fecha a janela do spotify".
+
+## Task 10: window seeds must not use the learning placeholder "programa"
+Found by `test_a_learned_wording_carries_over_to_other_apps` (real model) failing: with window
+seeds "me mostra o programa", "manda o programa pra outra tela"…, the learned form "bota o
+programa pra rodar" scored ≥ t_conflict against them, so the confirmation asked "posso guardar?"
+and stored nothing. Guard `test_only_opening_and_closing_apps_use_the_learning_placeholder`;
+mutation (re-add "minimiza o programa") → `AssertionError: assert {'abrir_app', 'fechar_app',
+'janela_minimizar'} <= {'abrir_app', 'fechar_app'}`.
+
+## Task 10: a folder named inside a longer phrase
+"abre o último print que eu tirei" read the folder as "print que eu tirei" (Unmatched → "a pasta
+não existe"); fixed by matching a known name or synonym as a run of words inside the phrase.
+`test_a_folder_named_inside_a_longer_phrase` failed first (2 of 3 cases).

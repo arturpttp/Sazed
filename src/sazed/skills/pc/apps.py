@@ -91,6 +91,8 @@ OPEN_EXAMPLES = (
     "abra o spotify",
     "abrir o discord",
     "inicia o steam",
+    "pode iniciar o chrome",
+    "abre o gerenciador de tarefas",
     "inicie o word",
     "iniciar o excel",
     "executa o obs",
@@ -112,6 +114,7 @@ OPEN_EXAMPLES = (
     "abre o site do github",
 )
 CLOSE_EXAMPLES = (
+    "fecha a janela do discord",
     "fecha o chrome",
     "feche o spotify",
     "fechar o discord",

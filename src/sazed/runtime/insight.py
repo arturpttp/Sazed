@@ -60,6 +60,23 @@ PORT_DESCRIPTIONS: dict[str, tuple[str, str]] = {
     ),
     "Brightness": ("Lê e altera o brilho do monitor que aceita WMI.", "WmiBrightness"),
     "SystemStatus": ("Lê memória livre, uso de CPU e espaço em disco.", "PsutilStatus"),
+    "WindowControl": (
+        "Minimiza, maximiza, restaura, traz para frente, encaixa e move janelas entre monitores"
+        " (nunca a janela do próprio Sazed).",
+        "WindowsWindowControl",
+    ),
+    "KnownFolders": (
+        "Encontra Downloads, Documentos, Área de Trabalho e outras pastas, e as do config.",
+        "WindowsKnownFolders",
+    ),
+    "FileSearch": (
+        "Procura arquivos pelo nome no índice da Pesquisa do Windows (nunca lê o conteúdo).",
+        "WindowsFileSearch",
+    ),
+    "FileOpener": (
+        "Abre arquivos e pastas; programas encontrados na busca só são mostrados na pasta.",
+        "WindowsFileOpener",
+    ),
 }
 NO_DESCRIPTION = ("Sem descrição.", "?")
 

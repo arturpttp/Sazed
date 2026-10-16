@@ -244,3 +244,43 @@ def test_search_without_a_query_asks_and_takes_a_bare_answer(make: Make) -> None
     assert "O que devo pesquisar?" in r.text
     h.say("lofi")
     assert h.opener.opened == ["https://www.youtube.com/results?search_query=lofi"]
+
+
+# Windows and files (sub-project 2b) --------------------------------------------------------
+
+
+def test_going_to_a_closed_app_offers_to_open_it_and_learns_nothing(make: Make) -> None:
+    h = make({"vai pro spotify": {"janela_focar": 0.97, "abrir_app": 0.80}})
+    r = h.say("vai pro spotify")
+    assert r.text.endswith("Devo abrir?")
+    h.say("sim")
+    assert h.launcher.launched == ["Spotify"]
+    assert h.store.learned() == []
+
+
+def test_declining_the_offer_opens_nothing(make: Make) -> None:
+    h = make({"vai pro spotify": {"janela_focar": 0.97, "abrir_app": 0.80}})
+    h.say("vai pro spotify")
+    h.say("não")
+    assert h.launcher.launched == []
+
+
+def test_choosing_among_files_opens_the_chosen_one(make: Make) -> None:
+    from datetime import datetime
+
+    from sazed.skills.pc.files import FileHit
+
+    hits = [
+        FileHit(
+            f"C:/U/Downloads/nota {i}.txt",
+            f"nota {i}.txt",
+            "Downloads",
+            datetime(2026, 10, 14, 8 + i),
+        )
+        for i in range(3)
+    ]
+    h = make({"abre o arquivo nota": {"abrir_arquivo": 0.97}}, files=hits)
+    r = h.say("abre o arquivo nota")
+    assert "1) nota 2.txt (Downloads, hoje 10:00)" in r.text
+    h.say("o segundo")
+    assert h.file_opener.opened == ["C:/U/Downloads/nota 1.txt"]

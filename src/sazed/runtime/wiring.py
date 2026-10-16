@@ -92,6 +92,11 @@ def build_default_app(config: Config) -> SazedApp:
     from sazed.adapters.windows.audio import PycawAudio
     from sazed.adapters.windows.brightness import WmiBrightness
     from sazed.adapters.windows.catalog import StartMenuCatalog
+    from sazed.adapters.windows.files import (
+        WindowsFileOpener,
+        WindowsFileSearch,
+        WindowsKnownFolders,
+    )
     from sazed.adapters.windows.launcher import WindowsLauncher
     from sazed.adapters.windows.media import WinRtMedia
     from sazed.adapters.windows.opener import ShellOpener
@@ -99,6 +104,7 @@ def build_default_app(config: Config) -> SazedApp:
     from sazed.adapters.windows.screen import WindowsScreen
     from sazed.adapters.windows.status import PsutilStatus
     from sazed.adapters.windows.store import StoreCatalog
+    from sazed.adapters.windows.windows import WindowsWindowControl
     from sazed.skills.pc.apps import CombinedCatalog
 
     ports = PcPorts(
@@ -111,6 +117,10 @@ def build_default_app(config: Config) -> SazedApp:
         brightness=WmiBrightness(),
         opener=ShellOpener(),
         status=PsutilStatus(),
+        windows=WindowsWindowControl(),
+        folders=WindowsKnownFolders(config.folders),
+        files=WindowsFileSearch([str(Path.home()), *(str(p) for p in config.folders.values())]),
+        file_opener=WindowsFileOpener(),
     )
     return build_app(config, embedder=OnnxEmbedder(config.model.embedder_path), ports=ports)
 

@@ -72,6 +72,10 @@ def inert_ports(catalog: AppCatalog) -> PcPorts:
         brightness=inert,
         opener=inert,
         status=inert,
+        windows=inert,
+        folders=inert,
+        files=inert,
+        file_opener=inert,
     )
 
 

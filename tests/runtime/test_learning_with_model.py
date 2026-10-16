@@ -74,3 +74,14 @@ def test_a_learned_wording_carries_over_to_other_apps(app: SazedApp) -> None:
     best = app.index.rank(normalize("bota o discord pra rodar"))[0]
     assert best.intent_id == "abrir_app"
     assert best.score >= Config().nlu.t_exec
+
+
+def test_learning_a_window_phrase_does_not_pull_its_opposite(app: SazedApp) -> None:
+    teach(app, "minimiza aí o spotify", "janela_minimizar")
+    assert top(app, "maximiza o spotify") == "janela_maximizar"
+    assert top(app, "restaura o spotify") == "janela_restaurar"
+
+
+def test_learning_a_folder_phrase_does_not_turn_files_into_folders(app: SazedApp) -> None:
+    teach(app, "abre aí a pasta downloads", "abrir_pasta")
+    assert top(app, "abre o arquivo relatório de vendas") == "abrir_arquivo"

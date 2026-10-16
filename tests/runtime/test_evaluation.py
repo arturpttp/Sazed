@@ -77,3 +77,29 @@ def test_executing_with_the_wrong_query_is_a_false_execute() -> None:
     wrong = NluCase("pesquisa gatos", "pesquisar", consulta="cachorros")
     assert evaluate([right], index=index, app_names=APPS, thresholds=TH).false_execute_rate == 0
     assert evaluate([wrong], index=index, app_names=APPS, thresholds=TH).false_execute_rate == 1
+
+
+def test_executing_with_the_wrong_folder_file_or_side_is_a_false_execute() -> None:
+    index = ScriptedIndex(
+        {
+            "abre a pasta downloads": {"abrir_pasta": 0.95},
+            "abre o arquivo gastos": {"abrir_arquivo": 0.95},
+            "joga a janela pra esquerda": {"janela_encaixar": 0.95},
+        }
+    )
+    cases = {
+        True: [
+            NluCase("abre a pasta downloads", "abrir_pasta", pasta="Documentos"),
+            NluCase("abre o arquivo gastos", "abrir_arquivo", arquivo="contas"),
+            NluCase("joga a janela pra esquerda", "janela_encaixar", lado="direita"),
+        ],
+        False: [
+            NluCase("abre a pasta downloads", "abrir_pasta", pasta="Downloads"),
+            NluCase("abre o arquivo gastos", "abrir_arquivo", arquivo="gastos"),
+            NluCase("joga a janela pra esquerda", "janela_encaixar", lado="esquerda"),
+        ],
+    }
+    for wrong, group in cases.items():
+        for case in group:
+            report = evaluate([case], index=index, app_names=APPS, thresholds=TH)
+            assert report.false_execute_rate == (1.0 if wrong else 0.0), case

@@ -48,6 +48,7 @@ from sazed.core.outcomes import (
     NothingToForget,
     NothingToRepeat,
     Outcome,
+    WindowNotFound,
     is_failure,
 )
 from sazed.core.persona import Prompt, render
@@ -373,6 +374,12 @@ class Assistant:
         if isinstance(outcome, AmbiguousSlot):
             ask = AskSlot(spec.id, slots, outcome.slot, outcome.candidates, "")
             return self._ask(spec, ask, u)
+        if isinstance(outcome, WindowNotFound) and outcome.offer_open:
+            app = slots.get("app")
+            if isinstance(app, SlotValue):
+                # "vai pro X" meant focus: opening X is offered, never learned as "open".
+                offer = AwaitConfirm("abrir_app", {"app": app}, u.normalized, learn_example=False)
+                self._ctx = self._ctx.with_pending(offer, self._now)
         if isinstance(outcome, AppNotFound):
             last = LastTurn(LastKind.APP_NOT_FOUND, u.normalized, spec.id, slots, outcome.query)
             self._ctx = self._ctx.with_last(last, self._now)

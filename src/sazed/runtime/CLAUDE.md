@@ -16,6 +16,12 @@ Wires config, adapters, skills and the assistant together; the only place the cl
   (`label_episode` uses it) and applies masking, `learnable`, dedupe and conflict-unless-forced.
 - `editing.Editor` is the dashboard's writer: one thread, lazy model (examples only), undo for
   forget. Its ports raise on use; the dashboard never executes a skill.
+- `[folders]` in config adds folders by name; a configured name that matches a known folder
+  overrides it. A missing directory does not stop startup: it is logged and answered as
+  `FolderNotFound` when asked.
+- Folder names for the extractor come from `KNOWN_FOLDERS` plus config, never from the
+  folders port (the dashboard's inert ports raise when called).
+- `janela_focar` on a closed app leaves a pending "abrir?" with `learn_example=False`.
 
 ## Traps
 - Import onnxruntime before WinRT in any process that will load both (`build_default_app`
@@ -30,6 +36,3 @@ Wires config, adapters, skills and the assistant together; the only place the cl
 
 ## Not here
 Skill logic (→ `skills`), OS access (→ `adapters`), the REPL and its pt-BR strings (→ `interfaces`).
-- `[folders]` in config adds folders by name; a configured name that matches a known folder
-  overrides it. A missing directory does not stop startup: it is logged and answered as
-  `FolderNotFound` when asked.

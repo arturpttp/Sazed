@@ -706,3 +706,229 @@ intent = "none"
 [[case]]
 text = "desliga a luz do quarto"
 intent = "none"
+
+# --- 2b: windows, folders, files (incl. near-ties and phrases that must not run) -----
+
+[[case]]
+text = "minimiza o spotify aí"
+intent = "janela_minimizar"
+app = "Spotify"
+
+[[case]]
+text = "minimiza o discord pra mim"
+intent = "janela_minimizar"
+app = "Discord"
+
+[[case]]
+text = "esconde essa janela"
+intent = "janela_minimizar"
+
+[[case]]
+text = "maximiza o spotify pra mim"
+intent = "janela_maximizar"
+app = "Spotify"
+
+[[case]]
+text = "coloca o chrome em tela cheia"
+intent = "janela_maximizar"
+app = "Google Chrome"
+
+[[case]]
+text = "maximiza essa janela aí"
+intent = "janela_maximizar"
+
+[[case]]
+text = "restaura a janela do spotify"
+intent = "janela_restaurar"
+app = "Spotify"
+
+[[case]]
+text = "tira o chrome da tela cheia"
+intent = "janela_restaurar"
+app = "Google Chrome"
+
+[[case]]
+text = "volta essa janela ao normal"
+intent = "janela_restaurar"
+
+[[case]]
+text = "vai pro discord agora"
+intent = "janela_focar"
+app = "Discord"
+
+[[case]]
+text = "mostra o spotify"
+intent = "janela_focar"
+app = "Spotify"
+
+[[case]]
+text = "troca pro chrome"
+intent = "janela_focar"
+app = "Google Chrome"
+
+[[case]]
+text = "me leva pro discord"
+intent = "janela_focar"
+app = "Discord"
+
+[[case]]
+text = "joga o spotify pra esquerda"
+intent = "janela_encaixar"
+app = "Spotify"
+lado = "esquerda"
+
+[[case]]
+text = "encaixa o chrome na direita"
+intent = "janela_encaixar"
+app = "Google Chrome"
+lado = "direita"
+
+[[case]]
+text = "coloca essa janela no lado esquerdo"
+intent = "janela_encaixar"
+lado = "esquerda"
+
+[[case]]
+text = "manda o spotify pro outro monitor"
+intent = "janela_mover_monitor"
+app = "Spotify"
+
+[[case]]
+text = "joga o discord pra outra tela"
+intent = "janela_mover_monitor"
+app = "Discord"
+
+[[case]]
+text = "move essa janela pro monitor 2"
+intent = "janela_mover_monitor"
+
+[[case]]
+text = "mostra a área de trabalho pra mim"
+intent = "area_trabalho_mostrar"
+
+[[case]]
+text = "minimiza todas as janelas aí"
+intent = "area_trabalho_mostrar"
+
+[[case]]
+text = "esconde tudo"
+intent = "area_trabalho_mostrar"
+
+[[case]]
+text = "traz as janelas de volta pra mim"
+intent = "area_trabalho_voltar"
+
+[[case]]
+text = "restaura todas as janelas aí"
+intent = "area_trabalho_voltar"
+
+[[case]]
+text = "abre a pasta de downloads"
+intent = "abrir_pasta"
+pasta = "Downloads"
+
+[[case]]
+text = "abre a pasta de documentos"
+intent = "abrir_pasta"
+pasta = "Documentos"
+
+[[case]]
+text = "abre minhas imagens"
+intent = "abrir_pasta"
+pasta = "Imagens"
+
+[[case]]
+text = "abre a pasta das capturas de tela"
+intent = "abrir_pasta"
+pasta = "Capturas de Tela"
+
+[[case]]
+text = "abre a pasta de músicas pra mim"
+intent = "abrir_pasta"
+pasta = "Músicas"
+
+[[case]]
+text = "abre o arquivo orçamento de outubro"
+intent = "abrir_arquivo"
+arquivo = "orçamento outubro"
+
+[[case]]
+text = "acha a planilha de vendas"
+intent = "abrir_arquivo"
+arquivo = "vendas"
+
+[[case]]
+text = "encontra o pdf da fatura"
+intent = "abrir_arquivo"
+arquivo = "fatura"
+
+[[case]]
+text = "abre a foto do aniversário"
+intent = "abrir_arquivo"
+arquivo = "aniversário"
+
+[[case]]
+text = "procura o documento contrato de aluguel"
+intent = "abrir_arquivo"
+arquivo = "contrato aluguel"
+
+[[case]]
+text = "abre o arquivo downloads"
+intent = "abrir_arquivo"
+arquivo = "downloads"
+
+[[case]]
+text = "abre o último arquivo baixado pra mim"
+intent = "abrir_recente"
+
+[[case]]
+text = "abre o último print que eu tirei"
+intent = "abrir_recente"
+pasta = "Capturas de Tela"
+
+[[case]]
+text = "abre o download mais novo"
+intent = "abrir_recente"
+pasta = "Downloads"
+
+[[case]]
+text = "quais arquivos eu baixei hoje"
+intent = "listar_recentes"
+
+[[case]]
+text = "o que baixei hoje"
+intent = "listar_recentes"
+
+[[case]]
+text = "lista meus downloads de hoje"
+intent = "listar_recentes"
+
+[[case]]
+text = "abre o spotify agora"
+intent = "abrir_app"
+app = "Spotify"
+
+[[case]]
+text = "fecha a janela do spotify"
+intent = "fechar_app"
+app = "Spotify"
+
+[[case]]
+text = "a janela da sala está emperrada"
+intent = "none"
+
+[[case]]
+text = "comprei um monitor novo"
+intent = "none"
+
+[[case]]
+text = "o arquivo morto da empresa"
+intent = "none"
+
+[[case]]
+text = "baixei um filme ontem à noite"
+intent = "none"
+
+[[case]]
+text = "minha tela quebrou"
+intent = "none"

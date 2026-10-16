@@ -37,8 +37,11 @@ def test_every_slot_has_a_pt_br_question(spec: IntentSpec) -> None:
     assert all(s.question.endswith("?") for s in spec.slots)
 
 
-def test_only_level_steps_and_track_skips_are_repeatable() -> None:
+def test_only_level_steps_track_skips_and_window_moves_are_repeatable() -> None:
     assert {s.id for s in SPECS if s.repeatable} == {
+        "janela_minimizar",
+        "janela_encaixar",
+        "janela_mover_monitor",
         "volume_aumentar",
         "volume_diminuir",
         "brilho_aumentar",
@@ -46,3 +49,13 @@ def test_only_level_steps_and_track_skips_are_repeatable() -> None:
         "midia_proxima",
         "midia_anterior",
     }
+
+
+def test_only_opening_and_closing_apps_use_the_learning_placeholder() -> None:
+    # Learned app phrases store "programa" in place of the app. A seed of another intent
+    # holding that word makes every learned open/close phrase "conflict" with it (2b: "me
+    # mostra o programa" made "inicia aí o programa pra mim" rank focus, so nothing was learned).
+    from sazed.nlu.slots.app import PLACEHOLDER
+
+    users = {s.id for s in SPECS for e in s.examples if PLACEHOLDER in e.split()}
+    assert users <= {"abrir_app", "fechar_app"}

@@ -25,7 +25,9 @@ from sazed.runtime.assistant import Assistant, Settings
 from sazed.runtime.config import Config
 from sazed.runtime.skills import PcPorts, SkillSet, build_skills
 from sazed.skills.pc.apps import AppEntry
+from sazed.skills.pc.files import KNOWN_FOLDERS, FileHit
 from sazed.skills.pc.media import NowPlayingInfo
+from sazed.skills.pc.windows import Monitor, Rect, WindowRef
 
 NO_INTENT = "none"
 MIN_ACCURACY = 0.90
@@ -43,6 +45,9 @@ class NluCase:
     consulta: str | None = None
     pagina: str | None = None
     site: str | None = None
+    lado: str | None = None
+    pasta: str | None = None
+    arquivo: str | None = None
 
 
 @dataclass(frozen=True)
@@ -161,8 +166,61 @@ class DryRunPorts:
         return []
 
 
+class DryRunDesk:
+    """Windows and files that do nothing; one window, one monitor, no files."""
+
+    def windows(self, entry: AppEntry | None) -> list[WindowRef]:
+        return [WindowRef(1, "Janela", "normal", Rect(0, 0, 800, 600), 1)]
+
+    def monitors(self) -> list[Monitor]:
+        return [Monitor(1, Rect(0, 0, 1920, 1040), True)]
+
+    def minimize(self, hwnd: int) -> None:
+        return None
+
+    def maximize(self, hwnd: int) -> None:
+        return None
+
+    def restore(self, hwnd: int) -> None:
+        return None
+
+    def focus(self, hwnd: int) -> bool:
+        return True
+
+    def place(self, hwnd: int, rect: Rect) -> None:
+        return None
+
+    def show_desktop(self) -> None:
+        return None
+
+    def undo_show_desktop(self) -> None:
+        return None
+
+    def names(self) -> Sequence[str]:
+        return list(KNOWN_FOLDERS)
+
+    def resolve(self, name: str) -> str | None:
+        return f"C:/{name}"
+
+    def search(self, words: Sequence[str], extensions: Sequence[str], limit: int) -> list[FileHit]:
+        return []
+
+    def newest(self, folder: str, since: datetime | None, limit: int) -> list[FileHit]:
+        return []
+
+    def open(self, path: str) -> None:
+        return None
+
+    def reveal(self, path: str) -> None:
+        return None
+
+    def exists(self, path: str) -> bool:
+        return False
+
+
 def dry_run_skills(app_names: Sequence[str]) -> SkillSet:
     p = DryRunPorts(app_names)
+    desk = DryRunDesk()
     ports = PcPorts(
         catalog=p,
         launcher=p,
@@ -173,6 +231,10 @@ def dry_run_skills(app_names: Sequence[str]) -> SkillSet:
         brightness=p,
         opener=p,
         status=p,
+        windows=desk,
+        folders=desk,
+        files=desk,
+        file_opener=desk,
     )
     return build_skills(ports, Config())
 
@@ -193,6 +255,9 @@ def _is_false_execute(result: CaseResult) -> bool:
         ("consulta", case.consulta),
         ("pagina", case.pagina),
         ("site", case.site),
+        ("lado", case.lado),
+        ("pasta", case.pasta),
+        ("arquivo", case.arquivo),
     )
     for name, expected in expected_slots:
         if expected is None:
@@ -223,6 +288,9 @@ def load_cases(path: Path) -> tuple[list[str], list[NluCase]]:
             c.get("consulta"),
             c.get("pagina"),
             c.get("site"),
+            c.get("lado"),
+            c.get("pasta"),
+            c.get("arquivo"),
         )
         for c in data["case"]
     ]

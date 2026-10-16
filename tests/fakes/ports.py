@@ -184,6 +184,10 @@ def fake_pc_ports(
         brightness=FakeBrightness(),
         opener=FakeOpener(),
         status=FakeStatus(),
+        windows=FakeWindows({}, [Monitor(1, Rect(0, 0, 1920, 1040), True)]),
+        folders=FakeFolders({}),
+        files=FakeSearch([]),
+        file_opener=FakeFileOpener(set()),
     )
 
 

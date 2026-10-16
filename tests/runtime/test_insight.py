@@ -75,6 +75,10 @@ def test_every_port_has_a_pt_br_description() -> None:
         "UriOpener",
         "Brightness",
         "SystemStatus",
+        "WindowControl",
+        "KnownFolders",
+        "FileSearch",
+        "FileOpener",
     }
     assert {p.name for p in found} <= set(PORT_DESCRIPTIONS)
     catalog = next(p for p in found if p.name == "AppCatalog")

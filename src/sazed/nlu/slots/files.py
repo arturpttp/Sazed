@@ -112,6 +112,16 @@ def extract_folder(
     exact = [n for n in names if _folder_query(n) == query]
     if exact:
         return SlotValue("pasta", exact[0], query, 1.0)
+    # A name inside a longer phrase ("o último print que eu tirei"): longest name first.
+    tokens = query.split()
+    keyed = [(_folder_query(s), n) for s, n in synonyms.items() if n in names]
+    keyed += [(_folder_query(n), n) for n in names]
+    for key, name in sorted(keyed, key=lambda kn: -len(kn[0].split())):
+        words = key.split()
+        if words and any(
+            tokens[i : i + len(words)] == words for i in range(len(tokens) - len(words) + 1)
+        ):
+            return SlotValue("pasta", name, key, 1.0)
     scored = sorted(((name_score(query, _key(n)), n) for n in names), key=lambda sn: -sn[0])
     if not scored or scored[0][0] < MIN_SCORE:
         return Unmatched("pasta", query, None)
