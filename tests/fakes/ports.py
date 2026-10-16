@@ -1,10 +1,12 @@
 """In-memory ports. Tests assert their state, not only the response text."""
 
 from collections.abc import Sequence
+from dataclasses import replace
 
 from sazed.runtime.skills import PcPorts
 from sazed.skills.pc.apps import AppEntry
 from sazed.skills.pc.media import NowPlayingInfo
+from sazed.skills.pc.windows import Monitor, Rect, WindowRef
 
 
 class FakeCatalog:
@@ -180,3 +182,56 @@ def fake_pc_ports(
         opener=FakeOpener(),
         status=FakeStatus(),
     )
+
+
+class FakeWindows:
+    """Windows per app name (None: every user window), frontmost first."""
+
+    def __init__(
+        self,
+        windows: dict[str | None, list[WindowRef]],
+        monitors: list[Monitor],
+        *,
+        focus_ok: bool = True,
+    ) -> None:
+        self._windows = {k: list(v) for k, v in windows.items()}
+        self._monitors = list(monitors)
+        self.focus_ok = focus_ok
+        self.calls: list[tuple[str, int]] = []
+        self.desktop_shown = False
+
+    def windows(self, entry: AppEntry | None) -> list[WindowRef]:
+        return list(self._windows.get(None if entry is None else entry.name, []))
+
+    def monitors(self) -> list[Monitor]:
+        return list(self._monitors)
+
+    def _update(self, hwnd: int, **changes: object) -> None:
+        for key, refs in self._windows.items():
+            self._windows[key] = [replace(r, **changes) if r.hwnd == hwnd else r for r in refs]  # type: ignore[arg-type]
+
+    def minimize(self, hwnd: int) -> None:
+        self.calls.append(("minimize", hwnd))
+        self._update(hwnd, state="minimized")
+
+    def maximize(self, hwnd: int) -> None:
+        self.calls.append(("maximize", hwnd))
+        self._update(hwnd, state="maximized")
+
+    def restore(self, hwnd: int) -> None:
+        self.calls.append(("restore", hwnd))
+        self._update(hwnd, state="normal")
+
+    def focus(self, hwnd: int) -> bool:
+        self.calls.append(("focus", hwnd))
+        return self.focus_ok
+
+    def place(self, hwnd: int, rect: Rect) -> None:
+        self.calls.append(("place", hwnd))
+        self._update(hwnd, rect=rect, state="normal")
+
+    def show_desktop(self) -> None:
+        self.desktop_shown = True
+
+    def undo_show_desktop(self) -> None:
+        self.desktop_shown = False

@@ -110,3 +110,36 @@ def test_fake_pc_ports_uses_the_given_fakes() -> None:
     ports = fake_pc_ports(["Spotify"], audio=audio)
     assert ports.audio is audio
     assert [e.name for e in ports.catalog.entries()] == ["Spotify"]
+
+
+def _ref(hwnd: int, title: str = "x"):  # type: ignore[no-untyped-def]
+    from sazed.skills.pc.windows import Rect, WindowRef
+
+    return WindowRef(hwnd, title, "normal", Rect(0, 0, 100, 100), 1)
+
+
+def test_fake_windows_lists_by_app_name_and_tracks_state() -> None:
+    from fakes.ports import FakeWindows
+    from sazed.skills.pc.windows import Monitor, Rect
+
+    (entry,) = FakeCatalog(["Spotify"]).entries()
+    fake = FakeWindows(
+        {None: [_ref(1)], "Spotify": [_ref(2)]}, [Monitor(1, Rect(0, 0, 9, 9), True)]
+    )
+    assert [r.hwnd for r in fake.windows(None)] == [1]
+    assert [r.hwnd for r in fake.windows(entry)] == [2]
+    fake.minimize(2)
+    assert fake.windows(entry)[0].state == "minimized"
+    fake.maximize(2)
+    assert fake.windows(entry)[0].state == "maximized"
+    fake.place(2, Rect(1, 2, 3, 4))
+    assert fake.windows(entry)[0].rect == Rect(1, 2, 3, 4)
+    assert fake.windows(entry)[0].state == "normal"
+    assert fake.calls == [("minimize", 2), ("maximize", 2), ("place", 2)]
+
+
+def test_fake_windows_focus_can_be_refused() -> None:
+    from fakes.ports import FakeWindows
+
+    assert FakeWindows({}, [], focus_ok=False).focus(1) is False
+    assert FakeWindows({}, []).focus(1) is True

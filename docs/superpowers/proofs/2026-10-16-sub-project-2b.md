@@ -25,3 +25,10 @@ Mutation: always insert the placeholder (no collapse after the same literal word
 ```
 FAILED tests/nlu/test_slot_mask.py::test_a_placeholder_after_the_same_literal_word_collapses
 ```
+
+## Task 4: Sazed's console is never a window target
+Mutation: exclude only windows whose own pid is Sazed's (drop the hosted-child check — Windows
+Terminal draws the console inside its own process's window).
+```
+FAILED tests/adapters/test_window_choice.py::test_a_frame_hosting_sazeds_console_is_excluded
+```

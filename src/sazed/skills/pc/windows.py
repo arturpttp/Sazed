@@ -8,11 +8,13 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, Protocol
 
 from sazed.core.outcomes import NoSuchMonitor, SingleMonitor
+from sazed.skills.pc.apps import AppEntry
 
 Side = Literal["esquerda", "direita"]
+WindowState = Literal["normal", "minimized", "maximized"]
 
 
 @dataclass(frozen=True)
@@ -38,6 +40,41 @@ class Monitor:
     work: Rect
     """The work area: the screen minus the taskbar."""
     primary: bool
+
+
+@dataclass(frozen=True)
+class WindowRef:
+    hwnd: int
+    title: str
+    state: WindowState
+    rect: Rect
+    """The visible rectangle (without the invisible resize borders)."""
+    monitor: int
+    """`Monitor.number` of the screen the window is on."""
+
+
+class WindowControl(Protocol):
+    def windows(self, entry: AppEntry | None) -> list[WindowRef]:
+        """The app's windows, or every user window when `entry` is None; frontmost first.
+
+        Never Sazed's own console.
+        """
+        ...
+
+    def monitors(self) -> list[Monitor]: ...
+    def minimize(self, hwnd: int) -> None: ...
+    def maximize(self, hwnd: int) -> None: ...
+    def restore(self, hwnd: int) -> None: ...
+    def focus(self, hwnd: int) -> bool:
+        """Bring to the front; False when Windows refused (the window then flashes)."""
+        ...
+
+    def place(self, hwnd: int, rect: Rect) -> None:
+        """Restore if needed and give the window this visible rectangle."""
+        ...
+
+    def show_desktop(self) -> None: ...
+    def undo_show_desktop(self) -> None: ...
 
 
 def half(work: Rect, side: Side) -> Rect:
