@@ -53,6 +53,9 @@ next to the skill that needs them and implemented in `sazed.adapters`.
   the source (size, mtime), that the target is still free, and the area rules. Every 2c intent
   has `confirms_itself=True` and `learnable=False`. The area: `fixed` folders never change
   themselves but may hold changes; nothing inside a `trees` folder (AppData, Sazed) changes.
+  The rules resolve both sides through `area.realpath`: the candidate *and* the area's folders.
+  Resolving only the candidate refused every folder configured through a subst drive or
+  junction, and let a tree named through a link stop protecting its real contents.
 
 ## Not here
 Text matching (→ `nlu`), Windows APIs (→ `adapters/windows`).

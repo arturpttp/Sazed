@@ -101,10 +101,17 @@ def _resolved(path: str, area: Area) -> str:
     return _norm(area.realpath(path))
 
 
+def _all_resolved(paths: tuple[str, ...], area: Area) -> list[str]:
+    # The area's folders go through realpath too: a candidate is resolved, so a folder
+    # configured through a subst drive or junction would otherwise never match itself, and a
+    # tree named through a link would not protect what is really inside it.
+    return [_resolved(p, area) for p in paths]
+
+
 def _in_tree(resolved: str, area: Area) -> bool:
     if "appdata" in resolved.split("\\"):
         return True
-    return any(resolved == _norm(t) or is_inside(resolved, t) for t in area.trees)
+    return any(resolved == t or is_inside(resolved, t) for t in _all_resolved(area.trees, area))
 
 
 def check_source(path: str, area: Area) -> Protected | None:
@@ -112,9 +119,9 @@ def check_source(path: str, area: Area) -> Protected | None:
     resolved = _resolved(path, area)
     if (
         _DRIVE_ROOT.match(resolved)
-        or resolved in {_norm(f) for f in area.fixed}
+        or resolved in set(_all_resolved(area.fixed, area))
         or _in_tree(resolved, area)
-        or not any(is_inside(resolved, root) for root in area.roots)
+        or not any(is_inside(resolved, root) for root in _all_resolved(area.roots, area))
     ):
         return Protected(_display(path))
     return None
@@ -123,7 +130,8 @@ def check_source(path: str, area: Area) -> Protected | None:
 def check_destination(folder: str, area: Area) -> Protected | None:
     """None when things may be put into `folder` (the known folders and roots included)."""
     resolved = _resolved(folder, area)
-    allowed = any(resolved == _norm(r) or is_inside(resolved, r) for r in area.roots)
+    roots = _all_resolved(area.roots, area)
+    allowed = any(resolved == r or is_inside(resolved, r) for r in roots)
     if _DRIVE_ROOT.match(resolved) or _in_tree(resolved, area) or not allowed:
         return Protected(_display(folder))
     return None

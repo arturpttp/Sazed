@@ -90,6 +90,43 @@ def test_protected_trees_are_never_destinations(folder: str) -> None:
     assert isinstance(check_destination(folder, AREA), Protected)
 
 
+SUBST_LINKS = {
+    r"S:": r"C:\unidade",  # a subst drive
+    rf"{PROFILE}\dados-sazed": rf"{PROFILE}\Documents\sazed",  # Sazed's data through a junction
+}
+
+
+def subst_realpath(path: str) -> str:
+    import ntpath
+
+    path = ntpath.normpath(path)
+    for link, target in SUBST_LINKS.items():
+        if path.lower() == link.lower() or path.lower().startswith(link.lower() + "\\"):
+            return target + path[len(link) :]
+    return path
+
+
+# The area names folders as configured; the rules see where they really are.
+LINKED_AREA = Area(
+    roots=(PROFILE, r"S:\alvo"),
+    fixed=(PROFILE, r"S:\alvo", *KNOWN),
+    trees=(rf"{PROFILE}\AppData", rf"{PROFILE}\dados-sazed"),
+    realpath=subst_realpath,
+)
+
+
+def test_a_folder_configured_through_a_subst_drive_is_a_destination_and_holds_sources() -> None:
+    assert check_destination(r"S:\alvo", LINKED_AREA) is None
+    assert check_source(r"S:\alvo\x.txt", LINKED_AREA) is None
+    assert isinstance(check_source(r"S:\alvo", LINKED_AREA), Protected)  # still fixed itself
+
+
+def test_a_tree_named_through_a_link_still_protects_what_is_really_inside_it() -> None:
+    inside = rf"{PROFILE}\Documents\sazed\coppermind.db"
+    assert isinstance(check_source(inside, LINKED_AREA), Protected)
+    assert isinstance(check_destination(rf"{PROFILE}\Documents\sazed", LINKED_AREA), Protected)
+
+
 def test_is_inside_is_strict_and_separator_aware() -> None:
     assert is_inside(r"C:\a\b", r"C:\a")
     assert not is_inside(r"C:\a", r"C:\a")
