@@ -42,7 +42,14 @@ Sazed, the Terris Keeper from *Mistborn*. Read [`AGENTS.md`](./AGENTS.md) and
 - 2a final review done (fresh reviewer): 1 Critical + 2 Important fixed (forced shutdown,
   site closes, "desmuta o computador"); minors deferred in the 2a ledger.
 - 2026-10-15: 2a, the editable dashboard and the Store close-race fix merged into `main`.
-- **Next step:** brainstorm 2b (windows, files).
+- 2026-10-16: sub-project 2b (windows, folders, files) per
+  [`docs/superpowers/specs/2026-10-16-sazed-pc-skills-2b-design.md`](./docs/superpowers/specs/2026-10-16-sazed-pc-skills-2b-design.md)
+  and its plan, on `feat/sub-project-2b`. Proofs:
+  [`docs/superpowers/proofs/2026-10-16-sub-project-2b.md`](./docs/superpowers/proofs/2026-10-16-sub-project-2b.md).
+  Fixture now 198 cases: accuracy 0.923, false-execute 0.000, executed 0.542 / asked 0.458
+  (thresholds unchanged). Move-and-copy of files is sub-project 2c.
+- **Next step:** final review of `feat/sub-project-2b`, then the user's merge decision; then
+  brainstorm 2c (moving, renaming, deleting files).
 
 ## Measurements
 
@@ -54,6 +61,10 @@ single sentence median 1.9 ms, p95 2.8 ms. Breakdown measured separately: the to
 
 2026-10-15, after 2a, `scripts/measure_app.py` (full app: model, 9 skills, 285 seed examples,
 Start-menu + Store catalogs, all adapters): startup 2.4–2.8 s, RSS +430 MB (process 473 MB).
+
+2026-10-16, after 2b (`scripts/measure_app.py`, 11 skills, 420 seed examples): startup
+2.48–2.50 s (main 2.28 s; one cold run 4.7 s), RSS +430 MB (process 475 MB) — unchanged.
+`scripts/measure_search.py`: Windows Search by name, 20 queries, median 110 ms, p95 130 ms.
 
 ## Commands
 
@@ -103,3 +114,17 @@ user present), whether brightness 50 was visibly dimmer (WMI accepted it).
 coppermind → exit 0, UTF-8 file with "→" (before the fix: UnicodeEncodeError, exit 1).
 **Unverified:** typing in an interactive console (only piped stdin was used), Ctrl-C handling,
 `sazed revisar` against the real data dir (covered only by tests with fakes).
+2026-10-16, sub-project 2b, real model and desktop, through the real `Assistant` (temp data
+dir): Character Map minimised, restored, snapped left, brought to the front; "manda … pro outro
+monitor" → "Só há um monitor ligado" (the second monitor was off); "minimiza tudo" / "volta as
+janelas" → desktop shown and windows back; after closing it, "vai pro character map" → "não está
+aberto… Devo abrir?", "não" → nothing; "abre a pasta downloads" → Explorer on Downloads; a
+`.bat` found by name → its folder shown, never run; "abre o último print" → the newest
+screenshot; "quais arquivos baixei hoje" → "Você não baixou nada hoje". Confirmed window
+commands are learned without a conflict question (after `t_conflict` 0.95).
+**Unverified (2b):** moving a window to the second monitor on the real desktop (it was off);
+a real foreground refusal (covered with fakes); `test_store_calculator_opens_and_closes`
+(2a) failed on `main` and on this branch alike after ~3 h without user input — the display
+was asleep and Windows suspended each new Calculator before its frame appeared; re-run it with
+the screen on; maximising Character Map (fixed size; the Tk
+window in the `-m windows` suite covers maximise and snap).

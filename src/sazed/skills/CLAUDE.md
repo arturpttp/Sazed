@@ -41,5 +41,10 @@ next to the skill that needs them and implemented in `sazed.adapters`.
   `escape_sql_like` and every path through quote-doubling. Never format a user's words into
   the SQL any other way. A hit with a `PROGRAM_EXTENSIONS` extension is revealed, never opened.
 
+- "programa" is the learning placeholder for app names: only `abrir_app`/`fechar_app` seeds
+  may use it (tests/skills/test_specs.py). Window seeds that said "programa" made every learned
+  open phrase "conflict" with them. Window seeds also avoid the apps the open/close seeds name
+  (Spotify, Discord): e5 weighs the object, and "desminimiza o discord" pulled "desliga o discord".
+
 ## Not here
 Text matching (→ `nlu`), Windows APIs (→ `adapters/windows`).

@@ -51,3 +51,6 @@ launcher, audio). This is the only package allowed to touch the OS, files, or mo
   after a synthetic Alt key, then flashes the taskbar button and returns False.
 - The real window tests use a throwaway Tk window (Character Map cannot be resized). Showing
   the desktop runs only with `SAZED_TEST_DESKTOP=1`: it minimises the user's windows too.
+- With the display asleep (user idle for hours) Windows suspends a just-launched Store app
+  before its frame adopts it: the Calculator close test fails on any branch. Run `-m windows`
+  with the screen on.

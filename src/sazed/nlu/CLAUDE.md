@@ -21,6 +21,11 @@ dialogue-control phrases. Pure functions over already-loaded data; no OS access,
 - `COMMAND_WORDS` are removed from every app query, and aliases match only the whole query:
   a missing verb ("bota") makes the alias miss ("bota calculadora"). Never add a word that is
   also an app-name word: "poe" (stripped "põe") would make "abre o poe" name no app.
+- Window commands share the `app` slot, so `WINDOW_WORDS` (their verbs and "janela",
+  "esquerda", "monitor"…) are command words too: without them "minimiza essa janela" named an
+  app "essa janela". Checked against the real catalog: "com" stays out ("Ação com um clique").
+- `extract_folder` also finds a folder name or synonym as a run of words inside a longer phrase
+  ("o último print que eu tirei").
 - `mask_app` (used before learning) must keep the verb: command words are never masked, even
   when one is a fuzzy match for a word of the app name ("roda" vs "Rodas").
 - Folder and file names are masked before learning with `mask_words` (slots `pasta`,
