@@ -96,7 +96,7 @@ def _given(slots: Mapping[str, Extraction]) -> dict[str, SlotValue | Unmatched]:
     return {n: v for n, v in slots.items() if not isinstance(v, Ambiguous)}
 
 
-def _alias_key(alias: str) -> str:
+def alias_key(alias: str) -> str:
     return strip_accents(normalize(alias))
 
 
@@ -140,7 +140,7 @@ class Assistant:
         self._extractors = extractors
         self._store = store
         self._base_aliases = {
-            slot: {_alias_key(k): v for k, v in m.items()} for slot, m in aliases.items()
+            slot: {alias_key(k): v for k, v in m.items()} for slot, m in aliases.items()
         }
         self._aliases = {slot: dict(m) for slot, m in self._base_aliases.items()}
         self._settings = settings
@@ -153,7 +153,7 @@ class Assistant:
         for example in store.examples():
             index.add(example.intent_id, example.text, example.embedding)
         for alias in store.aliases():
-            self._aliases.setdefault(alias.slot, {})[_alias_key(alias.alias)] = alias.value
+            self._aliases.setdefault(alias.slot, {})[alias_key(alias.alias)] = alias.value
 
     # entry point ---------------------------------------------------------------
 
@@ -458,7 +458,7 @@ class Assistant:
         new_aliases = [
             NewAlias(a.slot, a.alias, a.value)
             for a in aliases
-            if self._aliases.get(a.slot, {}).get(_alias_key(a.alias)) != a.value
+            if self._aliases.get(a.slot, {}).get(alias_key(a.alias)) != a.value
         ]
         if new_examples or new_aliases:
             try:
@@ -471,7 +471,7 @@ class Assistant:
             for ex in new_examples:
                 self._index.add(ex.intent_id, ex.text, ex.embedding)
             for al in new_aliases:
-                self._aliases.setdefault(al.slot, {})[_alias_key(al.alias)] = al.value
+                self._aliases.setdefault(al.slot, {})[alias_key(al.alias)] = al.value
         if announce and new_examples:
             outcome = ExampleLearned(new_examples[0].text)
             texts.append(self._say(outcome))
@@ -494,7 +494,7 @@ class Assistant:
         return _Turn([self._say(outcome)], outcome=outcome)
 
     def _unlearn_alias(self, slot: str, alias: str) -> None:
-        key = _alias_key(alias)
+        key = alias_key(alias)
         configured = self._base_aliases.get(slot, {}).get(key)
         current = self._aliases.setdefault(slot, {})
         if configured is None:
