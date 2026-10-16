@@ -60,7 +60,7 @@ def _parser() -> _Parser:
     review.add_argument(
         "--forcar", action="store_true", help="guarda mesmo se parecer outro pedido"
     )
-    panel = commands.add_parser("painel", help="abre o painel local (somente leitura)")
+    panel = commands.add_parser("painel", help="abre o painel local no navegador")
     panel.add_argument("--porta", type=_port, default=8765, help="porta local (padrão: 8765)")
     panel.add_argument("--raiz", type=Path, default=None, help="pasta do repositório de Sazed")
     return parser

@@ -775,7 +775,7 @@ async function renderCapabilities(panel) {
   const access = h("ul", { class: "plain" },
     h("li", { text: "Programas: lista os atalhos do Menu Iniciar, abre programas e fecha janelas (WM_CLOSE; nunca encerra à força)." }),
     h("li", { text: "Áudio: lê e altera o volume principal e o mudo." }),
-    h("li", { text: "Arquivos: lê config.toml e o modelo; Sazed grava a mente de cobre e os logs. Este painel só lê a mente de cobre (SQLite em modo somente leitura) e escreve apenas o próprio log." }),
+    h("li", { text: "Arquivos: lê config.toml e o modelo; Sazed grava a mente de cobre e os logs. Este painel lê a mente de cobre em modo somente leitura e só grava nela quando você ensina, corrige, esquece ou anota algo aqui (com token e checagem de origem); também escreve o próprio log." }),
     h("li", { text: "Rede: nenhuma. Sazed não usa APIs externas; este painel escuta apenas em 127.0.0.1 e não carrega nada de fora." }));
   const cfg = c.config;
   const config = h("div", {},

@@ -62,7 +62,7 @@ Start-menu + Store catalogs, all adapters): startup 2.4–2.8 s, RSS +430 MB (pr
 - `uv run pytest -m windows` — tests that open real apps and change the real volume.
 - `uv run ruff check . && uv run ruff format --check . && uv run mypy` — lint, format, strict types (`core`, `nlu`, the dashboard and its reader/insight modules; list in `pyproject.toml`).
 - `uv run sazed` — the REPL.
-- `uv run sazed painel [--porta 8765] [--raiz <repo>]` — read-only local dashboard at
+- `uv run sazed painel [--porta 8765] [--raiz <repo>]` — local dashboard (reads; edits learned items and notes) at
   http://127.0.0.1:8765 (see `src/sazed/interfaces/dashboard/CLAUDE.md`).
 
 ## Layout

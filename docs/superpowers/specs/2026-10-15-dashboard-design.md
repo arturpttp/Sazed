@@ -1,7 +1,7 @@
 # Sazed — Admin dashboard (`sazed painel`)
 
 Date: 2026-10-15
-Status: Implemented on `feat/dashboard` (read-only, first round).
+Status: Implemented on `feat/dashboard`: read-only first round, then editable learnings (§6).
 Builds on: [sub-project 1](./2026-10-14-sazed-core-design.md). Runs beside
 [sub-project 2a](./2026-10-15-sazed-pc-skills-2a-design.md), which was being built at the same time.
 
@@ -47,7 +47,8 @@ Dialogue-control turns ("sim", "esquece isso") are not counted as commands.
    no login. *Cost if wrong:* no access from another device until a token scheme exists.
 2. **Host header must be `127.0.0.1:<port>` or `localhost:<port>`** (403 otherwise), against DNS
    rebinding from a web page. *Cost:* a custom hosts alias for 127.0.0.1 is refused.
-3. **GET only**, every other verb 405 through one catch-all, so a new `do_X` cannot slip in.
+3. **GET reads, POST writes** (round 2; first round was GET only); every other verb 405 through
+   one catch-all, so a new `do_X` cannot slip in.
 4. **Strict CSP** (`default-src 'self'`), no CDN, no inline script or style. Styles set from JS
    use the CSSOM, which CSP allows.
 5. **Read-only by SQLite, not by convention:** `mode=ro`. A missing database is an empty state,
@@ -83,5 +84,68 @@ Dialogue-control turns ("sim", "esquece isso") are not counted as commands.
 - Per-command latency, the confirm reason as decided at the time, the thresholds in force, and
   the response text are not in `episodes`; they need a migration.
 - Learned items that were forgotten disappear from the per-day counts (rows are deleted).
-- Editing (forget, label, config) is deliberately absent; it would need authentication, CSRF
-  protection and the writable store.
+- Editing the config from the page is still absent.
+
+## 6. Round 2: editable learnings
+
+Asked: add and remove learned items, fix (edit) them, and comment on them. Sub-project 2a was
+merged into `feat/dashboard` first, so the edits reuse its `IntentSpec.learnable`, the
+`label_episode` safeguards and `build_skills`.
+
+| Action | Where in the page | Path | Same as |
+|---|---|---|---|
+| Forget an example/alias, then "Desfazer" | Coppermind | `runtime.editing.Editor.forget/undo` → `SqliteCoppermind.snapshot/forget/restore` | `sazed aprendizado --esquecer` |
+| Teach a phrase (text + intent) | Coppermind → Exemplos | `admin.learn_example` | live learning safeguards |
+| Teach what a command meant | Raciocínio | `admin.label_episode` | `sazed revisar --rotular [--forcar]` |
+| Fix an example's text or intent | Coppermind → Exemplos | `admin.edit_example` → `replace_example` | — |
+| New alias / fix its target | Coppermind → Apelidos | `admin.add_alias/edit_alias` → `replace_alias` | — |
+| Notes (add, edit, remove) | every example, alias and command | `notes` table (migration 2) | — |
+
+Results come back as codes (`learned`, `conflict`, `not_learnable`, `already_known`, `empty`,
+`saved`, `app_unknown`, `exists`, `forgotten`, `restored`, …) and the page shows a pt-BR
+message for each; a conflict offers "Guardar mesmo assim" (force), a forget offers "Desfazer".
+Every change to what Sazed knows says "Vale a partir do próximo início do Sazed."
+
+### Rulings (round 2)
+
+16. **Writes are POST only**, JSON bodies validated by pydantic models with `extra="forbid"`
+    and per-field limits, messages translated to pt-BR by a table (a schema-driven test sends a
+    bad value to every field of every model and rejects English or the fallback).
+17. **Every POST needs** the per-launch token (`secrets.token_urlsafe(32)`, put into the page
+    as a `<meta>`, compared with `hmac.compare_digest`), an `Origin` equal to the dashboard's
+    origin (or, without `Origin`, a same-origin `Referer`), `Content-Type: application/json`,
+    and a `Content-Length` of at most 16 KiB. The checks run before the body is read.
+    *Cost if wrong:* a local program that can read the page can still write — the same reach
+    it already has over the database file.
+18. **Reads and writes use different connections.** GET stays on the `mode=ro` reader; writes
+    go through `runtime.editing.Editor` on a single worker thread (a SQLite connection belongs
+    to its thread) with `SqliteCoppermind` (default busy timeout 5 s). The first write creates
+    the database if it is missing.
+19. **The model loads only for examples** (teach, fix, label), lazily, once; aliases, notes and
+    forget never load it. `/api/editor` reports idle/loading/ready/failed and the page shows a
+    loading notice. A missing model is a pt-BR `EditorUnavailable`, and the next try retries.
+20. **Editing keeps the id**: `replace_example` / `replace_alias` delete and re-insert the same
+    id in one transaction (refs like `e3` and the notes stay attached) and give it a new
+    learning batch, so "esquece isso" in Sazed would forget the corrected item.
+    *Cost if wrong:* a user expecting "esquece isso" to undo only the correction loses the item.
+21. **An edit is judged as a new example without its old version** (removed from the session
+    index first, put back if refused or failed), otherwise changing only the intent would
+    always conflict with itself.
+22. **Aliases are slot `app` only**, normalised like live aliases, the target must match a
+    catalog name (Start menu + Store + configured sites, accents and case ignored), and adding
+    never overwrites an existing alias (`exists` → use Corrigir).
+23. **Notes are for Mestre Artur only**: Sazed never reads them; forgetting an item deletes its
+    notes in the same transaction (also for "esquece isso"); undo restores both. Episodes are
+    never deleted, so their notes stay. Notes do not get the "next start" remark.
+24. **Undo lives in the dashboard's memory** (last 50 forgets, until it stops). It restores the
+    exact row (embedding included) and notes, and refuses if the id or the alias was taken.
+25. **The dashboard's ports raise** (unlike evaluation's `DryRunPorts`, which absorb calls): it
+    never executes a skill, so reaching a port is a bug.
+26. **onnxruntime is loaded before WinRT** whenever the dashboard scans the catalog (native
+    crash otherwise; see the proofs).
+
+### Not in round 2
+
+- A running Sazed does not see edits until it restarts (its index is in memory). A reload
+  command or a file watch would need its own design.
+- Undo for an edit (only forget has undo) and an audit log of who changed what.

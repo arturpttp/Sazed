@@ -219,3 +219,280 @@ FAILED tests/runtime/test_insight.py::test_listing_skills_match_the_wired_skills
 FAILED tests/runtime/test_insight.py::test_every_port_has_a_pt_br_description
 2 failed, 18 passed in 0.30s
 ```
+
+## Round 2 — editable learnings (forget/undo, examples, aliases, labels, notes)
+
+### Findings
+
+- **Native crash: onnxruntime imported after WinRT.** Found in the end-to-end run, not by a
+  unit test: an alias write scanned the Store catalog (WinRT), and the next "teach a phrase"
+  imported onnxruntime and killed the dashboard with an access violation. Sazed itself is safe
+  only because `build_default_app` happens to import the embedder first. Fixed in
+  `runtime/editing.real_catalog`; `tests/runtime/test_editing_windows.py` (`-m windows`)
+  reproduces it in a subprocess. Without the fix:
+
+```
+E       AssertionError:
+E        +  where 3221225477 = CompletedProcess(args=[...], returncode=3221225477, stdout='', stderr='').returncode
+tests\runtime\test_editing_windows.py:30: AssertionError
+1 failed in 1.21s
+```
+
+  With the fix: `1 passed in 1.32s`. (3221225477 = 0xC0000005, access violation.)
+- `sazed aprendizado` with a redirected stdout crashes on "→" (cp1252); pre-existing CLI
+  behaviour, reported, not changed here.
+
+### Mutations
+
+### token: a missing token is let through
+mutation in src/sazed/interfaces/dashboard/server.py: '        if not hmac.compare_digest(' -> '        if token and not hmac.compare_digest('
+```
+E       assert 200 == 403
+E       assert 200 == 403
+FAILED tests/interfaces/dashboard/test_server_writes.py::test_the_token_is_required[None]
+FAILED tests/interfaces/dashboard/test_server_writes.py::test_the_token_is_required[]
+2 failed, 3 passed, 33 deselected in 0.71s
+```
+
+### Origin: checked by prefix instead of exact origin
+mutation in src/sazed/interfaces/dashboard/server.py: '            if origin not in self._origins():' -> '            if not origin.startswith(f"http://{HOST}"):'
+```
+E       assert 200 == 403
+FAILED tests/interfaces/dashboard/test_server_writes.py::test_the_origin_must_be_the_dashboard[headers1]
+1 failed, 6 passed, 31 deselected in 0.74s
+```
+
+### Origin: a request without Origin skips the Referer check
+mutation in src/sazed/interfaces/dashboard/server.py: '            if not any(referer.startswith(f"{o}/") for o in self._origins()):' -> '            if False:'
+```
+E       assert 200 == 403
+E       assert 200 == 403
+E       assert 200 == 403
+FAILED tests/interfaces/dashboard/test_server_writes.py::test_the_origin_must_be_the_dashboard[headers3]
+FAILED tests/interfaces/dashboard/test_server_writes.py::test_the_origin_must_be_the_dashboard[headers4]
+FAILED tests/interfaces/dashboard/test_server_writes.py::test_the_origin_must_be_the_dashboard[headers5]
+3 failed, 4 passed, 31 deselected in 0.80s
+```
+
+### POST only: PUT served like POST
+mutation in src/sazed/interfaces/dashboard/server.py: '    # output ----' -> '    do_PUT = do_POST\n\n    # output ----'
+```
+E       AssertionError: assert {'do_GET', 'd...ST', 'do_PUT'} == {'do_GET', 'do_POST'}
+E         
+E         Extra items in the left set:
+E         'do_PUT'
+E         Use -v to get more diff
+FAILED tests/interfaces/dashboard/test_server.py::test_every_handler_method_other_than_get_and_post_refuses
+1 failed, 8 passed, 30 deselected in 0.81s
+```
+
+### POST only: GET on a write path is no longer refused
+mutation in src/sazed/interfaces/dashboard/server.py: '        if url.path in WRITE_ROUTES:\n            self._refuse_method(allow="POST")\n            return\n' -> ''
+```
+E       assert 404 == 405
+E       assert 404 == 405
+E       assert 404 == 405
+E       assert 404 == 405
+E       assert 404 == 405
+E       assert 404 == 405
+E       assert 404 == 405
+E       assert 404 == 405
+E       assert 404 == 405
+E       assert 404 == 405
+FAILED tests/interfaces/dashboard/test_server_writes.py::test_writes_are_post_only[/api/write/alias/add]
+FAILED tests/interfaces/dashboard/test_server_writes.py::test_writes_are_post_only[/api/write/alias/edit]
+FAILED tests/interfaces/dashboard/test_server_writes.py::test_writes_are_post_only[/api/write/episode/label]
+FAILED tests/interfaces/dashboard/test_server_writes.py::test_writes_are_post_only[/api/write/example/add]
+FAILED tests/interfaces/dashboard/test_server_writes.py::test_writes_are_post_only[/api/write/example/edit]
+FAILED tests/interfaces/dashboard/test_server_writes.py::test_writes_are_post_only[/api/write/forget]
+FAILED tests/interfaces/dashboard/test_server_writes.py::test_writes_are_post_only[/api/write/note/add]
+FAILED tests/interfaces/dashboard/test_server_writes.py::test_writes_are_post_only[/api/write/note/edit]
+FAILED tests/interfaces/dashboard/test_server_writes.py::test_writes_are_post_only[/api/write/note/remove]
+FAILED tests/interfaces/dashboard/test_server_writes.py::test_writes_are_post_only[/api/write/undo]
+10 failed, 28 deselected in 0.79s
+```
+
+### power intent: the learnable check forgotten
+mutation in src/sazed/runtime/admin.py: '    if not specs[intent_id].learnable:' -> '    if False:'
+```
+E       AssertionError: assert <LabelResult.LEARNED: 'learned'> is <LabelResult.NOT_LEARNABLE: 'not_learnable'>
+E        +  where <LabelResult.LEARNED: 'learned'> = learn_example(SazedApp(assistant=<sazed.runtime.assistant.Assistant object at 0x00000254612FC7D0>, store=<sazed.adapters.sqlite.copp...s={})), rng=<random.Random objec
+E        +  and   <LabelResult.NOT_LEARNABLE: 'not_learnable'> = LabelResult.NOT_LEARNABLE
+E       AssertionError: assert <LabelResult.LEARNED: 'learned'> is <LabelResult.NOT_LEARNABLE: 'not_learnable'>
+E        +  where <LabelResult.LEARNED: 'learned'> = edit_example(SazedApp(assistant=<sazed.runtime.assistant.Assistant object at 0x000002546136B4D0>, store=<sazed.adapters.sqlite.copp...s={})), rng=<random.Random object
+E        +  and   <LabelResult.NOT_LEARNABLE: 'not_learnable'> = LabelResult.NOT_LEARNABLE
+E       AssertionError: assert 'learned' == 'not_learnable'
+E         
+E         - not_learnable
+E         + learned
+E       assert (True is False)
+FAILED tests/runtime/test_admin_editing.py::test_learn_example_refuses_a_power_intent
+FAILED tests/runtime/test_admin_editing.py::test_a_refused_edit_leaves_index_and_store_untouched
+FAILED tests/runtime/test_editing.py::test_label_and_edit_go_through_the_safeguards
+FAILED tests/interfaces/dashboard/test_writes.py::test_power_intent_is_refused_with_an_explanation
+4 failed, 48 passed in 0.64s
+```
+
+### conflict: saved without force
+mutation in src/sazed/runtime/admin.py: '    if verdict is Verdict.CONFLICT and not force:' -> '    if False:'
+```
+E       AssertionError: assert <LabelResult.LEARNED: 'learned'> is <LabelResult.CONFLICT: 'conflict'>
+E        +  where <LabelResult.LEARNED: 'learned'> = learn_example(SazedApp(assistant=<sazed.runtime.assistant.Assistant object at 0x0000022B2A273170>, store=<sazed.adapters.sqlite.copp...s={})), rng=<random.Random objec
+E        +  and   <LabelResult.CONFLICT: 'conflict'> = LabelResult.CONFLICT
+E       AssertionError: assert <LabelResult.LEARNED: 'learned'> is <LabelResult.CONFLICT: 'conflict'>
+E        +  where <LabelResult.LEARNED: 'learned'> = edit_example(SazedApp(assistant=<sazed.runtime.assistant.Assistant object at 0x0000022B2A2CE630>, store=<sazed.adapters.sqlite.copp...s={})), rng=<random.Random object
+E        +  and   <LabelResult.CONFLICT: 'conflict'> = LabelResult.CONFLICT
+E       AssertionError: assert 'learned' == 'conflict'
+E         
+E         - conflict
+E         + learned
+E       AssertionError: assert (200, True, 'learned', False) == (200, False, 'conflict', True)
+E         
+E         At index 1 diff: True != False
+E         Use -v to get more diff
+FAILED tests/runtime/test_admin_editing.py::test_a_conflict_needs_force - Ass...
+FAILED tests/runtime/test_admin_editing.py::test_a_refused_edit_leaves_index_and_store_untouched
+FAILED tests/runtime/test_editing.py::test_label_and_edit_go_through_the_safeguards
+FAILED tests/interfaces/dashboard/test_writes.py::test_conflict_offers_force
+4 failed, 48 passed in 0.64s
+```
+
+### atomic edit: the delete is committed before the insert
+mutation in src/sazed/adapters/sqlite/coppermind.py: '            self._conn.execute("DELETE FROM learned_examples WHERE id = ?", (item_id,))\n' -> '            self._conn.execute("DELETE FROM learned_examples WHERE id = ?", (item_id,))\n            self._conn.commit()\n'
+```
+E       AssertionError: assert [] == [(1, 'abre o zap')]
+E         
+E         Right contains one more item: (1, 'abre o zap')
+E         Use -v to get more diff
+FAILED tests/adapters/test_sqlite_notes_and_edits.py::test_a_replace_that_fails_midway_leaves_no_trace
+1 failed, 15 passed in 0.39s
+```
+
+### notes: forgetting an item leaves its notes behind
+mutation in src/sazed/adapters/sqlite/coppermind.py: '            self._conn.execute(\n                "DELETE FROM notes WHERE target_kind = ? AND target_id = ?",\n                (kind.value, item_id),\n            )\n' -> ''
+```
+E       AssertionError: assert [('example', ...do episódio')] == [('alias', 'd...do episódio')]
+E         
+E         At index 0 diff: ('example', 'do exemplo') != ('alias', 'do apelido')
+E         Left contains one more item: ('episode', 'do episódio')
+E         Use -v to get more diff
+E               sqlite3.IntegrityError: UNIQUE constraint failed: notes.id
+E       assert [(1,)] == [(0,)]
+E         
+E         At index 0 diff: (1,) != (0,)
+E         Use -v to get more diff
+FAILED tests/adapters/test_sqlite_notes_and_edits.py::test_forgetting_an_item_deletes_its_notes_only
+FAILED tests/adapters/test_sqlite_notes_and_edits.py::test_snapshot_then_restore_brings_back_the_row_and_its_notes
+FAILED tests/runtime/test_editing.py::test_forget_then_undo_restores_row_and_notes
+3 failed, 25 passed in 0.55s
+```
+
+### reads: the editor status 'warms up' the model
+mutation in src/sazed/interfaces/dashboard/writes.py: '        """Never loads anything: it only reports the editor\'s state."""\n' -> '        self._worker.submit(self._editor._full).result()  # warm up\n'
+```
+E       AssertionError: assert 1 == 0
+E        +  where 1 = <support.editing.AppFactory object at 0x000001DBDF70AA50>.calls
+E        +    where <support.editing.AppFactory object at 0x000001DBDF70AA50> = Served(port=58977, factory=<support.editing.AppFactory object at 0x000001DBDF70AA50>, data=WindowsPath('C:/Users/Usuario/AppData/Local/Temp/
+E       AssertionError: assert {'state': 're...essage': None} == {'state': 'id...essage': None}
+E         
+E         Omitting 1 identical items, use -vv to show
+E         Differing items:
+E         {'state': 'ready'} != {'state': 'idle'}
+E         Use -v to get more diff
+FAILED tests/interfaces/dashboard/test_server_writes.py::test_reads_never_load_the_model
+FAILED tests/interfaces/dashboard/test_writes.py::test_editor_status_never_loads
+2 failed, 58 deselected in 0.62s
+```
+
+### edit: a refused edit forgets to put the old example back in the index
+mutation in src/sazed/runtime/admin.py: '        if removed and not saved:' -> '        if False:'
+```
+E       assert 0.35032451152801514 == 1.0 ± 1.0e-06
+E         
+E         comparison failed
+E         Obtained: 0.35032451152801514
+E         Expected: 1.0 ± 1.0e-06
+FAILED tests/runtime/test_admin_editing.py::test_a_refused_edit_leaves_index_and_store_untouched
+1 failed, 17 passed in 0.37s
+```
+
+### pt-BR: a pydantic error type without a translation
+mutation in src/sazed/interfaces/dashboard/writes.py: '    "string_type": "deve ser um texto",\n' -> ''
+```
+E           AssertionError: ('/api/write/alias/add', 'alias', 7, 'Dados inválidos: apelido: valor inválido; destino: é obrigatório.')
+E           assert 'valor inválido' not in 'Dados invál...obrigatório.'
+E             
+E             'valor inválido' is contained here:
+E               Dados inválidos: apelido: valor inválido; destino: é obrigatório.
+E             ?                           ++++++++++++++
+E           AssertionError: ('/api/write/alias/edit', 'target', 7, 'Dados inválidos: item: é obrigatório; destino: valor inválido.')
+E           assert 'valor inválido' not in 'Dados invál...or inválido.'
+E             
+E             'valor inválido' is contained here:
+E                destino: valor inválido.
+E           AssertionError: ('/api/write/episode/label', 'intent', 7, 'Dados inválidos: comando: é obrigatório; pedido: valor inválido.')
+E           assert 'valor inválido' not in 'Dados invál...or inválido.'
+E             
+E             'valor inválido' is contained here:
+E               ; pedido: valor inválido.
+E           AssertionError: ('/api/write/example/add', 'text', 7, 'Dados inválidos: texto: valor inválido; pedido: é obrigatório.')
+E           assert 'valor inválido' not in 'Dados invál...obrigatório.'
+E             
+E             'valor inválido' is contained here:
+E               Dados inválidos: texto: valor inválido; pedido: é obrigatório.
+E             ?                         ++++++++++++++
+E           AssertionError: ('/api/write/example/edit', 'text', 7, 'Dados inválidos: item: é obrigatório; texto: valor inválido; pedido: é obrigatório.')
+E           assert 'valor inválido' not in 'Dados invál...obrigatório.'
+E             
+E             'valor inválido' is contained here:
+E               o; texto: valor inválido; pedido: é obrigatório.
+E             ?           ++++++++++++++
+E           AssertionError: ('/api/write/forget', 'ref', 7, 'Dados inválidos: item: valor inválido.')
+E           assert 'valor inválido' not in 'Dados invál...or inválido.'
+E             
+E             'valor inválido' is contained here:
+E               Dados inválidos: item: valor inválido.
+E             ?                        ++++++++++++++
+E           AssertionError: ('/api/write/note/add', 'text', 7, 'Dados inválidos: destino: é obrigatório; item: é obrigatório; texto: valor inválido.')
+E           assert 'valor inválido' not in 'Dados invál...or inválido.'
+E             
+E             'valor inválido' is contained here:
+E               o; texto: valor inválido.
+E           AssertionError: ('/api/write/note/edit', 'text', 7, 'Dados inválidos: item: é obrigatório; texto: valor inválido.')
+E           assert 'valor inválido' not in 'Dados invál...or inválido.'
+E             
+E             'valor inválido' is contained here:
+E               o; texto: valor inválido.
+E           AssertionError: ('/api/write/undo', 'undo', 7, 'Dados inválidos: desfazer: valor inválido.')
+E           assert 'valor inválido' not in 'Dados invál...or inválido.'
+E             
+E             'valor inválido' is contained here:
+E               Dados inválidos: desfazer: valor inválido.
+E             ?                            ++++++++++++++
+FAILED tests/interfaces/dashboard/test_writes.py::test_every_invalid_field_is_explained_in_pt_br[/api/write/alias/add]
+FAILED tests/interfaces/dashboard/test_writes.py::test_every_invalid_field_is_explained_in_pt_br[/api/write/alias/edit]
+FAILED tests/interfaces/dashboard/test_writes.py::test_every_invalid_field_is_explained_in_pt_br[/api/write/episode/label]
+FAILED tests/interfaces/dashboard/test_writes.py::test_every_invalid_field_is_explained_in_pt_br[/api/write/example/add]
+FAILED tests/interfaces/dashboard/test_writes.py::test_every_invalid_field_is_explained_in_pt_br[/api/write/example/edit]
+FAILED tests/interfaces/dashboard/test_writes.py::test_every_invalid_field_is_explained_in_pt_br[/api/write/forget]
+FAILED tests/interfaces/dashboard/test_writes.py::test_every_invalid_field_is_explained_in_pt_br[/api/write/note/add]
+FAILED tests/interfaces/dashboard/test_writes.py::test_every_invalid_field_is_explained_in_pt_br[/api/write/note/edit]
+FAILED tests/interfaces/dashboard/test_writes.py::test_every_invalid_field_is_explained_in_pt_br[/api/write/undo]
+9 failed, 13 passed in 0.53s
+```
+
+### undo: notes not restored
+mutation in src/sazed/adapters/sqlite/coppermind.py: '            for note in snap.notes:' -> '            for note in ():'
+```
+E       AssertionError: assert [] == ['nota']
+E         
+E         Right contains one more item: 'nota'
+E         Use -v to get more diff
+E       AssertionError: assert [] == [('nota',)]
+E         
+E         Right contains one more item: ('nota',)
+E         Use -v to get more diff
+FAILED tests/adapters/test_sqlite_notes_and_edits.py::test_snapshot_then_restore_brings_back_the_row_and_its_notes
+FAILED tests/runtime/test_editing.py::test_forget_then_undo_restores_row_and_notes
+2 failed, 26 passed in 0.53s
+```

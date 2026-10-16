@@ -8,8 +8,18 @@ Wires config, adapters, skills and the assistant together; the only place the cl
 - `DryRunPorts` implements every port and never touches the machine; evaluation relies on it.
 - `Assistant._learn` is the single gate for learned examples (`IntentSpec.learnable`), and the
   REPEAT control never falls through to ranking.
+- `admin` holds every learned-item edit (CLI and dashboard share it): validate first, write
+  once. `learn_example` is the one path for examples taught outside a conversation
+  (`label_episode` uses it) and applies `learnable`, dedupe and conflict-unless-forced.
+- `editing.Editor` is the dashboard's writer: one thread, lazy model (examples only), undo for
+  forget. Its ports raise on use; the dashboard never executes a skill.
 
 ## Traps
+- Import onnxruntime before WinRT in any process that will load both (`build_default_app`
+  imports the embedder first; `editing.real_catalog` does it explicitly). The other order is a
+  native access violation.
+- Removing a learned example must also leave this session's index (`index.remove`), or the next
+  dedupe judges against a ghost.
 - Sites are catalog entries (`CombinedCatalog`); an installed app with the same name wins.
 - `DEFAULT_APP_ALIASES` are added only for apps present in the catalog; config aliases win.
 - Turns can share a timestamp (tests use a manual clock): track "this turn ran a command" by

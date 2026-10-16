@@ -131,3 +131,12 @@ def test_build_editing_app_without_a_model_says_how_to_fetch_it(tmp_path: Path) 
     config = Config(data=DataConfig(dir=tmp_path), model=ModelConfig(embedder_path=tmp_path))
     with pytest.raises(EditorUnavailable, match="fetch_model.py"):
         build_editing_app(config)
+
+
+def test_writes_wait_for_a_busy_database(tmp_path: Path) -> None:
+    """The design note promises a 5 s busy timeout while a running Sazed holds a write."""
+    editor, _ = make_editor(tmp_path)
+    editor.add_alias("zap", "WhatsApp")
+    (timeout,) = editor._store()._conn.execute("PRAGMA busy_timeout").fetchone()
+    assert timeout >= 5000
+    editor.close()

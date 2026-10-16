@@ -24,6 +24,10 @@ launcher, audio). This is the only package allowed to touch the OS, files, or mo
 - `sqlite/reader.py` (dashboard) opens `file:…?mode=ro` per call. That URI mode is what keeps
   it read-only and stops it from creating a missing database; never drop it for a plain path.
   It must follow schema changes made in `coppermind.py` (its tests seed through the writer).
+- Schema 2 adds `notes` (target example/alias/episode). Forgetting (`forget`, `forget_latest`)
+  deletes the item's notes in the same transaction; `replace_example`/`replace_alias` delete and
+  re-insert the same id in ONE transaction (a failure midway leaves the old row: tested).
+  Check a conflict with a query before writing (`restore`), never by catching IntegrityError.
 - e5 needs the `"query: "` prefix on both sides; it is applied only in `OnnxEmbedder`.
 - The int8 e5 model quantizes activations over the whole batch, so `OnnxEmbedder` embeds one
   sentence per run. Batching again makes a vector depend on its batch-mates (see proofs).
