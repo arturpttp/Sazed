@@ -22,7 +22,11 @@ def scratch() -> Path:
 
 
 def test_the_users_drive_has_a_recycle_bin(scratch: Path) -> None:
-    assert WindowsFileChanger().can_recycle(str(scratch))
+    changer = WindowsFileChanger()
+    item = scratch / "x.txt"
+    item.write_text("x", encoding="utf-8")
+    state = changer.state(str(item))
+    assert state is not None and changer.can_recycle(state)
 
 
 @pytest.mark.parametrize("kind", ["file", "folder"])

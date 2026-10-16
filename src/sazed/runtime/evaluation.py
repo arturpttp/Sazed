@@ -250,7 +250,7 @@ class DryRunChanger:
     def make_folder(self, path: str) -> None:
         return None
 
-    def can_recycle(self, path: str) -> bool:
+    def can_recycle(self, item: ItemState) -> bool:
         return True
 
     def recycle(self, path: str) -> str:

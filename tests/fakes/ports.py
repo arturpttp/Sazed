@@ -8,7 +8,14 @@ from datetime import datetime
 
 from sazed.runtime.skills import PcPorts
 from sazed.skills.pc.apps import AppEntry
-from sazed.skills.pc.fileops import Area, ChangeBusy, ChangePlan, ItemState, LoggedChange
+from sazed.skills.pc.fileops import (
+    Area,
+    ChangeBusy,
+    ChangePlan,
+    ItemState,
+    LoggedChange,
+    MovedAsCopy,
+)
 from sazed.skills.pc.files import FileHit, SearchError
 from sazed.skills.pc.media import NowPlayingInfo
 from sazed.skills.pc.windows import Monitor, Rect, WindowRef
@@ -347,6 +354,10 @@ class FakeChanger:
         self.bin: dict[str, ItemState] = {}
         self.busy = {b.lower() for b in busy}
         self.no_bin = no_bin
+        self.no_bin_over: int | None = None
+        self.copy_only: set[str] = set()
+        """Paths whose move copies but cannot remove the original (another drive, held open)."""
+        """When set, items bigger than this many bytes do not fit the bin."""
         self.calls: list[tuple[str, str]] = []
         self.clock = 5000.0
 
@@ -382,6 +393,9 @@ class FakeChanger:
     def move(self, src: str, dst: str) -> None:
         self.calls.append(("move", src))
         self._check(src)
+        if src.lower() in self.copy_only:
+            self._relocate(src, dst, keep=True)
+            raise MovedAsCopy(src)
         self._relocate(src, dst, keep=False)
 
     def copy(self, src: str, dst: str) -> None:
@@ -398,8 +412,9 @@ class FakeChanger:
         self.calls.append(("make_folder", path))
         self.items[path.lower()] = ItemState(path, True, 0, self._tick(), 0)
 
-    def can_recycle(self, path: str) -> bool:
-        return not self.no_bin
+    def can_recycle(self, item: ItemState) -> bool:
+        too_big = self.no_bin_over is not None and item.size > self.no_bin_over
+        return not self.no_bin and not too_big
 
     def recycle(self, path: str) -> str:
         self.calls.append(("recycle", path))

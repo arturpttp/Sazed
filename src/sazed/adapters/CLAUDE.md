@@ -63,8 +63,11 @@ launcher, audio). This is the only package allowed to touch the OS, files, or mo
   before its frame adopts it: the Calculator close test fails on any branch. Run `-m windows`
   with the screen on.
 - File changes (`windows/fileops.py`): a delete is always `SHFileOperation` with
-  `FOF_ALLOWUNDO` (Recycle Bin) and only on a fixed drive; `restore` finds the bin item by
+  `FOF_ALLOWUNDO | FOF_WANTNUKEWARNING`, and only when `can_recycle(item)` says the bin will
+  really take it (fixed, non-subst drive; the volume's `BitBucket` MaxCapacity ≥ size; bin not
+  off; unknown settings → refuse): Windows otherwise deletes for good *without asking*; `restore` finds the bin item by
   original folder + name and the deletion time **closest** to the change (the same name may be
-  there twice), then the shell verb "undelete". A move to another drive copies, checks the
-  size, then removes the original; any failure removes the partial copy instead. `make_folder`
+  there twice), then the shell verb "undelete". A move to another drive refuses an occupied
+  destination, copies, checks the size, then sends the original to the Recycle Bin; a failed copy
+  removes only its own partial copy; an original that cannot go → `MovedAsCopy` (logged as a copy). `make_folder`
   is `os.mkdir`, never `makedirs`. Error 5/32/33 or PermissionError → `ChangeBusy`.

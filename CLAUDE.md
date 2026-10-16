@@ -57,7 +57,9 @@ Sazed, the Terris Keeper from *Mistborn*. Read [`AGENTS.md`](./AGENTS.md) and
   ([`docs/superpowers/plans/2026-10-16-sazed-file-changes-2c.md`](./docs/superpowers/plans/2026-10-16-sazed-file-changes-2c.md)).
   Proofs: [`docs/superpowers/proofs/2026-10-16-sub-project-2c.md`](./docs/superpowers/proofs/2026-10-16-sub-project-2c.md).
   Fixture 233 cases: accuracy 0.919, false-execute 0.000 (file-change proposals count as asked).
-- **Next step:** final review of `feat/sub-project-2c`, then the user's merge decision.
+- 2c final review (fresh reviewer): 1 Critical (a delete could be a silent permanent delete) and
+  3 Important fixed; 10 minors deferred in the 2c ledger.
+- **Next step:** the user's merge decision for `feat/sub-project-2c`.
 
 ## Measurements
 

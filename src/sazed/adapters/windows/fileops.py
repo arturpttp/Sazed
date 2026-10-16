@@ -14,7 +14,7 @@ import shutil
 from collections.abc import Callable
 from datetime import datetime
 
-from sazed.skills.pc.fileops import ChangeBusy, ItemState
+from sazed.skills.pc.fileops import ChangeBusy, ItemState, MovedAsCopy
 
 log = logging.getLogger(__name__)
 
@@ -23,6 +23,53 @@ COUNT_LIMIT = 100_000
 _BUSY_ERRORS = {5, 32, 33}  # access denied, sharing violation, lock violation
 DRIVE_FIXED = 3
 RECYCLE_BIN_FOLDER = 10  # ShellSpecialFolderConstants.ssfBITBUCKET
+# FOF_WANTNUKEWARNING: if Windows still cannot recycle an item, it asks instead of silently
+# deleting it for good (the danger of FOF_NOCONFIRMATION alone). Values from shellcon.
+FOF_SILENT, FOF_NOCONFIRMATION, FOF_ALLOWUNDO = 0x0004, 0x0010, 0x0040
+FOF_NOERRORUI, FOF_WANTNUKEWARNING = 0x0400, 0x4000
+RECYCLE_FLAGS = (
+    FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI | FOF_WANTNUKEWARNING
+)
+
+
+def fits_in_bin(*, size: int, count: int, capacity: int | None, nuke: bool) -> bool:
+    """Whether the Recycle Bin will really take an item. Windows deletes for good what does
+    not fit (or when the bin is off) — under FOF_NOCONFIRMATION without even asking."""
+    if nuke or capacity is None or count >= COUNT_LIMIT:
+        return False  # off, unknown, or a folder too big to have been counted
+    return size <= capacity
+
+
+def _bin_settings(root: str) -> tuple[int | None, bool]:
+    """(capacity in bytes or None when unknown, NukeOnDelete) for the drive of `root`."""
+    import ctypes
+    import winreg
+
+    buf = ctypes.create_unicode_buffer(64)
+    kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+    if not kernel32.GetVolumeNameForVolumeMountPointW(root, buf, 64):
+        return None, False
+    guid = buf.value[buf.value.find("{") : buf.value.find("}") + 1]
+    key_path = rf"Software\Microsoft\Windows\CurrentVersion\Explorer\BitBucket\Volume\{guid}"
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path) as key:
+            megabytes = int(winreg.QueryValueEx(key, "MaxCapacity")[0])
+            try:
+                nuke = bool(winreg.QueryValueEx(key, "NukeOnDelete")[0])
+            except OSError:
+                nuke = False
+    except OSError:
+        return None, False
+    return megabytes * 2**20, nuke
+
+
+def _is_subst(drive: str) -> bool:
+    import ctypes
+
+    device = ctypes.create_unicode_buffer(512)
+    kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+    kernel32.QueryDosDeviceW(drive, device, 512)
+    return device.value.startswith("\\??\\")  # a subst drive maps to another path
 
 
 def count_tree(path: str, limit: int = COUNT_LIMIT) -> tuple[int, int]:
@@ -50,22 +97,35 @@ def move_across(
     dst: str,
     *,
     copy: Callable[[str, str], None],
-    remove: Callable[[str], None],
+    remove_copy: Callable[[str], None],
+    discard_source: Callable[[str], None],
     size_of: Callable[[str], int],
+    exists: Callable[[str], bool],
 ) -> None:
-    """Move between drives: copy, verify, remove. On any failure the original stays and the
-    partial copy goes."""
+    """Move between drives without ever losing anything:
+
+    - something already at `dst` is never touched (refused before copying);
+    - a failed or incomplete copy is removed, and only the copy this call made;
+    - the original goes to the Recycle Bin only after the copy is verified; if it cannot,
+      `MovedAsCopy` says both now exist.
+    """
+    if exists(dst):
+        raise FileExistsError(dst)
     try:
         copy(src, dst)
         if size_of(dst) != size_of(src):
             raise OSError(f"the copy of {src} is incomplete")
     except BaseException:
-        try:
-            remove(dst)
-        except OSError:
-            log.exception("could not remove the partial copy %s", dst)
+        if exists(dst):  # did not exist before: it is this call's partial copy
+            try:
+                remove_copy(dst)
+            except OSError:
+                log.exception("could not remove the partial copy %s", dst)
         raise
-    remove(src)
+    try:
+        discard_source(src)
+    except (OSError, ChangeBusy) as error:
+        raise MovedAsCopy(src) from error
 
 
 def _busy(error: OSError) -> bool:
@@ -120,10 +180,27 @@ class WindowsFileChanger:
         if same_drive:
             self._guard(lambda: os.rename(src, dst))
             return
-        self._guard(lambda: move_across(src, dst, copy=_copy, remove=_remove, size_of=_size))
+        self._guard(
+            lambda: move_across(
+                src,
+                dst,
+                copy=_copy,
+                remove_copy=_remove,
+                discard_source=self._discard,
+                size_of=_size,
+                exists=os.path.lexists,
+            )
+        )
+
+    def _discard(self, path: str) -> None:
+        """The original of a cross-drive move goes to the Recycle Bin, never rmtree."""
+        state = self.state(path)
+        if state is None or not self.can_recycle(state):
+            raise ChangeBusy(f"cannot recycle {path}")
+        self.recycle(path)
 
     def copy(self, src: str, dst: str) -> None:
-        if os.path.exists(dst):
+        if os.path.lexists(dst):  # lexists: a dangling link is not a free name either
             raise FileExistsError(dst)  # never overwrite: the plan chose a free name
         self._guard(lambda: _copy(src, dst))
 
@@ -133,24 +210,23 @@ class WindowsFileChanger:
     def make_folder(self, path: str) -> None:
         os.mkdir(path)  # not makedirs: a missing parent is an error, never created silently
 
-    def can_recycle(self, path: str) -> bool:
+    def can_recycle(self, item: ItemState) -> bool:
+        """A fixed, non-subst drive whose bin is on and big enough for this item."""
         import ctypes
 
-        root = ntpath.splitdrive(os.path.abspath(path))[0] + "\\"
+        drive = ntpath.splitdrive(os.path.abspath(item.path))[0]
+        root = drive + "\\"
         kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
-        return int(kernel32.GetDriveTypeW(root)) == DRIVE_FIXED
+        if int(kernel32.GetDriveTypeW(root)) != DRIVE_FIXED or _is_subst(drive):
+            return False
+        capacity, nuke = _bin_settings(root)
+        return fits_in_bin(size=item.size, count=item.count, capacity=capacity, nuke=nuke)
 
     def recycle(self, path: str) -> str:
         from win32com.shell import shell, shellcon
 
-        flags = (
-            shellcon.FOF_ALLOWUNDO
-            | shellcon.FOF_NOCONFIRMATION
-            | shellcon.FOF_SILENT
-            | shellcon.FOF_NOERRORUI
-        )
         result, aborted = shell.SHFileOperation(
-            (0, shellcon.FO_DELETE, os.path.abspath(path), None, flags, None, None)
+            (0, shellcon.FO_DELETE, os.path.abspath(path), None, RECYCLE_FLAGS, None, None)
         )
         if result != 0 or aborted or os.path.exists(path):
             raise ChangeBusy(f"could not recycle {path} (code {result})")

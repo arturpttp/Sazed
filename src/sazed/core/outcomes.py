@@ -425,6 +425,12 @@ class UndoStale:
 
 
 @dataclass(frozen=True)
+class CopiedNotMoved:
+    name: str
+    folder: str
+
+
+@dataclass(frozen=True)
 class NotInRecycleBin:
     name: str
 
@@ -511,6 +517,7 @@ Failure = (
     | NothingToUndo
     | UndoStale
     | NotInRecycleBin
+    | CopiedNotMoved
 )
 Outcome = Success | Failure
 

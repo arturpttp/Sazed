@@ -5,6 +5,7 @@ from fakes.ports import FakeChangeLog, FakeChanger, FakeFolders, FakeSearch
 from sazed.core.outcomes import (
     AmbiguousSlot,
     ChangeUndone,
+    CopiedNotMoved,
     FileBusy,
     FileChangeProposed,
     FileCopied,
@@ -296,3 +297,53 @@ def test_only_protected_matches_means_protected() -> None:
     appdata = ItemState(rf"{P}\AppData\Local\viagem", True, 0, 1.0, 0)
     skill, _, _ = make([appdata])
     assert skill.execute("arquivo_apagar", slots(item="pasta:viagem"), CTX) == Protected("viagem")
+
+
+def test_the_recycle_check_sees_the_items_size() -> None:
+    # Final review C1: the bin limit depends on the size; the port receives the whole state.
+    skill, disk, _ = make([TRIP, TRIP_PHOTO])
+    disk.no_bin_over = 5  # bytes
+    assert skill.execute("arquivo_apagar", slots(item="pasta:viagem"), CTX) == NoRecycleBin(
+        "viagem"
+    )
+
+
+def test_picking_a_file_then_a_folder_keeps_both_choices() -> None:
+    # Final review I1: the folder list replaced the file list, so the picked file's label was
+    # searched as words ("30)") and another file was proposed.
+    a = ItemState(rf"{DL}\relatorio 1.docx", False, 1, 1.0, 0)
+    b = ItemState(rf"{DL}\relatorio velho.docx", False, 1, 1.0, 0)
+    decoy = ItemState(rf"{DOCS}\foto 00).jpg", False, 1, 1.0, 0)
+    trip1 = ItemState(rf"{DOCS}\viagem", True, 0, 1.0, 0)
+    trip2 = ItemState(rf"{DESK}\viagem", True, 0, 1.0, 0)
+    skill, _, _ = make([a, b, decoy, trip1, trip2])
+    dest = Unmatched("destino", "viagem", None)
+    first = skill.execute("arquivo_mover", slots(item="arquivo:relatorio", destino=dest), CTX)
+    assert isinstance(first, AmbiguousSlot) and first.slot == "item"
+    picked_file = first.candidates[1]
+    second = skill.execute("arquivo_mover", slots(item=picked_file, destino=dest), CTX)
+    assert isinstance(second, AmbiguousSlot) and second.slot == "destino"
+    third = skill.execute(
+        "arquivo_mover", slots(item=picked_file, destino=second.candidates[0]), CTX
+    )
+    assert isinstance(third, FileChangeProposed)
+    assert third.action.startswith("Mover relatorio")
+    assert "foto" not in third.action
+
+
+def test_an_unknown_item_encoding_is_a_programming_error_not_a_search() -> None:
+    import pytest
+
+    skill, _, _ = make([REPORT])
+    with pytest.raises(ValueError):
+        skill.execute("arquivo_apagar", slots(item="relatório.docx (Downloads, hoje 14:30)"), CTX)
+
+
+def test_a_move_that_could_only_copy_is_logged_and_reported_as_a_copy() -> None:
+    skill, disk, log = make([REPORT])
+    disk.copy_only = {REPORT.path.lower()}
+    skill.execute("arquivo_mover", slots(item="arquivo:relatório", destino="Documentos"), CTX)
+    assert skill.apply_pending(CTX) == CopiedNotMoved("relatório.docx", "Documentos")
+    change = log.latest_open()
+    assert change is not None and change.kind == "copiar"
+    assert disk.state(REPORT.path) is not None

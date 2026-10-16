@@ -110,3 +110,23 @@ Found only on the real machine, each fixed with a test that failed first:
 - "apaga a pasta downloads" ranked opening the folder: delete seeds now share the folder objects
   ("apaga a pasta downloads"); fixture 233 cases, accuracy 0.919, false-execute 0.000.
 Startup 2.91–2.95 s (2b: 2.5 s; 484 seed examples), RSS +430 MB unchanged.
+
+## Final review fixes (each test watched failing before the fix)
+- **C1 — a "delete" could be a silent permanent delete** (an item bigger than the bin's quota,
+  the bin turned off, or a subst drive: under FOF_NOCONFIRMATION Windows destroys it without
+  asking). `can_recycle` now receives the item and checks the drive's real bin settings
+  (`BitBucket\Volume\{GUID}`: MaxCapacity, NukeOnDelete; this machine: 49 703 MB on C:), refuses
+  subst drives, a folder whose count was capped, and unknown settings; `FOF_WANTNUKEWARNING` is
+  set as a second net. `test_anything_the_bin_might_not_take_is_refused` (4 cases) failed first;
+  mutation "ignore the capped count" → `FAILED …[10-100000-53687091200-False]`.
+- **I1 — a pick from one list was searched as words after a second list replaced it** (the
+  wrong file proposed). Choice lists are kept per slot; an unknown item encoding raises instead
+  of searching. `test_picking_a_file_then_a_folder_keeps_both_choices` failed first; mutation
+  "one shared list" → fails again.
+- **I2 — a cross-drive move whose last step failed said "nothing happened"** while a copy existed
+  and part of the original was gone (rmtree). The original now goes to the Recycle Bin after the
+  copy is verified; if that fails, `MovedAsCopy` → logged as a copy, answered `CopiedNotMoved`.
+  Mutation: no conversion → `FAILED …test_when_the_original_cannot_be_removed_the_copy_stays_and_says_so`.
+- **I3 — the rollback could remove a folder it had not created.** Anything already at the
+  destination is refused before copying; only this call's partial copy is removed. Mutation: no
+  pre-check → `FAILED …test_something_already_at_the_destination_is_never_touched`.

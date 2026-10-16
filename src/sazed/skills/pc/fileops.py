@@ -11,7 +11,7 @@ import ntpath
 import re
 import unicodedata
 from collections.abc import Callable, Collection, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Literal, Protocol
 
@@ -19,6 +19,7 @@ from sazed.core.outcomes import (
     AmbiguousSlot,
     BadName,
     ChangeUndone,
+    CopiedNotMoved,
     FileBusy,
     FileChangeProposed,
     FileCopied,
@@ -385,6 +386,11 @@ def describe_plan(plan: ChangePlan, labels: Mapping[str, str]) -> str:
     return text
 
 
+class MovedAsCopy(Exception):
+    """A move to another drive copied the item but could not remove the original: there are
+    now two. The skill logs and reports it as a copy."""
+
+
 class ChangeBusy(Exception):
     """The item is open in another program, or permission was denied (adapter raises it)."""
 
@@ -396,7 +402,10 @@ class FileChanger(Protocol):
     def copy(self, src: str, dst: str) -> None: ...
     def rename(self, src: str, dst: str) -> None: ...
     def make_folder(self, path: str) -> None: ...
-    def can_recycle(self, path: str) -> bool: ...
+    def can_recycle(self, item: ItemState) -> bool:
+        """Whether the Recycle Bin will really take `item` (never a permanent delete)."""
+        ...
+
     def recycle(self, path: str) -> str:
         """Send to the Recycle Bin; return a reference `restore` understands."""
         ...
@@ -551,8 +560,9 @@ class FileOpsSkill:
         self._log = log
         self._area = area
         self._pending: ChangePlan | None = None
-        self._shown: dict[str, str] = {}
-        """The choices last listed (label → path): a pick arrives back as its label."""
+        self._shown: dict[str, dict[str, str]] = {}
+        """Per slot, the choices last listed (label → path): a pick arrives back as its label.
+        Kept per slot: listing folders must not forget the file just picked."""
         destination = SlotSpec("destino", True, "Para qual pasta?")
         new_name = SlotSpec("novo_nome", True, "Qual o novo nome?")
         self.intents: tuple[IntentSpec, ...] = tuple(
@@ -600,7 +610,7 @@ class FileOpsSkill:
             while label in shown:
                 label, n = f"{base} #{n}", n + 1
             shown[label] = found.path
-        self._shown = shown
+        self._shown[slot] = shown
         return AmbiguousSlot(slot, tuple(shown))
 
     def _known_folder(self, words: str) -> str | None:
@@ -618,9 +628,13 @@ class FileOpsSkill:
         value = _value(slots, "item")
         if value is None:
             raise ValueError("a file change called without its item")
-        if value in self._shown:
-            return self._shown[value]
+        picked = self._shown.get("item", {})
+        if value in picked:
+            return picked[value]
         how, _, words = value.partition(":")
+        if how not in ("ultimo", "pasta", "arquivo"):
+            # Never search a label as words: that proposed another file (final review I1).
+            raise ValueError(f"unknown item {value!r}")
         try:
             if how == "ultimo":
                 folder = self._folders.resolve(words)
@@ -667,8 +681,9 @@ class FileOpsSkill:
         name = str(found.value) if isinstance(found, SlotValue) else default
         if name is None:
             raise ValueError("a file change called without its destination")
-        if name in self._shown:
-            return self._shown[name]
+        picked = self._shown.get("destino", {})
+        if name in picked:
+            return picked[name]
         path = self._folders.resolve(name)
         return FolderNotFound(name) if path is None else path
 
@@ -699,7 +714,7 @@ class FileOpsSkill:
         if source is None:
             return FileGone(_name(path))
         if kind == "apagar":
-            can = self._changer.can_recycle(path)
+            can = self._changer.can_recycle(source)
             plan = plan_change("apagar", source, None, None, (), self._area, can_recycle=can)
             return self._propose(plan)
         if kind == "renomear":
@@ -755,7 +770,8 @@ class FileOpsSkill:
                         self._log.mark_undone(plan.undo_of, ctx.now)
                     return NotInRecycleBin(name)
             elif plan.kind == "apagar":
-                if not self._changer.can_recycle(plan.target):
+                current = self._changer.state(plan.target)
+                if current is None or not self._changer.can_recycle(current):
                     return NoRecycleBin(name)
                 ref = self._changer.recycle(plan.target)
             elif plan.kind == "criar":
@@ -767,6 +783,10 @@ class FileOpsSkill:
                     "renomear": self._changer.rename,
                 }[plan.kind]
                 operation(plan.source, plan.target)
+        except MovedAsCopy:
+            as_copy = replace(plan, kind="copiar")
+            self._log.record(as_copy, self._changer.state(plan.target), None, ctx.now)
+            return CopiedNotMoved(_name(plan.target), _label(_parent(plan.target), labels))
         except ChangeBusy:
             return FileBusy(_VERBS[plan.kind], name)
         if plan.undo_of is not None:

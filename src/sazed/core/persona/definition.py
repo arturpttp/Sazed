@@ -139,6 +139,10 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
     "NoRecycleBin": ("Essa unidade não tem Lixeira, {mestre}; não vou apagar {name}.",),
     "NothingToUndo": ("Não há nada para desfazer, {mestre}.",),
     "UndoStale": ("{name} mudou depois, {mestre}; não vou desfazer.",),
+    "CopiedNotMoved": (
+        "Copiei {name} para {folder}, {mestre}, mas não consegui tirar o original do lugar"
+        " (pode estar aberto); ele continua onde estava.",
+    ),
     "NotInRecycleBin": ("{name} já não está na Lixeira, {mestre}; não consigo desfazer.",),
     "WindowNotFound": ("{app} não está aberto, {mestre}.",),
     "WindowNotFound.offer_open": ("{app} não está aberto, {mestre}. Devo abrir?",),
