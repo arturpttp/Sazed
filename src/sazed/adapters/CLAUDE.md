@@ -33,3 +33,10 @@ launcher, audio). This is the only package allowed to touch the OS, files, or mo
 - e5 needs the `"query: "` prefix on both sides; it is applied only in `OnnxEmbedder`.
 - The int8 e5 model quantizes activations over the whole batch, so `OnnxEmbedder` embeds one
   sentence per run. Batching again makes a vector depend on its batch-mates (see proofs).
+- Windows Search (`windows/files.py`): `System.ItemPathDisplay` is a localised *display* path
+  ("C:\Usuários\…\Documentos") that does not exist on disk — read `System.ItemUrl`.
+  Dates come back in UTC; `_local`/`_utc` convert, and `newest` sends its "since" in UTC.
+  COM is initialised per call (the REPL and dashboard threads differ). The SQL is built only by
+  `skills/pc/files.py` (escaped there).
+- `WindowsFileOpener.open` refuses `PROGRAM_EXTENSIONS` itself: that is the load-bearing guard,
+  the skill's check only gives the better answer.

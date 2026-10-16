@@ -54,3 +54,18 @@ Mutation: skip the `is_program` check in `FilesSkill._open_hit`.
 FAILED tests/skills/test_files_skill.py::test_a_program_chosen_from_a_list_is_revealed_not_run
 FAILED tests/skills/test_files_skill.py::test_a_single_program_hit_is_revealed_too
 ```
+
+## Task 8: the opener itself refuses programs (the load-bearing guard)
+Mutation: drop the `is_program` check in `WindowsFileOpener.open` → 23 failures (one per
+`PROGRAM_EXTENSIONS` entry), e.g.
+`FAILED tests/adapters/test_files_adapter.py::test_the_opener_refuses_a_program_even_if_the_skill_did_not[.bat]`.
+
+## Task 8: the index's display path is not a real path (found on this machine)
+With the plan's `System.ItemPathDisplay`, the real-index test failed:
+```
+E  AssertionError: assert WindowsPath('C:/Usuários/Usuario/Documentos/sazed2b430dd08dfd.txt')
+   == WindowsPath('C:/Users/Usuario/Documents/sazed2b430dd08dfd.txt')
+```
+Fixed by reading `System.ItemUrl`; the test now also asserts the path exists, with a file name
+holding a space and an accent. Dates arrive as UTC (`TimeZoneInfo('GMT Standard Time', True)`)
+and are converted to local time (checked against the clock: created 00:35 local, read 00:35).

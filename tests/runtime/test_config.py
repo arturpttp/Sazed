@@ -137,3 +137,15 @@ def test_invalid_sites_and_engines_stop_startup_in_pt_br(
 def test_default_engine_matches_ignoring_case_and_accents(tmp_path: Path) -> None:
     config = load_config(write(tmp_path, '[search]\ndefault = "wikipedia"\n'))
     assert config.search.default == "wikipedia"
+
+
+def test_configured_folders_load_as_paths(tmp_path: Path) -> None:
+    text = f'[folders]\nprojetos = "{tmp_path.as_posix()}"\n'
+    assert load_config(write(tmp_path, text)).folders == {"projetos": tmp_path}
+
+
+def test_a_blank_folder_name_stops_startup_in_pt_br(tmp_path: Path) -> None:
+    with pytest.raises(ConfigError) as err:
+        load_config(write(tmp_path, '[folders]\n"  " = "C:/x"\n'))
+    assert "- folders:" in str(err.value)
+    assert "vazio" in str(err.value)

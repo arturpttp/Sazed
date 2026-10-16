@@ -91,7 +91,9 @@ KIND_PHRASES: dict[str | None, str] = {
     "texto": "nenhum texto chamado",
 }
 
-_COLUMNS = "System.ItemPathDisplay, System.DateModified"
+# ItemPathDisplay is a localised display path ("C:\Usuários\…\Documentos") that does not exist
+# on disk; ItemUrl ("file:C:/Users/…") is the real one (seen on this machine, 2026-10-16).
+_COLUMNS = "System.ItemUrl, System.ItemFolderNameDisplay, System.DateModified"
 _ORDER = "ORDER BY System.DateModified DESC"
 
 

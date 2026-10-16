@@ -155,6 +155,15 @@ class Config(_Section):
     aliases: dict[str, str] = Field(default_factory=dict)
     sites: dict[str, HttpUrl] = Field(default_factory=dict)
     search: SearchConfig = Field(default_factory=SearchConfig)
+    folders: dict[str, Path] = Field(default_factory=dict)
+    """Extra folders by name ("abre a pasta projetos"). A missing one is reported when asked."""
+
+    @field_validator("folders")
+    @classmethod
+    def _folder_names(cls, value: dict[str, Path]) -> dict[str, Path]:
+        if any(not name_key(k) for k in value):
+            raise ValueError("nomes não podem ficar vazios")
+        return value
 
     @field_validator("sites")
     @classmethod

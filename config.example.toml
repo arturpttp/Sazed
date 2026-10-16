@@ -27,3 +27,6 @@ debug = false
 
 [aliases]
 # zap = "WhatsApp"
+
+[folders]
+# projetos = "D:/Projetos"

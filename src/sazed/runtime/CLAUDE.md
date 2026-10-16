@@ -30,3 +30,6 @@ Wires config, adapters, skills and the assistant together; the only place the cl
 
 ## Not here
 Skill logic (→ `skills`), OS access (→ `adapters`), the REPL and its pt-BR strings (→ `interfaces`).
+- `[folders]` in config adds folders by name; a configured name that matches a known folder
+  overrides it. A missing directory does not stop startup: it is logged and answered as
+  `FolderNotFound` when asked.

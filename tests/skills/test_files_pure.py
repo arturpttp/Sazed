@@ -59,7 +59,8 @@ def test_like_escaping(word: str, escaped: str) -> None:
 def test_search_sql_scopes_words_kinds_and_excludes_folders() -> None:
     sql = search_sql(["gastos", "agua"], [".xlsx", ".csv"], ["C:/Users/A"], 6)
     assert sql == (
-        "SELECT TOP 6 System.ItemPathDisplay, System.DateModified FROM SYSTEMINDEX "
+        "SELECT TOP 6 System.ItemUrl, System.ItemFolderNameDisplay, System.DateModified "
+        "FROM SYSTEMINDEX "
         "WHERE (SCOPE='file:C:/Users/A') AND System.Kind <> 'folder' "
         "AND System.FileName LIKE '%gastos%' AND System.FileName LIKE '%agua%' "
         "AND (System.FileExtension = '.xlsx' OR System.FileExtension = '.csv') "
@@ -92,7 +93,8 @@ def test_a_scope_with_a_quote_is_escaped() -> None:
 def test_newest_sql_limits_to_one_folder_and_a_start() -> None:
     sql = newest_sql("C:/U/Downloads", datetime(2026, 10, 16), 10)
     assert sql == (
-        "SELECT TOP 10 System.ItemPathDisplay, System.DateModified FROM SYSTEMINDEX "
+        "SELECT TOP 10 System.ItemUrl, System.ItemFolderNameDisplay, System.DateModified "
+        "FROM SYSTEMINDEX "
         "WHERE DIRECTORY='file:C:/U/Downloads' AND System.Kind <> 'folder' "
         "AND System.DateModified >= '2026-10-16 00:00:00' "
         "ORDER BY System.DateModified DESC"
