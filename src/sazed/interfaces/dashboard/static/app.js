@@ -105,6 +105,114 @@ function outcomeBadges(e) {
   ];
 }
 
+// ---------------------------------------------------------------- writes
+
+// The per-launch token is put in the page by the server; every POST must carry it.
+const TOKEN = (document.querySelector('meta[name="sazed-token"]') || {}).content || "";
+const MODEL_WRITES = new Set(["/api/write/example/add", "/api/write/example/edit", "/api/write/episode/label"]);
+
+function button(text, onClick, cls = "btn") {
+  const b = h("button", { class: cls, type: "button", text });
+  b.addEventListener("click", onClick);
+  return b;
+}
+
+// A form being filled must survive the live refresh: typing marks it dirty.
+function dirty(el) { el.addEventListener("input", () => { el.dataset.dirty = "1"; }); return el; }
+function panelBusy(panel) {
+  if (panel.querySelector("[data-dirty]")) return true;
+  const a = document.activeElement;
+  return Boolean(a && panel.contains(a) && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName) && a.type !== "search");
+}
+
+async function postJSON(path, body) {
+  let response;
+  try {
+    response = await fetch(path, {
+      method: "POST",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json", "X-Sazed-Token": TOKEN },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error("Não consegui falar com o painel. Ele ainda está em execução?");
+  }
+  let data;
+  try { data = await response.json(); } catch { throw new Error("Resposta inválida do painel."); }
+  if (!response.ok) throw new Error(data.error || "Não consegui gravar.");
+  return data;
+}
+
+function notice(message, kind = "", actions = []) {
+  const box = document.getElementById("notice");
+  const close = button("Fechar", () => { box.hidden = true; }, "btn small");
+  box.replaceChildren(h("div", { class: `notice ${kind}` }, h("span", { class: "msg", text: message }), actions, close));
+  box.hidden = false;
+}
+
+// Every write goes through here: it explains the result, offers "guardar mesmo assim" on a
+// conflict and "desfazer" after a forget, then lets the caller refresh its view.
+async function write(path, body, onDone) {
+  if (MODEL_WRITES.has(path)) {
+    let state = "ready";
+    try { state = (await getJSON("/api/editor")).state; } catch { /* the POST will say what is wrong */ }
+    notice(state === "ready" ? "Gravando…" : "Carregando o modelo de linguagem (só na primeira vez; alguns segundos)…", "warn");
+  } else {
+    notice("Gravando…");
+  }
+  let r;
+  try { r = await postJSON(path, body); } catch (err) { notice(err.message, "bad"); return null; }
+  const actions = [];
+  if (r.needs_force) actions.push(button("Guardar mesmo assim", () => write(path, { ...body, force: true }, onDone)));
+  if (r.undo) actions.push(button("Desfazer", () => write("/api/write/undo", { undo: r.undo }, onDone)));
+  notice(r.message, r.ok ? "good" : r.needs_force ? "warn" : "bad", actions);
+  if (r.ok && onDone) onDone(r);
+  return r;
+}
+
+function intentSelect(intents, selected, label = "Pedido") {
+  const select = h("select", { "aria-label": label }, h("option", { value: "", text: "escolha o pedido…" }),
+    intents.map((i) => h("option", {
+      value: i.id, selected: i.id === selected, disabled: !i.learnable,
+      text: i.learnable ? `${i.id} — ${i.description}` : `${i.id} — nunca aprendido`,
+    })));
+  return dirty(select);
+}
+
+function notesView(target, targetId, notes, onChange) {
+  const items = notes.map((n) => {
+    const li = h("li", {});
+    const show = () => li.replaceChildren(h("span", { text: n.text }),
+      h("span", { class: "updated", text: ` · ${fmtWhen(n.updated_at || n.created_at)}${n.updated_at ? " (editada)" : ""} ` }),
+      button("Editar", () => {
+        const area = dirty(h("textarea", { rows: 2, "aria-label": "Editar nota", maxlength: 2000 }));
+        area.value = n.text;
+        li.replaceChildren(area, h("div", { class: "toolbar" },
+          button("Salvar", () => write("/api/write/note/edit", { id: n.id, text: area.value }, onChange)),
+          button("Cancelar", show)));
+        area.focus();
+      }, "btn small"),
+      button("Remover", () => {
+        if (window.confirm("Remover esta nota?")) write("/api/write/note/remove", { id: n.id }, onChange);
+      }, "btn small"));
+    show();
+    return li;
+  });
+  const area = dirty(h("textarea", { rows: 2, maxlength: 2000, "aria-label": "Nova nota", placeholder: "Uma nota para você (Sazed não lê notas)…" }));
+  return h("div", { class: "notes" }, h("h3", { text: `Notas (${notes.length})` }),
+    items.length ? h("ul", { class: "plain" }, items) : null,
+    h("div", { class: "toolbar" }, area,
+      button("Adicionar nota", () => write("/api/write/note/add", { target, target_id: targetId, text: area.value }, onChange))));
+}
+
+function forgetButton(ref, text, onChange) {
+  return button("Esquecer", () => {
+    if (window.confirm(`Esquecer ${ref} “${text}”? As notas dele vão junto. Dá para desfazer logo em seguida.`)) {
+      write("/api/write/forget", { ref }, onChange);
+    }
+  }, "btn small");
+}
+
 // ---------------------------------------------------------------- charts
 
 function tooltip(chart) { const tip = h("div", { class: "tip", hidden: true }); chart.append(tip); return tip; }
@@ -307,7 +415,7 @@ function rankingView(e, th) {
   return h("div", { class: "ranking" }, rows);
 }
 
-function episodeView(e, th) {
+function episodeView(e, th, intents, onChange) {
   const det = h("details", { class: `episode ${reasoning.seen.size && !reasoning.seen.has(e.id) ? "fresh" : ""}` });
   if (reasoning.open.has(e.id)) det.open = true;
   det.addEventListener("toggle", () => { if (det.open) reasoning.open.add(e.id); else reasoning.open.delete(e.id); });
@@ -326,15 +434,25 @@ function episodeView(e, th) {
         e.failed ? h("span", { class: "badge bad", text: "conta como falha" }) : null,
         h("span", { class: "badge", text: e.reaction_label ? `reação: ${e.reaction_label}` : "sem reação do usuário" })),
       h("h3", { text: "O que aprendi com isso" }),
-      e.learned.length ? h("ul", { class: "plain" }, e.learned.map((l) => h("li", { text: l }))) : h("div", { class: "updated", text: "nada guardado" })));
+      e.learned.length ? h("ul", { class: "plain" }, e.learned.map((l) => h("li", { text: l }))) : h("div", { class: "updated", text: "nada guardado" }),
+      teachView(e, intents, onChange),
+      notesView("episode", e.id, e.notes || [], onChange)));
   return det;
+}
+
+function teachView(e, intents, onChange) {
+  const intent = intentSelect(intents, "", "Pedido certo");
+  return h("div", {}, h("h3", { text: "Ensinar o que este comando queria dizer" }),
+    h("div", { class: "toolbar" }, intent,
+      button("Ensinar", () => write("/api/write/episode/label", { episode_id: e.id, intent: intent.value }, onChange))),
+    h("div", { class: "updated", text: "Igual a: sazed revisar --rotular. A frase vira um exemplo do pedido escolhido." }));
 }
 
 async function loadIntents() {
   if (reasoning.intents) return reasoning.intents;
   try {
     const cap = await getJSON("/api/capabilities");
-    reasoning.intents = cap.skills.flatMap((sk) => sk.intents.map((i) => i.id));
+    reasoning.intents = cap.skills.flatMap((sk) => sk.intents.map((i) => ({ id: i.id, description: i.description, learnable: i.learnable })));
   } catch { reasoning.intents = []; }
   return reasoning.intents;
 }
@@ -346,7 +464,7 @@ function episodeFilters(state, onChange, decisions, intents) {
     Object.entries(decisions).map(([k, v]) => h("option", { value: k, text: v, selected: state.decision === k })));
   dec.addEventListener("change", () => { state.decision = dec.value; state.offset = 0; onChange(); });
   const intent = h("select", { "aria-label": "Pedido" }, h("option", { value: "", text: "todos os pedidos" }),
-    intents.map((i) => h("option", { value: i, text: i, selected: state.intent === i })));
+    intents.map((i) => h("option", { value: i.id, text: i.id, selected: state.intent === i.id })));
   intent.addEventListener("change", () => { state.intent = intent.value; state.offset = 0; onChange(); });
   return [search, dec, intent];
 }
@@ -384,7 +502,7 @@ async function renderReasoning(panel, manual = false) {
   let body;
   if (data.available === false) body = empty(data.message);
   else if (!data.items.length) body = empty("Nenhum comando encontrado.");
-  else body = h("div", { class: "episodes" }, data.items.map((e) => episodeView(e, data.thresholds)));
+  else body = h("div", { class: "episodes" }, data.items.map((e) => episodeView(e, data.thresholds, intents, rerender)));
   if (data.items && reasoning.offset === 0 && !reasoning.open.size && data.items[0]) reasoning.open.add(data.items[0].id);
   for (const e of data.items || []) reasoning.seen.add(e.id);
   panel.replaceChildren(h("div", { class: "card" }, h("header", {}, h("h2", { text: "Raciocínio de Sazed" }), tools), intro), body,
@@ -522,6 +640,65 @@ async function renderResources(panel) {
 // ---------------------------------------------------------------- coppermind
 
 const copper = { view: "episodes", q: "", decision: "", intent: "", offset: 0, limit: 50 };
+const appNames = { list: null, loading: null };
+
+async function loadAppNames() {
+  if (appNames.list) return appNames.list;
+  if (!appNames.loading) {
+    appNames.loading = getJSON("/api/catalog").then((d) => { appNames.list = (d.items || []).map((e) => e.name); return appNames.list; })
+      .catch(() => { appNames.loading = null; return []; });
+  }
+  return appNames.loading;
+}
+
+function appInput(value, label) {
+  const id = `apps-${Math.random().toString(36).slice(2)}`;
+  const list = h("datalist", { id });
+  const input = dirty(h("input", { type: "text", list: id, value: value || "", "aria-label": label, placeholder: "programa ou site do catálogo", maxlength: 200 }));
+  input.addEventListener("focus", async () => {
+    if (list.childElementCount) return;
+    const names = await loadAppNames();
+    list.replaceChildren(...names.map((n) => h("option", { value: n })));
+  }, { once: true });
+  return [input, list];
+}
+
+function exampleItem(x, intents, rerender) {
+  const box = h("div", { class: "item" });
+  const view = () => box.replaceChildren(
+    h("div", { class: "item-head" }, h("code", { text: `e${x.id}` }), h("strong", { text: `“${x.text}”` }), " → ", h("code", { text: x.intent_id }),
+      h("span", { class: "updated", text: ` · ${x.origin} · lote ${x.batch} · ${fmtWhen(x.created_at)}` })),
+    h("div", { class: "toolbar" }, button("Corrigir", edit, "btn small"), forgetButton(`e${x.id}`, x.text, rerender)),
+    h("details", {}, h("summary", { text: `Notas (${x.notes.length})` }), notesView("example", x.id, x.notes, rerender)));
+  const edit = () => {
+    const text = dirty(h("input", { type: "text", value: x.text, "aria-label": "Frase", maxlength: 300 }));
+    const intent = intentSelect(intents, x.intent_id);
+    box.replaceChildren(h("div", { class: "toolbar" }, h("code", { text: `e${x.id}` }), text, intent,
+      button("Salvar", () => write("/api/write/example/edit", { id: x.id, text: text.value, intent: intent.value }, rerender)),
+      button("Cancelar", view)));
+    text.focus();
+  };
+  view();
+  return box;
+}
+
+function aliasItem(a, rerender) {
+  const box = h("div", { class: "item" });
+  const view = () => box.replaceChildren(
+    h("div", { class: "item-head" }, h("code", { text: `a${a.id}` }), h("strong", { text: `“${a.alias}”` }), " → ", a.value,
+      h("span", { class: "updated", text: ` · ${a.slot} · lote ${a.batch} · ${fmtWhen(a.created_at)}` })),
+    h("div", { class: "toolbar" }, button("Corrigir destino", edit, "btn small"), forgetButton(`a${a.id}`, a.alias, rerender)),
+    h("details", {}, h("summary", { text: `Notas (${a.notes.length})` }), notesView("alias", a.id, a.notes, rerender)));
+  const edit = () => {
+    const [target, list] = appInput(a.value, "Destino");
+    box.replaceChildren(h("div", { class: "toolbar" }, h("code", { text: `a${a.id}` }), `“${a.alias}” →`, target, list,
+      button("Salvar", () => write("/api/write/alias/edit", { id: a.id, target: target.value }, rerender)),
+      button("Cancelar", view)));
+    target.focus();
+  };
+  view();
+  return box;
+}
 
 async function renderCoppermind(panel) {
   const rerender = () => renderCoppermind(panel).catch((err) => panel.replaceChildren(empty(err.message, true)));
@@ -531,18 +708,19 @@ async function renderCoppermind(panel) {
     b.addEventListener("click", () => { copper.view = k; copper.q = ""; copper.offset = 0; rerender(); });
     return b;
   }));
-  let body; let tools = [];
+  let body; let tools = []; let form = null;
   const keepFocus = document.activeElement && document.activeElement.type === "search";
+  const intents = await loadIntents();
   if (copper.view === "episodes") {
     const data = await getJSON(`/api/episodes?${episodeQuery(copper)}`);
-    const intents = await loadIntents();
     if (data.available === false) body = empty(data.message);
     else {
       tools = episodeFilters(copper, rerender, data.decisions, intents);
-      body = h("div", {}, data.items.length ? table(["#", "Quando", "Frase", "Decisão", "Pedido", "Melhor pontuação", "Resultado", "Reação"],
+      body = h("div", {}, data.items.length ? table(["#", "Quando", "Frase", "Decisão", "Pedido", "Melhor pontuação", "Resultado", "Reação", "Notas"],
         data.items.map((e) => [e.id, fmtWhen(e.at), e.utterance, decisionBadge(e), e.intent || "—",
-          e.ranking.length ? fmtScore(e.ranking[0].score) : "—", e.outcome || "—", e.reaction_label || "—"]), [0, 5])
-        : empty("Nenhum episódio encontrado."), pager(copper, data.total, rerender));
+          e.ranking.length ? fmtScore(e.ranking[0].score) : "—", e.outcome || "—", e.reaction_label || "—", e.notes.length || "—"]), [0, 5, 8])
+        : empty("Nenhum episódio encontrado."), pager(copper, data.total, rerender),
+      h("div", { class: "updated", text: "Para ensinar o que um comando queria dizer ou anotar algo nele, abra-o na aba Raciocínio." }));
     }
   } else {
     const search = h("input", { type: "search", placeholder: "Buscar…", value: copper.q, "aria-label": "Buscar" });
@@ -550,16 +728,26 @@ async function renderCoppermind(panel) {
     tools = [search];
     const q = copper.q ? `?q=${encodeURIComponent(copper.q)}` : "";
     const data = await getJSON(`/api/${copper.view}${q}`);
+    if (copper.view === "examples") {
+      const text = dirty(h("input", { type: "text", placeholder: "Frase que deve significar o pedido", "aria-label": "Nova frase", maxlength: 300 }));
+      const intent = intentSelect(intents, "");
+      form = h("div", { class: "card" }, h("h2", { text: "Ensinar uma frase" }), h("div", { class: "toolbar" }, text, intent,
+        button("Ensinar", () => write("/api/write/example/add", { text: text.value, intent: intent.value }, rerender))),
+      h("div", { class: "updated", text: "A frase é normalizada como no aprendizado ao vivo. Pedidos de energia nunca são aprendidos." }));
+    } else if (copper.view === "aliases") {
+      const alias = dirty(h("input", { type: "text", placeholder: "apelido (ex.: zap)", "aria-label": "Novo apelido", maxlength: 80 }));
+      const [target, list] = appInput("", "Programa");
+      form = h("div", { class: "card" }, h("h2", { text: "Novo apelido de programa" }), h("div", { class: "toolbar" }, alias, "→", target, list,
+        button("Guardar", () => write("/api/write/alias/add", { alias: alias.value, target: target.value }, rerender))));
+    }
     if (data.available === false) body = empty(data.message);
     else if (!data.items.length) body = empty("Nada encontrado.");
-    else if (copper.view === "examples") {
-      body = table(["Ref.", "Frase", "Pedido", "Origem", "Lote", "Quando"], data.items.map((x) => [`e${x.id}`, x.text, h("code", { text: x.intent_id }), x.origin, x.batch, fmtWhen(x.created_at)]), [4]);
-    } else {
-      body = table(["Ref.", "Detalhe", "Apelido", "Significa", "Lote", "Quando"], data.items.map((x) => [`a${x.id}`, x.slot, x.alias, x.value, x.batch, fmtWhen(x.created_at)]), [4]);
-    }
+    else if (copper.view === "examples") body = h("div", { class: "stack" }, data.items.map((x) => exampleItem(x, intents, rerender)));
+    else body = h("div", { class: "stack" }, data.items.map((a) => aliasItem(a, rerender)));
   }
   panel.replaceChildren(cardWith("Mente de cobre", subtabs, h("div", { class: "toolbar" }, tools),
-    h("div", { class: "updated", text: "Somente leitura. Para esquecer um item use: uv run sazed aprendizado --esquecer e3" })), h("div", { class: "card" }, body));
+    h("div", { class: "updated", text: "Mudanças valem a partir do próximo início do Sazed: o Sazed em execução mantém o que já carregou." })),
+  form, h("div", { class: "card" }, body));
   if (keepFocus) { const input = panel.querySelector("input[type=search]"); if (input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); } }
 }
 
@@ -577,11 +765,11 @@ async function renderCatalog(box) {
 async function renderCapabilities(panel) {
   const c = await getJSON("/api/capabilities");
   const intents = c.skills.flatMap((sk) => sk.intents.map((i) => [sk.id, i]));
-  const skills = table(["Habilidade", "Pedido", "Descrição", "Exemplos", "Detalhes (slots)", "Confirmação"], intents.map(([sk, i]) => [
+  const skills = table(["Habilidade", "Pedido", "Descrição", "Exemplos", "Detalhes (slots)", "Confirmação", "Aprendível", "Repetível (de novo)"], intents.map(([sk, i]) => [
     sk, h("code", { text: i.id }), i.description,
     h("details", {}, h("summary", { text: String(i.examples) }), h("ul", { class: "plain" }, i.example_texts.map((x) => h("li", { text: x })))),
     i.slots.length ? h("div", {}, i.slots.map((sl) => h("div", {}, h("code", { text: sl.name }), sl.required ? " (obrigatório)" : " (opcional)", h("div", { class: "updated", text: sl.question })))) : "—",
-    i.confirmation]));
+    i.confirmation, i.learnable ? "sim" : "nunca", i.repeatable ? "sim" : "não"]));
   const ports = table(["Porta", "Habilidade", "Métodos", "O que faz", "Adaptador"], c.ports.map((p) => [
     h("code", { text: p.name }), p.skill, p.methods.join(", "), p.description, h("code", { text: p.adapter })]));
   const access = h("ul", { class: "plain" },
@@ -626,13 +814,14 @@ let active = "geral";
 let timer = null;
 let busy = false;
 
-async function refresh() {
+async function refresh(auto = false) {
   clearTimeout(timer);
   if (busy) return;
   busy = true;
   const panel = document.getElementById(active);
   const tab = active;
   try {
+    if (auto && panelBusy(panel)) return; // a form is being filled: do not wipe it
     await TABS[tab].render(panel);
     const now = new Date();
     document.getElementById("updated").textContent = `atualizado às ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
@@ -641,7 +830,7 @@ async function refresh() {
   } finally {
     busy = false;
     const every = TABS[tab].every;
-    if (every && tab === active && !document.hidden) timer = setTimeout(refresh, every);
+    if (every && tab === active && !document.hidden) timer = setTimeout(() => refresh(true), every);
   }
 }
 
