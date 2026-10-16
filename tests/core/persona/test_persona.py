@@ -90,3 +90,26 @@ def test_now_playing_without_artist_omits_it() -> None:
     text = render(NowPlaying("Lofi Radio", ""), nome="Artur", rng=Random(0))
     assert "Lofi Radio" in text
     assert ", de" not in text
+
+
+def test_window_not_found_offers_to_open_only_when_asked() -> None:
+    from sazed.core.outcomes import WindowNotFound
+
+    plain = render(WindowNotFound("Spotify"), nome="Artur", rng=Random(0))
+    offer = render(WindowNotFound("Spotify", offer_open=True), nome="Artur", rng=Random(0))
+    assert plain == "Spotify não está aberto, Mestre Artur."
+    assert offer == "Spotify não está aberto, Mestre Artur. Devo abrir?"
+
+
+def test_recent_files_lists_names_numbered() -> None:
+    from sazed.core.outcomes import RecentFiles
+
+    text = render(RecentFiles(2, ("a.pdf", "b.zip")), nome="Artur", rng=Random(0))
+    assert text == "Hoje você baixou 2 arquivos, Mestre Artur: 1) a.pdf, 2) b.zip."
+
+
+def test_file_not_found_names_the_kind() -> None:
+    from sazed.core.outcomes import FileNotFound
+
+    text = render(FileNotFound("gastos", "nenhuma planilha chamada"), nome="Artur", rng=Random(0))
+    assert text == "Não encontrei nenhuma planilha chamada 'gastos', Mestre Artur."

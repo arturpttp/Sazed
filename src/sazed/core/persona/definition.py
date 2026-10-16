@@ -9,7 +9,7 @@ from __future__ import annotations
 from enum import Enum
 
 from sazed.core.decisions import AskSlot, Confirm
-from sazed.core.outcomes import AppNotFound, NowPlaying
+from sazed.core.outcomes import AppNotFound, NowPlaying, WindowNotFound
 
 TRAITS: tuple[str, ...] = (
     "Guardião terrisano: erudito gentil, cortês e muito educado.",
@@ -34,6 +34,7 @@ VARIANT_KEYS: dict[type, tuple[str, ...]] = {
     Confirm: ("Confirm", "ConfirmDestructive"),
     AskSlot: ("AskSlot", "AskSlotChoice"),
     NowPlaying: ("NowPlaying", "NowPlaying.no_artist"),
+    WindowNotFound: ("WindowNotFound", "WindowNotFound.offer_open"),
 }
 
 
@@ -103,7 +104,35 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
     "NothingToForget": ("Não há nada recente para esquecer, {mestre}.",),
     "NothingToRepeat": ("Não há nada recente para repetir, {mestre}.",),
     "Cancelled": ("Como desejar, {mestre}.", "Está bem, {mestre}. Não farei nada."),
+    "WindowMinimized": ("{app} minimizado, {mestre}.",),
+    "WindowMaximized": ("{app} maximizado, {mestre}.",),
+    "WindowRestored": ("{app} restaurado, {mestre}.",),
+    "WindowFocused": ("Aqui está {app}, {mestre}.",),
+    "WindowSnapped": ("{app} foi para a {side}, {mestre}.",),
+    "WindowMoved": ("{app} está no monitor {monitor}, {mestre}.",),
+    "DesktopShown": ("Aqui está a área de trabalho, {mestre}.",),
+    "DesktopRestored": ("As janelas estão de volta, {mestre}.",),
+    "FolderOpened": ("Abrindo {folder}, {mestre}.",),
+    "FileOpened": ("Abrindo {name}, {mestre}.",),
+    "ProgramRevealed": (
+        "Por segurança, não executo programas encontrados na busca, {mestre}; "
+        "abri a pasta de {name}.",
+    ),
+    "RecentFiles": ("Hoje você baixou {count} arquivos, {mestre}: {names}.",),
     # Outcomes: failures
+    "WindowNotFound": ("{app} não está aberto, {mestre}.",),
+    "WindowNotFound.offer_open": ("{app} não está aberto, {mestre}. Devo abrir?",),
+    "NoWindow": ("Não há janela para isso, {mestre}.",),
+    "FocusRefused": (
+        "Não consegui trazer {app} para frente, {mestre}; ele está piscando na barra de tarefas.",
+    ),
+    "NoSuchMonitor": ("Só há {count} monitores, {mestre}.",),
+    "SingleMonitor": ("Só há um monitor ligado, {mestre}.",),
+    "SearchUnavailable": ("A pesquisa do Windows não está disponível agora, {mestre}.",),
+    "FileNotFound": ("Não encontrei {kind} '{query}', {mestre}.",),
+    "FolderNotFound": ("A pasta '{folder}' não existe, {mestre}.",),
+    "FileGone": ("Esse arquivo não existe mais, {mestre}: {name}.",),
+    "NothingRecent": ("Você não baixou nada hoje, {mestre}.",),
     "AppNotFound": (
         "Peço desculpas, {mestre}, mas não encontrei '{query}' entre os seus programas.",
     ),

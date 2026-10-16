@@ -216,6 +216,125 @@ class InvalidPercent:
     raw: str
 
 
+# Windows, folders and files (sub-project 2b)
+
+
+@dataclass(frozen=True)
+class WindowMinimized:
+    app: str
+
+
+@dataclass(frozen=True)
+class WindowMaximized:
+    app: str
+
+
+@dataclass(frozen=True)
+class WindowRestored:
+    app: str
+
+
+@dataclass(frozen=True)
+class WindowFocused:
+    app: str
+
+
+@dataclass(frozen=True)
+class WindowSnapped:
+    app: str
+    side: str
+
+
+@dataclass(frozen=True)
+class WindowMoved:
+    app: str
+    monitor: int
+
+
+@dataclass(frozen=True)
+class DesktopShown:
+    pass
+
+
+@dataclass(frozen=True)
+class DesktopRestored:
+    pass
+
+
+@dataclass(frozen=True)
+class FolderOpened:
+    folder: str
+
+
+@dataclass(frozen=True)
+class FileOpened:
+    name: str
+
+
+@dataclass(frozen=True)
+class ProgramRevealed:
+    name: str
+
+
+@dataclass(frozen=True)
+class RecentFiles:
+    count: int
+    names: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class WindowNotFound:
+    app: str
+    offer_open: bool = False
+
+
+@dataclass(frozen=True)
+class NoWindow:
+    pass
+
+
+@dataclass(frozen=True)
+class FocusRefused:
+    app: str
+
+
+@dataclass(frozen=True)
+class NoSuchMonitor:
+    number: int
+    count: int
+
+
+@dataclass(frozen=True)
+class SingleMonitor:
+    pass
+
+
+@dataclass(frozen=True)
+class SearchUnavailable:
+    pass
+
+
+@dataclass(frozen=True)
+class FileNotFound:
+    query: str
+    kind: str
+
+
+@dataclass(frozen=True)
+class FolderNotFound:
+    folder: str
+
+
+@dataclass(frozen=True)
+class FileGone:
+    name: str
+
+
+@dataclass(frozen=True)
+class NothingRecent:
+    pass
+
+
 Success = (
     AppOpened
     | AppClosed
@@ -248,6 +367,18 @@ Success = (
     | NothingToForget
     | NothingToRepeat
     | Cancelled
+    | WindowMinimized
+    | WindowMaximized
+    | WindowRestored
+    | WindowFocused
+    | WindowSnapped
+    | WindowMoved
+    | DesktopShown
+    | DesktopRestored
+    | FolderOpened
+    | FileOpened
+    | ProgramRevealed
+    | RecentFiles
 )
 Failure = (
     AppNotFound
@@ -259,6 +390,16 @@ Failure = (
     | NoMediaSession
     | UnknownSettingsPage
     | BrightnessUnsupported
+    | WindowNotFound
+    | NoWindow
+    | FocusRefused
+    | NoSuchMonitor
+    | SingleMonitor
+    | SearchUnavailable
+    | FileNotFound
+    | FolderNotFound
+    | FileGone
+    | NothingRecent
 )
 Outcome = Success | Failure
 

@@ -7,7 +7,7 @@ from dataclasses import fields
 from random import Random
 
 from sazed.core.decisions import AskSlot, Confirm, ConfirmReason, Decision
-from sazed.core.outcomes import AppNotFound, NowPlaying, Outcome
+from sazed.core.outcomes import AppNotFound, NowPlaying, Outcome, WindowNotFound
 from sazed.core.persona.definition import EXTRA_FIELDS, TEMPLATES, Prompt
 
 Renderable = Outcome | Decision | Prompt
@@ -22,6 +22,8 @@ def template_key(item: Renderable) -> str:
         return "ConfirmDestructive"
     if isinstance(item, AskSlot) and item.candidates:
         return "AskSlotChoice"
+    if isinstance(item, WindowNotFound) and item.offer_open:
+        return "WindowNotFound.offer_open"
     if isinstance(item, NowPlaying) and not item.artist:
         return "NowPlaying.no_artist"
     return type(item).__name__
