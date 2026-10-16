@@ -240,3 +240,22 @@ FAILED tests/nlu/test_slot_app.py::test_poe_is_an_app_name_not_the_verb_poe
 The real catalog (183 Start-menu + Store names) was checked for words equal to a new command
 word: only "poe". NLU fixture with the real model (qint8), before and after: 150 cases,
 accuracy 0.928, false-execute 0.000, executed 0.496 / asked 0.504 / not understood 0.000.
+
+## CLI output redirected to a file (found in use after 2a)
+`uv run sazed aprendizado > x.txt` crashed: a redirected stdout on Windows is cp1252, which has
+no "→". `main` now reconfigures stdout/stderr to UTF-8 (`errors="replace"`) once, at entry.
+`test_output_redirected_with_a_legacy_encoding_is_written_as_utf8` swaps in cp1252 streams.
+Mutation: drop the `_utf8_output()` call:
+```
+E       UnicodeEncodeError: 'charmap' codec can't encode character '\u2192' in position 22: character maps to <undefined>
+FAILED tests/interfaces/test_cli.py::test_output_redirected_with_a_legacy_encoding_is_written_as_utf8
+```
+Mutation: reconfigure stdout only (stderr forgotten):
+```
+E       AssertionError: assert 'cp1252' == 'utf-8'
+FAILED tests/interfaces/test_cli.py::test_output_redirected_with_a_legacy_encoding_is_written_as_utf8
+```
+By hand (PYTHONIOENCODING and PYTHONUTF8 unset, `cmd /c "... > file"`, temp config over a copy
+of the real coppermind): before the fix exit 1 with
+`UnicodeEncodeError: 'charmap' codec can't encode character '\u2192' in position 46`; after,
+exit 0 and a 337-byte UTF-8 file listing e7/e6/e4/e1 with "→".

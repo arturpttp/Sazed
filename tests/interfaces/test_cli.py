@@ -1,4 +1,5 @@
 import io
+import sys
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -77,6 +78,22 @@ def test_learned_list_and_forget(
     assert "a1" in out and "apelido" in out and "zap" in out and "WhatsApp" in out
     assert run(boot, ["aprendizado", "--esquecer", "a1"]) == 0
     assert app.store.aliases() == []
+
+
+def test_output_redirected_with_a_legacy_encoding_is_written_as_utf8(
+    boot: Boot, app: SazedApp, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A redirected stdout on Windows is cp1252, which has no "→": `sazed aprendizado > x.txt`
+    # crashed with UnicodeEncodeError (seen by hand, 2026-10-16).
+    out = io.TextIOWrapper(io.BytesIO(), encoding="cp1252")
+    err = io.TextIOWrapper(io.BytesIO(), encoding="cp1252")
+    monkeypatch.setattr(sys, "stdout", out)
+    monkeypatch.setattr(sys, "stderr", err)
+    app.store.learn([], [NewAlias("app", "zap", "WhatsApp")], T0)
+    assert run(boot, ["aprendizado"]) == 0
+    out.flush()
+    assert "'zap' → WhatsApp" in out.buffer.getvalue().decode("utf-8")  # type: ignore[attr-defined]
+    assert err.encoding == "utf-8"
 
 
 def test_forgetting_an_unknown_ref_is_explained(

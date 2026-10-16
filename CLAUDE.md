@@ -74,6 +74,8 @@ Start-menu + Store catalogs, all adapters): startup 2.4–2.8 s, RSS +430 MB (pr
 
 - Ruff formats Python code blocks inside Markdown; `*.md` is excluded in `pyproject.toml` so
   docs are not rewritten.
+- A redirected or piped stdout on Windows is cp1252 (no "→"): `cli.main` reconfigures
+  stdout/stderr to UTF-8 once, at entry. Print nothing before that call.
 
 ## Verified by hand
 
@@ -96,5 +98,7 @@ window closed (WhatsApp keeps running in the background, as with its own X); `fe
 **Unverified (2a):** `próxima música` / `música anterior` (not run: would skip the user's video),
 `recorta a tela` (opens an overlay that waits for the user), `bloqueia o computador` (needs the
 user present), whether brightness 50 was visibly dimmer (WMI accepted it).
+2026-10-16: `uv run sazed --config <temp> aprendizado > file` over a copy of the real
+coppermind → exit 0, UTF-8 file with "→" (before the fix: UnicodeEncodeError, exit 1).
 **Unverified:** typing in an interactive console (only piped stdin was used), Ctrl-C handling,
-`sazed aprendizado` / `revisar` against the real data dir (covered only by tests with fakes).
+`sazed revisar` against the real data dir (covered only by tests with fakes).

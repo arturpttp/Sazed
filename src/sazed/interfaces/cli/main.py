@@ -146,6 +146,14 @@ def _repl(app: SazedApp, stdin: TextIO) -> int:
     return 0
 
 
+def _utf8_output() -> None:
+    """Write UTF-8 even when redirected: Windows then defaults to cp1252, which has no "→"."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(encoding="utf-8", errors="replace")
+
+
 def main(
     argv: list[str] | None = None,
     *,
@@ -153,6 +161,7 @@ def main(
     stdin: TextIO | None = None,
     dashboard: Callable[..., int] | None = None,
 ) -> int:
+    _utf8_output()
     args = _parser().parse_args(argv)
     if args.command == "painel":  # reads only: no model, no writable coppermind
         if dashboard is None:
