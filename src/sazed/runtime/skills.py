@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import ntpath
+import os
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -82,6 +85,21 @@ class SkillSet:
             folder_names=self.folder_names,
             folder_synonyms=FOLDER_SYNONYMS,
         )
+
+
+def file_area(
+    *,
+    profile: str,
+    configured: Sequence[str],
+    known: Sequence[str],
+    data_dir: str,
+    project: str,
+) -> Area:
+    """Where file changes may happen: inside the profile and [folders]; never the roots or
+    known folders themselves; never inside AppData, Sazed's data or its project."""
+    roots = (profile, *configured)
+    trees = (ntpath.join(profile, "AppData"), data_dir, project)
+    return Area(roots=roots, fixed=(*roots, *known), trees=trees, realpath=os.path.realpath)
 
 
 class NoChangeLog:

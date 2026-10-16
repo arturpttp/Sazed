@@ -59,3 +59,22 @@ def test_known_and_configured_folders_feed_the_folder_extractor(tmp_path: Path) 
     extract = skill_set.extractors()["pasta"]
     assert extract("abre a pasta projetos", {}) == SlotValue("pasta", "Projetos", "projetos", 1.0)
     assert extract("abre os baixados", {}) == SlotValue("pasta", "Downloads", "baixados", 1.0)
+
+
+def test_the_file_area_protects_sazed_and_appdata_and_fixes_the_known_folders() -> None:
+    from sazed.runtime.skills import file_area
+
+    area = file_area(
+        profile=r"C:\Users\a",
+        configured=[r"D:\Projetos"],
+        known=[r"C:\Users\a\Downloads", r"D:\Docs"],
+        data_dir=r"C:\Users\a\AppData\Local\Sazed",
+        project=r"C:\Programacao\JARVIS\Sazed",
+    )
+    assert area.roots == (r"C:\Users\a", r"D:\Projetos")
+    assert area.fixed == (r"C:\Users\a", r"D:\Projetos", r"C:\Users\a\Downloads", r"D:\Docs")
+    assert area.trees == (
+        r"C:\Users\a\AppData",
+        r"C:\Users\a\AppData\Local\Sazed",
+        r"C:\Programacao\JARVIS\Sazed",
+    )

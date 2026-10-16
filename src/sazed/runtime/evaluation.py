@@ -15,7 +15,14 @@ from pathlib import Path
 from random import Random
 
 from sazed.adapters.sqlite.coppermind import SqliteCoppermind
-from sazed.core.decisions import AskSlot, Confirm, Decision, Execute, NotUnderstood
+from sazed.core.decisions import (
+    AskSlot,
+    Confirm,
+    ConfirmReason,
+    Decision,
+    Execute,
+    NotUnderstood,
+)
 from sazed.core.learning import LearningThresholds
 from sazed.core.policy import Thresholds
 from sazed.core.types import SlotValue, Unmatched
@@ -344,6 +351,8 @@ def evaluate(
     skill_set = dry_run_skills(app_names)
     extractors = skill_set.extractors()
     settings = Settings("Artur", thresholds, LearningThresholds(1.0, 1.0), 60.0)
+    # A self-confirming intent's Execute is only a proposal: it still asks before acting.
+    proposing = {s.id for skill in skill_set.skills for s in skill.intents if s.confirms_itself}
     results: list[CaseResult] = []
     for case in cases:
         assistant = Assistant(
@@ -358,9 +367,10 @@ def evaluate(
         )
         ranking = index.rank(normalize(case.text))
         response = assistant.handle(case.text)
-        results.append(
-            CaseResult(case, ranking[0].intent_id if ranking else None, response.decision)
-        )
+        decision = response.decision
+        if isinstance(decision, Execute) and decision.intent_id in proposing:
+            decision = Confirm(decision.intent_id, decision.slots, ConfirmReason.DESTRUCTIVE)
+        results.append(CaseResult(case, ranking[0].intent_id if ranking else None, decision))
 
     in_domain = [r for r in results if r.case.intent != NO_INTENT]
     correct = sum(1 for r in in_domain if r.top_intent == r.case.intent)

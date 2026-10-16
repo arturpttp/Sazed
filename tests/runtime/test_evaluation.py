@@ -103,3 +103,12 @@ def test_executing_with_the_wrong_folder_file_or_side_is_a_false_execute() -> No
         for case in group:
             report = evaluate([case], index=index, app_names=APPS, thresholds=TH)
             assert report.false_execute_rate == (1.0 if wrong else 0.0), case
+
+
+def test_a_file_change_proposal_counts_as_asked_never_as_a_false_execute() -> None:
+    # The plan is the confirmation: nothing happens on disk before "sim".
+    index = ScriptedIndex({"apaga o relatório": {"arquivo_apagar": 0.97}})
+    wrong = NluCase("apaga o relatório", "abrir_arquivo")
+    report = evaluate([wrong], index=index, app_names=APPS, thresholds=TH)
+    assert report.false_execute_rate == 0.0
+    assert report.executed_rate == 0.0 and report.asked_rate == 1.0

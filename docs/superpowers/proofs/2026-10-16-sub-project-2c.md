@@ -74,3 +74,18 @@ reaches `_learn`; `learnable=False` is what blocks the dashboard and `sazed revi
   deleted twice: the first `restore` took whichever the bin listed first —
   `test_restore_brings_back_the_copy_this_change_deleted` failed 1 run in 2
   (`assert 'primeiro' == 'segundo'`); with the deletion time compared it passed 4 of 4.
+
+## Task 10: fixture with the real model (qint8), thresholds unchanged
+| | cases | accuracy | false-execute | executed | asked |
+|---|---|---|---|---|---|
+| main after 2b | 198 | 0.923 | 0.000 | 0.542 | 0.458 |
+| 2c + 33 new cases, first seeds | 231 | 0.897 | 0.000 | 0.477 | 0.523 |
+| + seeds sharing objects (delete/open, rename/move, copy/move) | 231 | 0.903 | 0.000 | 0.472 | 0.528 |
+| "renomeia a pasta fotos pra fotos antigas" replaced (it pulled "abre a pasta fotos antigas" to rename at 0.965) | 231 | 0.918 | 0.000 | 0.477 | 0.523 |
+
+A self-confirming intent's Execute counts as *asked* in the evaluation (it is a proposal):
+`test_a_file_change_proposal_counts_as_asked_never_as_a_false_execute` failed first.
+Remaining 2c misrankings all ask: "apaga o arquivo orçamento" (abrir_arquivo 0.949 vs 0.946,
+gap under g_min → "abrir o arquivo orçamento?"), "manda o último download pro lixo" (mover →
+"Para qual pasta?"), "transfere a pasta fotos antigas pra documentos" (copiar 0.938 vs 0.937 →
+the plan says "Copiar…", the user can say no).

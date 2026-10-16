@@ -932,3 +932,137 @@ intent = "none"
 [[case]]
 text = "minha tela quebrou"
 intent = "none"
+
+# --- 2c: moving, copying, renaming, deleting files; creating folders ------------------
+
+[[case]]
+text = "move o arquivo orçamento pra pasta documentos"
+intent = "arquivo_mover"
+
+[[case]]
+text = "manda a planilha de vendas pra área de trabalho"
+intent = "arquivo_mover"
+
+[[case]]
+text = "leva o último download pra pasta projetos"
+intent = "arquivo_mover"
+
+[[case]]
+text = "transfere a pasta fotos antigas pra documentos"
+intent = "arquivo_mover"
+
+[[case]]
+text = "move esse pdf da fatura pra área de trabalho"
+intent = "arquivo_mover"
+
+[[case]]
+text = "joga o relatório anual na pasta documentos"
+intent = "arquivo_mover"
+
+[[case]]
+text = "copia o arquivo orçamento pra pasta documentos"
+intent = "arquivo_copiar"
+
+[[case]]
+text = "faz uma cópia da planilha de vendas na área de trabalho"
+intent = "arquivo_copiar"
+
+[[case]]
+text = "duplica o último download na pasta projetos"
+intent = "arquivo_copiar"
+
+[[case]]
+text = "copia a pasta fotos antigas pra documentos"
+intent = "arquivo_copiar"
+
+[[case]]
+text = "copie esse pdf da fatura pra área de trabalho"
+intent = "arquivo_copiar"
+
+[[case]]
+text = "renomeia o arquivo orçamento pra orçamento final"
+intent = "arquivo_renomear"
+
+[[case]]
+text = "muda o nome da planilha de vendas pra vendas 2025"
+intent = "arquivo_renomear"
+
+[[case]]
+text = "troca o nome da pasta fotos antigas pra fotos 2020"
+intent = "arquivo_renomear"
+
+[[case]]
+text = "renomear o último print pra tela de erro"
+intent = "arquivo_renomear"
+
+[[case]]
+text = "apaga o arquivo orçamento"
+intent = "arquivo_apagar"
+
+[[case]]
+text = "deleta a planilha de vendas"
+intent = "arquivo_apagar"
+
+[[case]]
+text = "exclui a pasta fotos antigas"
+intent = "arquivo_apagar"
+
+[[case]]
+text = "joga o pdf da fatura na lixeira"
+intent = "arquivo_apagar"
+
+[[case]]
+text = "manda o último download pro lixo"
+intent = "arquivo_apagar"
+
+[[case]]
+text = "remove esse arquivo de notas"
+intent = "arquivo_apagar"
+
+[[case]]
+text = "cria uma pasta chamada recibos"
+intent = "pasta_criar"
+
+[[case]]
+text = "cria uma pasta nova chamada contas de casa em documentos"
+intent = "pasta_criar"
+
+[[case]]
+text = "faz uma pasta pra trabalho na área de trabalho"
+intent = "pasta_criar"
+
+[[case]]
+text = "crie uma pasta recibos 2025"
+intent = "pasta_criar"
+
+[[case]]
+text = "abre o arquivo orçamento"
+intent = "abrir_arquivo"
+
+[[case]]
+text = "abre a pasta fotos antigas"
+intent = "abrir_pasta"
+
+[[case]]
+text = "apaguei a luz da sala"
+intent = "none"
+
+[[case]]
+text = "mudei de casa semana passada"
+intent = "none"
+
+[[case]]
+text = "copiei a prova do colega"
+intent = "none"
+
+[[case]]
+text = "o nome do arquivo é estranho"
+intent = "none"
+
+[[case]]
+text = "minha pasta da escola rasgou"
+intent = "none"
+
+[[case]]
+text = "criei coragem e fui"
+intent = "none"

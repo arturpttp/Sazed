@@ -19,7 +19,8 @@ from sazed.nlu.matcher import IntentMatcher
 from sazed.runtime.assistant import Assistant, Settings
 from sazed.runtime.config import DEFAULT_CONFIG_PATH, Config, ConfigError, load_config
 from sazed.runtime.logs import setup_logging
-from sazed.runtime.skills import PcPorts, build_skills
+from sazed.runtime.skills import PcPorts, build_skills, file_area
+from sazed.skills.pc.files import KNOWN_FOLDERS
 
 
 @dataclass
@@ -92,6 +93,7 @@ def build_default_app(config: Config) -> SazedApp:
     from sazed.adapters.windows.audio import PycawAudio
     from sazed.adapters.windows.brightness import WmiBrightness
     from sazed.adapters.windows.catalog import StartMenuCatalog
+    from sazed.adapters.windows.fileops import WindowsFileChanger
     from sazed.adapters.windows.files import (
         WindowsFileOpener,
         WindowsFileSearch,
@@ -107,6 +109,7 @@ def build_default_app(config: Config) -> SazedApp:
     from sazed.adapters.windows.windows import WindowsWindowControl
     from sazed.skills.pc.apps import CombinedCatalog
 
+    known = WindowsKnownFolders(config.folders)
     ports = PcPorts(
         catalog=CombinedCatalog([StartMenuCatalog(), StoreCatalog()]),
         launcher=WindowsLauncher(),
@@ -118,9 +121,17 @@ def build_default_app(config: Config) -> SazedApp:
         opener=ShellOpener(),
         status=PsutilStatus(),
         windows=WindowsWindowControl(),
-        folders=WindowsKnownFolders(config.folders),
+        folders=known,
         files=WindowsFileSearch([str(Path.home()), *(str(p) for p in config.folders.values())]),
         file_opener=WindowsFileOpener(),
+        changer=WindowsFileChanger(),
+        file_area=file_area(
+            profile=str(Path.home()),
+            configured=[str(p) for p in config.folders.values()],
+            known=[p for p in map(known.resolve, KNOWN_FOLDERS) if p is not None],
+            data_dir=str(config.data.dir),
+            project=str(Path(__file__).resolve().parents[3]),  # the repository
+        ),
     )
     return build_app(config, embedder=OnnxEmbedder(config.model.embedder_path), ports=ports)
 

@@ -423,6 +423,7 @@ MOVE_EXAMPLES = (
     "passa o arquivo notas pra área de trabalho",
     "mova o currículo pra pasta documentos",
     "move o último print pra área de trabalho",
+    "transfere a pasta projetos pra área de trabalho",
 )
 COPY_EXAMPLES = (
     "copia o relatório pra pasta documentos",
@@ -435,6 +436,8 @@ COPY_EXAMPLES = (
     "copia o arquivo notas pra área de trabalho",
     "copie o currículo pra pasta documentos",
     "copia o último print pra área de trabalho",
+    "duplica o último print na pasta imagens",
+    "copia a pasta projetos pra área de trabalho",
 )
 RENAME_EXAMPLES = (
     "renomeia o relatório pra relatório final",
@@ -447,6 +450,9 @@ RENAME_EXAMPLES = (
     "renomear o currículo pra currículo atualizado",
     "põe o nome do pdf do boleto como boleto pago",
     "renomeia a pasta projetos pra projetos antigos",
+    "renomeia a pasta viagem pra viagem de férias",
+    "troca o nome do último download pra fatura",
+    "renomeia o último print pra erro na tela",
 )
 DELETE_EXAMPLES = (
     "apaga o relatório",
@@ -458,6 +464,11 @@ DELETE_EXAMPLES = (
     "manda a foto da praia pra lixeira",
     "remove o arquivo notas",
     "apague o currículo",
+    "apaga o arquivo relatório",
+    "deleta a planilha de gastos",
+    "exclui a apresentação do projeto",
+    "manda o relatório pro lixo",
+    "joga o último download na lixeira",
     "joga o último print no lixo",
 )
 CREATE_EXAMPLES = (
