@@ -130,3 +130,22 @@ Startup 2.91–2.95 s (2b: 2.5 s; 484 seed examples), RSS +430 MB unchanged.
 - **I3 — the rollback could remove a folder it had not created.** Anything already at the
   destination is refused before copying; only this call's partial copy is removed. Mutation: no
   pre-check → `FAILED …test_something_already_at_the_destination_is_never_touched`.
+
+## After the merge: a cross-drive move by hand (2026-10-16)
+Only C: exists, so `S:` was a `subst` of `C:\sazed-drive-test`, configured as
+`[folders] testedrive = "S:\alvo"`; a 36 000-byte file the script created in Documents.
+- First run: "move o arquivo sazedcrossdrive pra pasta testedrive" → "Por segurança, não mexo em
+  alvo". `check_destination` resolved the candidate through `realpath` (S:\alvo →
+  C:\sazed-drive-test\alvo) but compared it with the area's folders unresolved, so a folder
+  configured through a subst drive, junction or symlink never matched itself — and a protected
+  tree named through a link did not protect what is really inside it. The area's roots, fixed
+  folders and trees now go through `realpath` too.
+  `test_a_folder_configured_through_a_subst_drive_is_a_destination_and_holds_sources` and
+  `test_a_tree_named_through_a_link_still_protects_what_is_really_inside_it` failed first
+  (`AssertionError: … isinstance(None, Protected)` for the file inside the linked tree).
+- Second run: "Mover … de Documentos para alvo. Confirma?" → sim → "Pronto … está em alvo"; the
+  copy's size equal (36000), the original in the real Recycle Bin (original location
+  `C:\Users\Usuario\Documents`). "desfaz isso" → sim → copied back, and the copy on S: kept:
+  "Copiei … mas não consegui tirar o original do lugar (pode estar aberto)" — a subst drive
+  has no Recycle Bin, so `can_recycle` refuses it (C1) and nothing is deleted permanently.
+  The "(pode estar aberto)" reason is misleading in that case (deferred minor).

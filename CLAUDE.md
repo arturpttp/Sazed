@@ -60,7 +60,8 @@ Sazed, the Terris Keeper from *Mistborn*. Read [`AGENTS.md`](./AGENTS.md) and
 - 2c final review (fresh reviewer): 1 Critical (a delete could be a silent permanent delete) and
   3 Important fixed; 10 minors deferred in the 2c ledger.
 - 2026-10-16: 2c merged into `main`; sub-project 2 (PC skills) is complete.
-- **Next step:** check a move to another drive by hand; then brainstorm sub-project 3
+- 2026-10-16: cross-drive move checked by hand (subst drive); one area-rule bug fixed.
+- **Next step:** brainstorm sub-project 3
   (organization skills: reminders, alarms, timers, notes; scheduler + persistence).
 
 ## Measurements
@@ -148,5 +149,9 @@ asked once with its exact effect, each undone with "desfaz isso" (the delete res
 real Recycle Bin); "apaga a pasta downloads" and "renomeia a pasta documentos pra docs" →
 "Por segurança, não mexo em …". Two test items (an undone copy and folder) remain in the
 Recycle Bin by design. Startup after 2c: 2.9 s (484 seed examples), RSS +430 MB.
-**Unverified (2c):** a move to another drive on the real disk (no `[folders]` entry on a second
-drive; the copy-verify-remove path is covered with fakes).
+2026-10-16, after the merge: a move to another drive by hand, onto a `subst` drive configured in
+`[folders]` (only C: exists) → copied, size verified, the original in the real Recycle Bin.
+It first refused the destination ("Por segurança, não mexo em alvo"): the area's own folders
+were not resolved through `realpath` — fixed. Its undo keeps both copies (a subst drive has no
+Recycle Bin), with a misleading "pode estar aberto".
+**Unverified (2c):** a move to a real second physical drive, and undoing one.
