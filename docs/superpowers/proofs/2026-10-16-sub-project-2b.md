@@ -47,3 +47,10 @@ FAILED tests/skills/test_files_pure.py::test_an_injection_attempt_stays_inside_t
 FAILED tests/skills/test_files_pure.py::test_an_injection_attempt_stays_inside_the_string[a'; DROP TABLE x; --]
 ```
 Mutation: `is_program` compares without `.lower()` → 23 failures (every upper-case extension).
+
+## Task 7: a program found by search is revealed, never opened (skill guard)
+Mutation: skip the `is_program` check in `FilesSkill._open_hit`.
+```
+FAILED tests/skills/test_files_skill.py::test_a_program_chosen_from_a_list_is_revealed_not_run
+FAILED tests/skills/test_files_skill.py::test_a_single_program_hit_is_revealed_too
+```

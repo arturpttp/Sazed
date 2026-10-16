@@ -143,3 +143,48 @@ def test_fake_windows_focus_can_be_refused() -> None:
 
     assert FakeWindows({}, [], focus_ok=False).focus(1) is False
     assert FakeWindows({}, []).focus(1) is True
+
+
+def test_fake_search_filters_like_the_index_and_sorts_newest_first() -> None:
+    from datetime import datetime
+
+    from fakes.ports import FakeSearch
+    from sazed.skills.pc.files import FileHit
+
+    a = FileHit("C:/d/Relatório.docx", "Relatório.docx", "d", datetime(2026, 1, 1))
+    b = FileHit("C:/d/relatorio.pdf", "relatorio.pdf", "d", datetime(2026, 1, 2))
+    c = FileHit("C:/e/outro.pdf", "outro.pdf", "e", datetime(2026, 1, 3))
+    search = FakeSearch([a, b, c])
+    assert search.search(["relatorio"], [], 6) == [b, a]
+    assert search.search(["relatorio"], [".pdf"], 6) == [b]
+    assert search.newest("C:/d", datetime(2026, 1, 2), 5) == [b]
+    assert search.calls[0] == (("relatorio",), ())
+
+
+def test_fake_search_can_fail() -> None:
+    import pytest
+
+    from fakes.ports import FakeSearch
+    from sazed.skills.pc.files import SearchError
+
+    with pytest.raises(SearchError):
+        FakeSearch([], fail=True).search(["x"], [], 6)
+
+
+def test_fake_file_opener_records_and_knows_what_exists() -> None:
+    from fakes.ports import FakeFileOpener
+
+    opener = FakeFileOpener({"C:/a.pdf"})
+    opener.open("C:/a.pdf")
+    opener.reveal("C:/b.lnk")
+    assert (opener.opened, opener.revealed) == (["C:/a.pdf"], ["C:/b.lnk"])
+    assert opener.exists("C:/a.pdf") and not opener.exists("C:/b.lnk")
+
+
+def test_fake_folders_resolve_and_list() -> None:
+    from fakes.ports import FakeFolders
+
+    folders = FakeFolders({"Downloads": "C:/d", "Projetos": None})
+    assert list(folders.names()) == ["Downloads", "Projetos"]
+    assert folders.resolve("Downloads") == "C:/d"
+    assert folders.resolve("Projetos") is None

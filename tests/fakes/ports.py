@@ -1,10 +1,13 @@
 """In-memory ports. Tests assert their state, not only the response text."""
 
+import unicodedata
 from collections.abc import Sequence
 from dataclasses import replace
+from datetime import datetime
 
 from sazed.runtime.skills import PcPorts
 from sazed.skills.pc.apps import AppEntry
+from sazed.skills.pc.files import FileHit, SearchError
 from sazed.skills.pc.media import NowPlayingInfo
 from sazed.skills.pc.windows import Monitor, Rect, WindowRef
 
@@ -235,3 +238,66 @@ class FakeWindows:
 
     def undo_show_desktop(self) -> None:
         self.desktop_shown = False
+
+
+def _plain(text: str) -> str:
+    decomposed = unicodedata.normalize("NFKD", text)
+    return "".join(c for c in decomposed if not unicodedata.combining(c)).casefold()
+
+
+class FakeFolders:
+    def __init__(self, folders: dict[str, str | None]) -> None:
+        self._folders = dict(folders)
+
+    def names(self) -> Sequence[str]:
+        return list(self._folders)
+
+    def resolve(self, name: str) -> str | None:
+        return self._folders.get(name)
+
+
+class FakeSearch:
+    """Filters its hits the way the index does: every word in the name, accents ignored."""
+
+    def __init__(self, hits: Sequence[FileHit], *, fail: bool = False) -> None:
+        self._hits = sorted(hits, key=lambda h: h.modified, reverse=True)
+        self.fail = fail
+        self.calls: list[tuple[tuple[str, ...], tuple[str, ...]]] = []
+
+    def search(self, words: Sequence[str], extensions: Sequence[str], limit: int) -> list[FileHit]:
+        self.calls.append((tuple(words), tuple(extensions)))
+        if self.fail:
+            raise SearchError("index off")
+        found = [
+            h
+            for h in self._hits
+            if all(_plain(w) in _plain(h.name) for w in words)
+            and (not extensions or any(h.name.lower().endswith(e) for e in extensions))
+        ]
+        return found[:limit]
+
+    def newest(self, folder: str, since: datetime | None, limit: int) -> list[FileHit]:
+        if self.fail:
+            raise SearchError("index off")
+        found = [
+            h
+            for h in self._hits
+            if h.path.rsplit("/", 1)[0] == folder and (since is None or h.modified >= since)
+        ]
+        return found[:limit]
+
+
+class FakeFileOpener:
+    def __init__(self, existing: set[str]) -> None:
+        self._existing = set(existing)
+        self.opened: list[str] = []
+        self.revealed: list[str] = []
+
+    def open(self, path: str) -> None:
+        self.opened.append(path)
+
+    def reveal(self, path: str) -> None:
+        self.revealed.append(path)
+
+    def exists(self, path: str) -> bool:
+        return path in self._existing
