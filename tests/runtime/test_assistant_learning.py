@@ -25,13 +25,14 @@ def learned(h) -> list[tuple[LearnedKind, str, str]]:  # type: ignore[no-untyped
     return [(i.kind, i.text, i.target) for i in h.store.learned()]
 
 
-def test_confirmed_command_is_learned_and_executes_next_time(make: Make) -> None:
+def test_confirmed_command_is_learned_without_the_app_name(make: Make) -> None:
+    # e5 weighs the object: a learned "abre aí o chrome" would pull "fecha o chrome" to opening.
     h = make(LOW_CHROME)
     h.say("abre aí o chrome")
     h.say("sim")
-    assert learned(h) == [(LearnedKind.EXAMPLE, "abre aí o chrome", "abrir_app")]
-    assert isinstance(h.say("abre aí o chrome").decision, Execute)
-    assert h.launcher.launched == ["Google Chrome", "Google Chrome"]
+    assert learned(h) == [(LearnedKind.EXAMPLE, "abre aí o programa", "abrir_app")]
+    assert h.index.learned == [("abrir_app", "abre aí o programa")]  # the live index too
+    assert h.launcher.launched == ["Google Chrome"]
 
 
 def test_destructive_confirmation_teaches_nothing(make: Make) -> None:
@@ -52,20 +53,29 @@ def test_denied_confirmation_teaches_nothing(make: Make) -> None:
 
 def test_conflicting_example_is_asked_before_saving(make: Make) -> None:
     h = make(
-        {"fecha aí o chrome": {"fechar_app": 0.88, "abrir_app": 0.86}}, running={"Google Chrome": 1}
+        {
+            "fecha aí o chrome": {"fechar_app": 0.88, "abrir_app": 0.86},
+            "fecha aí o programa": {"fechar_app": 0.88, "abrir_app": 0.86},
+        },
+        running={"Google Chrome": 1},
     )
     h.say("fecha aí o chrome")
     r = h.say("sim")
     assert h.launcher.closed == ["Google Chrome"]
-    assert "fecha aí o chrome" in r.text
+    assert "fecha aí o programa" in r.text
     assert learned(h) == []
     r = h.say("sim")
     assert isinstance(r.outcome, ExampleLearned)
-    assert learned(h) == [(LearnedKind.EXAMPLE, "fecha aí o chrome", "fechar_app")]
+    assert learned(h) == [(LearnedKind.EXAMPLE, "fecha aí o programa", "fechar_app")]
 
 
 def test_near_duplicate_is_not_saved(make: Make) -> None:
-    h = make({"abre o chrome agora": {"abrir_app": 0.98, "fechar_app": 0.95}})
+    h = make(
+        {
+            "abre o chrome agora": {"abrir_app": 0.98, "fechar_app": 0.95},
+            "abre o programa agora": {"abrir_app": 0.98, "fechar_app": 0.95},
+        }
+    )
     assert isinstance(h.say("abre o chrome agora").decision, Confirm)
     h.say("sim")
     assert h.launcher.launched == ["Google Chrome"]
@@ -109,7 +119,7 @@ def test_correction_after_a_wrong_execution_learns_the_right_intent(make: Make) 
     assert h.launcher.launched == ["Google Chrome"]
     h.say("não, era pra fechar")
     assert h.launcher.closed == ["Google Chrome"]
-    assert learned(h) == [(LearnedKind.EXAMPLE, "fecha o chrome", "fechar_app")]
+    assert learned(h) == [(LearnedKind.EXAMPLE, "fecha o programa", "fechar_app")]
     assert h.store.episodes(2)[1].episode.reaction is Reaction.CORRECTED
 
 
@@ -128,9 +138,8 @@ def test_rephrase_after_not_understood_offers_to_learn(make: Make) -> None:
     assert "chrome por favor abre" in r.text
     r = h.say("sim")
     assert isinstance(r.outcome, ExampleLearned)
-    assert learned(h) == [(LearnedKind.EXAMPLE, "chrome por favor abre", "abrir_app")]
-    assert isinstance(h.say("chrome por favor abre").decision, Execute)
-    assert h.launcher.launched == ["Google Chrome", "Google Chrome"]
+    assert learned(h) == [(LearnedKind.EXAMPLE, "programa por favor abre", "abrir_app")]
+    assert h.launcher.launched == ["Google Chrome"]
 
 
 def test_declined_offer_learns_nothing(make: Make) -> None:

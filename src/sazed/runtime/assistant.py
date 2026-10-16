@@ -67,6 +67,7 @@ from sazed.core.types import (
 from sazed.nlu.control import Control, ControlKind, parse_control, pick_candidate
 from sazed.nlu.matcher import IntentIndex
 from sazed.nlu.normalize import normalize, strip_accents
+from sazed.nlu.slots.app import mask_app
 from sazed.runtime.extractors import SlotExtractor
 
 log = logging.getLogger(__name__)
@@ -437,7 +438,11 @@ class Assistant:
     ) -> tuple[list[str], Outcome | None]:
         """Validate every candidate, then write all of them in one store transaction."""
         # The single gate for examples: confirmations, offers and corrections all pass here.
-        examples = [e for e in examples if self._specs[e[1]][1].learnable]
+        examples = [
+            (self.learnable_text(text, intent_id), intent_id, origin)
+            for text, intent_id, origin in examples
+            if self._specs[intent_id][1].learnable
+        ]
         texts: list[str] = []
         outcome: Outcome | None = None
         new_examples: list[NewExample] = []
@@ -479,6 +484,14 @@ class Assistant:
             outcome = AliasLearned(al.alias, al.value)
             texts.append(self._say(outcome))
         return texts, outcome
+
+    def learnable_text(self, text: str, intent_id: str) -> str:
+        """The form of `text` that is learned: the app it names becomes a placeholder."""
+        entry = self._specs.get(intent_id)
+        if entry is None or not any(slot.name == "app" for slot in entry[1].slots):
+            return text
+        aliases = self._aliases.get("app", {})
+        return mask_app(text, self._extractors["app"](text, aliases), aliases)
 
     def _forget(self) -> _Turn:
         items = self._store.forget_latest()

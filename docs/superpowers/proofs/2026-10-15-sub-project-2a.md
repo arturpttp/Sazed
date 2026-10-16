@@ -198,3 +198,22 @@ drop the CoreWindow exclusion from `windows_to_close`.
 ```
 FAILED tests/adapters/test_windows_pure.py::test_a_store_apps_own_core_window_is_never_the_close_target
 ```
+
+## Learned phrases keep the wording, not the app (found by hand after 2a)
+Before the fix, with the real model (`tests/runtime/test_learning_with_model.py`, the code in
+`runtime/` reverted to store the raw phrase):
+```
+>       assert top(app, "fecha o whatsapp") == "fechar_app"
+E       AssertionError: assert 'abrir_app' == 'fechar_app'
+>       assert top(app, "fecha o spotify pra mim") == "fechar_app"
+E       AssertionError: assert 'abrir_app' == 'fechar_app'
+2 failed
+```
+After: 3 passed. Measured with the real model after learning "bota o spotify pra rodar"
+(stored as "bota o programa pra rodar"): "bota o discord pra rodar" abrir 0.915 / fechar 0.909
+before, 0.958 / 0.909 after; "fecha o spotify" unchanged (fechar 0.960).
+Mutations on `mask_app`: drop the alias keys →
+`FAILED tests/nlu/test_slot_app.py::test_an_alias_is_masked`. Drop the command-word guard in
+`is_name` → the first test set still passed (a finding: "Abrir Arquivo" was covered by the set
+subtraction); added `test_a_verb_close_to_a_name_word_is_kept`, which then failed with
+`assert 'programa o programa' == 'roda o programa'`.

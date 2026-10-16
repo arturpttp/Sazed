@@ -60,6 +60,20 @@ def test_learn_example_normalises_and_saves(app: SazedApp) -> None:
     assert app.index.scores(FRESH)["abrir_app"] == pytest.approx(1.0)  # live index updated
 
 
+def test_learn_example_masks_the_app_name_as_live_learning_does(app: SazedApp) -> None:
+    assert learn_example(app, "bota o whatsapp pra rodar", "abrir_app") is LabelResult.LEARNED
+    assert on_disk(app, "SELECT text FROM learned_examples") == [("bota o programa pra rodar",)]
+
+
+def test_editing_an_example_masks_the_app_name(app: SazedApp) -> None:
+    learn_example(app, FRESH, "abrir_app")
+    (old,) = app.store.examples()
+    assert edit_example(app, old.id, "derruba o discord", "fechar_app") is LabelResult.LEARNED
+    assert on_disk(app, "SELECT text, intent_id FROM learned_examples") == [
+        ("derruba o programa", "fechar_app")
+    ]
+
+
 def test_learn_example_refuses_a_power_intent(app: SazedApp) -> None:
     assert learn_example(app, "apaga tudo agora", "pc_desligar") is LabelResult.NOT_LEARNABLE
     assert on_disk(app, "SELECT COUNT(*) FROM learned_examples") == [(0,)]
@@ -75,7 +89,7 @@ def test_a_conflict_needs_force(app: SazedApp) -> None:
     assert on_disk(app, "SELECT COUNT(*) FROM learned_examples") == [(0,)]
     assert learn_example(app, "fecha o chrome", "abrir_app", force=True) is LabelResult.LEARNED
     assert on_disk(app, "SELECT text, intent_id FROM learned_examples") == [
-        ("fecha o chrome", "abrir_app")
+        ("fecha o programa", "abrir_app")
     ]
 
 

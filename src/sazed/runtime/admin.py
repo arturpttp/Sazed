@@ -137,7 +137,7 @@ def learn_example(
     app: SazedApp, text: str, intent_id: str, *, force: bool = False, origin: str = "painel"
 ) -> LabelResult:
     """Teach `text` as an example of `intent_id`, exactly as live learning would."""
-    text = normalize(text)
+    text = app.assistant.learnable_text(normalize(text), intent_id)
     refused = _judge(app, text, intent_id, force)
     if refused is not None:
         return refused
@@ -163,7 +163,7 @@ def edit_example(
     old = next((e for e in app.store.examples() if e.id == item_id), None)
     if old is None:
         return LabelResult.UNKNOWN
-    text = normalize(text)
+    text = app.assistant.learnable_text(normalize(text), intent_id)
     # Judge without the old version, or changing only the intent always "conflicts" with itself.
     removed = app.index.remove(old.intent_id, old.text)
     saved = False

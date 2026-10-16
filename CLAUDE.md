@@ -27,10 +27,11 @@ Sazed, the Terris Keeper from *Mistborn*. Read [`AGENTS.md`](./AGENTS.md) and
   across opposing intents (open/close, up/down/set) so the verb decides. Keep that when adding seeds.
 - **Unverified:** `learning.t_conflict` / `t_dup` are placeholders (no fixture measures them yet);
   closing apps whose shortcut targets a launcher.
-- **Open finding (2026-10-15, by hand):** once "abre o whatsapp" is learned from a confirmation,
-  "fecha o whatsapp" ranks `abrir_app` (e5 weighs the object), so Sazed asks "abrir WhatsApp?".
-  The fixture cannot see it (evaluation never learns). Learned examples carrying an app name
-  pull the opposite verb.
+- **Fixed (2026-10-15):** once "abre o whatsapp" was learned from a confirmation, "fecha o
+  whatsapp" ranked `abrir_app` (e5 weighs the object). Learned phrases now store "programa" in
+  place of the app name (`mask_app`), so a learned wording also works for every app. Pinned with
+  the real model in `tests/runtime/test_learning_with_model.py` (the fixture never learns).
+  Not masked yet: numbers ("pra 20") and the web search's query and site.
 - 2026-10-15: sub-project 1 merged into `main`. Sub-project 2 split into 2a (one-shot PC skills:
   media, system, web, status, Store apps) and 2b (windows, files). 2a spec:
   [`docs/superpowers/specs/2026-10-15-sazed-pc-skills-2a-design.md`](./docs/superpowers/specs/2026-10-15-sazed-pc-skills-2a-design.md).
@@ -39,9 +40,8 @@ Sazed, the Terris Keeper from *Mistborn*. Read [`AGENTS.md`](./AGENTS.md) and
   [`docs/superpowers/proofs/2026-10-15-sub-project-2a.md`](./docs/superpowers/proofs/2026-10-15-sub-project-2a.md).
 - 2a final review done (fresh reviewer): 1 Critical + 2 Important fixed (forced shutdown,
   site closes, "desmuta o computador"); minors deferred in the 2a ledger.
-- **Next step:** user's merge decision for `feat/sub-project-2a`; then the learned-example
-  open finding above; then brainstorm 2b (windows, files). The dashboard (`sazed painel`) is on
-  `feat/dashboard`, being made editable.
+- 2026-10-15: 2a, the editable dashboard and the Store close-race fix merged into `main`.
+- **Next step:** brainstorm 2b (windows, files).
 
 ## Measurements
 

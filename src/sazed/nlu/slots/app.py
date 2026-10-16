@@ -123,3 +123,40 @@ def extract_app(
     if len(top) > 1:
         return Ambiguous("app", query, top[:5])
     return SlotValue("app", top[0], query, best / 100, exact=best == 100)
+
+
+PLACEHOLDER = "programa"
+"""Stands for any app in a learned phrase; the seeds of both opening and closing use it."""
+
+
+def mask_app(normalized: str, found: Extraction | None, aliases: Mapping[str, str]) -> str:
+    """Replace the app named in `normalized` with PLACEHOLDER, keeping the rest of the wording.
+
+    e5 weighs the object over the verb, so a learned phrase that kept "whatsapp" would pull
+    every other command about WhatsApp (even closing it) toward the learned intent.
+    """
+    if isinstance(found, SlotValue):
+        targets = {str(found.value)}
+    elif isinstance(found, Ambiguous):
+        targets = set(found.candidates)
+    elif isinstance(found, Unmatched) and found.suggestion is not None:
+        targets = {found.suggestion}
+    else:
+        return normalized
+    keys = [_key(name) for name in targets]
+    keys += [_key(alias) for alias, value in aliases.items() if value in targets]
+    words = {word for key in keys for word in key.split()} - COMMAND_WORDS
+
+    def is_name(token: str) -> bool:
+        token = strip_accents(token)
+        return token not in COMMAND_WORDS and any(
+            fuzz.ratio(token, word) >= MIN_SCORE for word in words
+        )
+
+    out: list[str] = []
+    for token in normalized.split():
+        if not is_name(token):
+            out.append(token)
+        elif not out or out[-1] != PLACEHOLDER:
+            out.append(PLACEHOLDER)
+    return " ".join(out)

@@ -33,20 +33,21 @@ def test_settings_follow_the_config() -> None:
 
 def test_learning_persists_across_restarts_and_changes_the_decision(tmp_path: Path) -> None:
     # Thresholds chosen so only an exact (learned) example executes: everything else confirms.
+    # The phrase names no app: app names are masked before learning (test_assistant_learning).
     config = Config(
         data=DataConfig(dir=tmp_path),
         nlu=NluConfig(t_exec=0.999, t_confirm=0.0, g_min=0.0),
         learning=LearningConfig(t_conflict=1.0, t_dup=0.999),
     )
     app = boot(config)
-    first = app.assistant.handle("abre o chrome agora")
+    first = app.assistant.handle("sobe esse som aí")
     assert isinstance(first.decision, Confirm)
-    assert first.decision.intent_id == "abrir_app"
+    assert first.decision.intent_id == "volume_aumentar"
     app.assistant.handle("sim")
     app.close()
 
     restarted = boot(config)
-    again = restarted.assistant.handle("abre o chrome agora")
+    again = restarted.assistant.handle("sobe esse som aí")
     assert isinstance(again.decision, Execute)
     assert (tmp_path / "coppermind.db").exists()
 

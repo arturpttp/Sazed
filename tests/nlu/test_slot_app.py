@@ -75,3 +75,65 @@ def test_an_exact_name_wins_over_a_longer_name_containing_it() -> None:
     assert extract_app("abre o whatsapp web", names, {}) == SlotValue(
         "app", "WhatsApp Web", "whatsapp web", 1.0, exact=True
     )
+
+
+# Masking the app name before a phrase is learned ------------------------------------------
+# e5 weighs the object over the verb, so a learned "abre o whatsapp" would pull "fecha o
+# whatsapp" toward opening (seen by hand, 2026-10-15). Learned phrases keep the wording only.
+
+
+def mask(text: str, aliases: dict[str, str] | None = None) -> str:
+    from sazed.nlu.slots.app import mask_app
+
+    aliases = aliases or {}
+    return mask_app(text, extract_app(text, NAMES, aliases), aliases)
+
+
+def test_the_app_name_becomes_the_placeholder() -> None:
+    assert mask("abre o spotify") == "abre o programa"
+
+
+def test_the_wording_around_the_name_is_kept() -> None:
+    assert mask("bota o spotify pra rodar") == "bota o programa pra rodar"
+
+
+def test_a_name_of_several_words_becomes_one_placeholder() -> None:
+    assert mask("abre o visual studio code agora") == "abre o programa agora"
+
+
+def test_a_typo_of_the_name_is_masked_too() -> None:
+    assert mask("abre o spotfy") == "abre o programa"
+
+
+def test_an_alias_is_masked() -> None:
+    assert mask("abre o zap", {"zap": "Discord"}) == "abre o programa"
+
+
+def test_without_an_app_the_text_is_unchanged() -> None:
+    assert mask("abre o programa") == "abre o programa"
+    from sazed.nlu.slots.app import mask_app
+
+    assert mask_app("liga o som", None, {}) == "liga o som"
+
+
+def test_command_words_are_never_masked() -> None:
+    # "Abrir Arquivo" shares "abrir" with the verb; the verb must survive.
+    from sazed.nlu.slots.app import mask_app
+
+    value = SlotValue("app", "Abrir Arquivo", "arquivo", 1.0)
+    assert mask_app("abrir o arquivo", value, {}) == "abrir o programa"
+
+
+def test_every_candidate_of_an_ambiguous_name_is_masked() -> None:
+    from sazed.nlu.slots.app import mask_app
+
+    amb = Ambiguous("app", "visual", ("Visual Studio", "Visual Studio Code"))
+    assert mask_app("fecha o visual", amb, {}) == "fecha o programa"
+
+
+def test_a_verb_close_to_a_name_word_is_kept() -> None:
+    # "roda" scores 89 against "rodas": only the command-word guard keeps the verb.
+    from sazed.nlu.slots.app import mask_app
+
+    value = SlotValue("app", "Rodas", "rodas", 1.0)
+    assert mask_app("roda o rodas", value, {}) == "roda o programa"
