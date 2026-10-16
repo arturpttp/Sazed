@@ -51,6 +51,9 @@ class _Inert:
 
 
 def real_catalog() -> AppCatalog:
+    # Load order trap: importing onnxruntime AFTER WinRT (the Store catalog) is loaded crashes
+    # the process (access violation). Load it first; `-m windows` test_editing_windows pins it.
+    import sazed.adapters.onnx.embedder  # noqa: F401  (imports onnxruntime)
     from sazed.adapters.windows.catalog import StartMenuCatalog
     from sazed.adapters.windows.store import StoreCatalog
 
