@@ -1,12 +1,13 @@
 """In-memory ports. Tests assert their state, not only the response text."""
 
 import unicodedata
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from dataclasses import replace
 from datetime import datetime
 
 from sazed.runtime.skills import PcPorts
 from sazed.skills.pc.apps import AppEntry
+from sazed.skills.pc.fileops import ChangeBusy, ChangePlan, ItemState, LoggedChange
 from sazed.skills.pc.files import FileHit, SearchError
 from sazed.skills.pc.media import NowPlayingInfo
 from sazed.skills.pc.windows import Monitor, Rect, WindowRef
@@ -266,6 +267,7 @@ class FakeSearch:
     def __init__(self, hits: Sequence[FileHit], *, fail: bool = False) -> None:
         self._hits = sorted(hits, key=lambda h: h.modified, reverse=True)
         self.fail = fail
+        self.folder_hits: list[FileHit] = []
         self.calls: list[tuple[tuple[str, ...], tuple[str, ...]]] = []
 
     def search(self, words: Sequence[str], extensions: Sequence[str], limit: int) -> list[FileHit]:
@@ -280,13 +282,20 @@ class FakeSearch:
         ]
         return found[:limit]
 
+    def folders(self, words: Sequence[str], limit: int) -> list[FileHit]:
+        if self.fail:
+            raise SearchError("index off")
+        found = [h for h in self.folder_hits if all(_plain(w) in _plain(h.name) for w in words)]
+        return found[:limit]
+
     def newest(self, folder: str, since: datetime | None, limit: int) -> list[FileHit]:
         if self.fail:
             raise SearchError("index off")
         found = [
             h
             for h in self._hits
-            if h.path.rsplit("/", 1)[0] == folder and (since is None or h.modified >= since)
+            if h.path.replace("\\", "/").rsplit("/", 1)[0] == folder.replace("\\", "/")
+            and (since is None or h.modified >= since)
         ]
         return found[:limit]
 
@@ -305,3 +314,120 @@ class FakeFileOpener:
 
     def exists(self, path: str) -> bool:
         return path in self._existing
+
+
+class FakeChanger:
+    """An in-memory disk of ItemStates keyed by path (case-insensitive), plus a Recycle Bin."""
+
+    def __init__(
+        self,
+        items: Sequence[ItemState] = (),
+        *,
+        busy: Collection[str] = (),
+        no_bin: bool = False,
+    ) -> None:
+        self.items: dict[str, ItemState] = {i.path.lower(): i for i in items}
+        self.bin: dict[str, ItemState] = {}
+        self.busy = {b.lower() for b in busy}
+        self.no_bin = no_bin
+        self.calls: list[tuple[str, str]] = []
+        self.clock = 5000.0
+
+    def _tick(self) -> float:
+        self.clock += 1
+        return self.clock
+
+    def _check(self, path: str) -> None:
+        if path.lower() in self.busy:
+            raise ChangeBusy(path)
+
+    def state(self, path: str) -> ItemState | None:
+        return self.items.get(path.lower())
+
+    def names_in(self, folder: str) -> set[str]:
+        prefix = folder.lower().rstrip("\\") + "\\"
+        return {
+            i.path.rsplit("\\", 1)[1]
+            for k, i in self.items.items()
+            if k.startswith(prefix) and "\\" not in k[len(prefix) :]
+        }
+
+    def _relocate(self, src: str, dst: str, keep: bool) -> None:
+        moved = {}
+        for key, item in list(self.items.items()):
+            if key == src.lower() or key.startswith(src.lower() + "\\"):
+                new_path = dst + item.path[len(src) :]
+                moved[new_path.lower()] = replace(item, path=new_path, mtime=self._tick())
+                if not keep:
+                    del self.items[key]
+        self.items.update(moved)
+
+    def move(self, src: str, dst: str) -> None:
+        self.calls.append(("move", src))
+        self._check(src)
+        self._relocate(src, dst, keep=False)
+
+    def copy(self, src: str, dst: str) -> None:
+        self.calls.append(("copy", src))
+        self._check(src)
+        self._relocate(src, dst, keep=True)
+
+    def rename(self, src: str, dst: str) -> None:
+        self.calls.append(("rename", src))
+        self._check(src)
+        self._relocate(src, dst, keep=False)
+
+    def make_folder(self, path: str) -> None:
+        self.calls.append(("make_folder", path))
+        self.items[path.lower()] = ItemState(path, True, 0, self._tick(), 0)
+
+    def can_recycle(self, path: str) -> bool:
+        return not self.no_bin
+
+    def recycle(self, path: str) -> str:
+        self.calls.append(("recycle", path))
+        self._check(path)
+        for key in [
+            k for k in self.items if k == path.lower() or k.startswith(path.lower() + "\\")
+        ]:
+            self.bin[key] = self.items.pop(key)
+        return f"ref:{path}"
+
+    def restore(self, ref: str) -> bool:
+        self.calls.append(("restore", ref))
+        path = ref.removeprefix("ref:").lower()
+        back = {k: v for k, v in self.bin.items() if k == path or k.startswith(path + "\\")}
+        if not back:
+            return False
+        for key, item in back.items():
+            self.items[key] = item
+            del self.bin[key]
+        return True
+
+
+class FakeChangeLog:
+    def __init__(self) -> None:
+        self.rows: list[tuple[LoggedChange, datetime | None]] = []
+
+    def record(
+        self, plan: ChangePlan, after: ItemState | None, recycle_ref: str | None, at: datetime
+    ) -> int:
+        change = LoggedChange(
+            len(self.rows) + 1,
+            plan.kind,
+            plan.source if plan.kind != "apagar" else None,
+            plan.target,
+            plan.is_dir,
+            after.size if after else 0,
+            after.mtime if after else 0.0,
+            recycle_ref,
+        )
+        self.rows.append((change, None))
+        return change.id
+
+    def latest_open(self) -> LoggedChange | None:
+        open_rows = [c for c, undone in self.rows if undone is None]
+        return open_rows[-1] if open_rows else None
+
+    def mark_undone(self, change_id: int, at: datetime) -> None:
+        self.rows = [(c, at if c.id == change_id else u) for c, u in self.rows]

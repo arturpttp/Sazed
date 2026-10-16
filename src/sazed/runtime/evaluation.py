@@ -208,6 +208,9 @@ class DryRunDesk:
     def newest(self, folder: str, since: datetime | None, limit: int) -> list[FileHit]:
         return []
 
+    def folders(self, words: Sequence[str], limit: int) -> list[FileHit]:
+        return []
+
     def open(self, path: str) -> None:
         return None
 

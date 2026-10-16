@@ -9,18 +9,51 @@ from __future__ import annotations
 
 import ntpath
 import re
-from collections.abc import Callable, Collection, Mapping
+from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Literal
+from datetime import datetime
+from typing import Literal, Protocol
 
 from sazed.core.outcomes import (
+    AmbiguousSlot,
     BadName,
+    ChangeUndone,
+    FileBusy,
+    FileChangeProposed,
+    FileCopied,
+    FileGone,
+    FileMoved,
+    FileNotFound,
+    FileRecycled,
+    FileRenamed,
+    FolderCreated,
+    FolderNotFound,
     IntoItself,
     NameTaken,
     NoRecycleBin,
+    NothingRecent,
+    NothingToUndo,
+    NotInRecycleBin,
     Outcome,
+    PlanChanged,
     Protected,
+    SearchUnavailable,
     UndoStale,
+)
+from sazed.core.skill import IntentSpec, SkillContext, SlotSpec
+from sazed.core.types import Slots, SlotValue, Unmatched
+from sazed.skills.pc.files import (
+    KIND_EXTENSIONS,
+    KIND_PHRASES,
+    KNOWN_FOLDERS,
+    SEARCH_LIMIT,
+    SHOWN_LIMIT,
+    FileHit,
+    FileSearch,
+    KnownFolders,
+    SearchError,
+    file_label,
+    is_exact,
 )
 
 INVALID_CHARACTERS = frozenset('\\/:*?"<>|')
@@ -348,3 +381,357 @@ def describe_plan(plan: ChangePlan, labels: Mapping[str, str]) -> str:
     if plan.renamed_for_clash:
         text += f". Já existe {name} lá; vou salvar como {_name(plan.target)}"
     return text
+
+
+class ChangeBusy(Exception):
+    """The item is open in another program, or permission was denied (adapter raises it)."""
+
+
+class FileChanger(Protocol):
+    def state(self, path: str) -> ItemState | None: ...
+    def names_in(self, folder: str) -> set[str]: ...
+    def move(self, src: str, dst: str) -> None: ...
+    def copy(self, src: str, dst: str) -> None: ...
+    def rename(self, src: str, dst: str) -> None: ...
+    def make_folder(self, path: str) -> None: ...
+    def can_recycle(self, path: str) -> bool: ...
+    def recycle(self, path: str) -> str:
+        """Send to the Recycle Bin; return a reference `restore` understands."""
+        ...
+
+    def restore(self, ref: str) -> bool:
+        """Take the item back out of the Recycle Bin; False when it is no longer there."""
+        ...
+
+
+class ChangeLog(Protocol):
+    def record(
+        self, plan: ChangePlan, after: ItemState | None, recycle_ref: str | None, at: datetime
+    ) -> int: ...
+    def latest_open(self) -> LoggedChange | None: ...
+    def mark_undone(self, change_id: int, at: datetime) -> None: ...
+
+
+MOVE_EXAMPLES = (
+    "move o relatório pra pasta documentos",
+    "move o arquivo contrato pra área de trabalho",
+    "manda o último download pra pasta documentos",
+    "move a pasta viagem pra documentos",
+    "leva a planilha de gastos pra pasta projetos",
+    "transfere o pdf do boleto pra pasta documentos",
+    "move a foto da praia pra pasta imagens",
+    "passa o arquivo notas pra área de trabalho",
+    "mova o currículo pra pasta documentos",
+    "move o último print pra área de trabalho",
+)
+COPY_EXAMPLES = (
+    "copia o relatório pra pasta documentos",
+    "copia o arquivo contrato pra área de trabalho",
+    "copia o último download pra pasta documentos",
+    "copia a pasta viagem pra documentos",
+    "copia a planilha de gastos pra pasta projetos",
+    "duplica o pdf do boleto na pasta documentos",
+    "faz uma cópia da foto da praia na pasta imagens",
+    "copia o arquivo notas pra área de trabalho",
+    "copie o currículo pra pasta documentos",
+    "copia o último print pra área de trabalho",
+)
+RENAME_EXAMPLES = (
+    "renomeia o relatório pra relatório final",
+    "renomeia o arquivo contrato pra contrato assinado",
+    "muda o nome da pasta viagem pra viagem antiga",
+    "troca o nome da planilha de gastos pra gastos de outubro",
+    "renomeia o último download pra boleto",
+    "muda o nome do arquivo notas pra notas velhas",
+    "renomeie a foto da praia pra praia de verão",
+    "renomear o currículo pra currículo atualizado",
+    "põe o nome do pdf do boleto como boleto pago",
+    "renomeia a pasta projetos pra projetos antigos",
+)
+DELETE_EXAMPLES = (
+    "apaga o relatório",
+    "apaga o arquivo contrato",
+    "deleta o último download",
+    "apaga a pasta viagem",
+    "joga a planilha de gastos no lixo",
+    "exclui o pdf do boleto",
+    "manda a foto da praia pra lixeira",
+    "remove o arquivo notas",
+    "apague o currículo",
+    "joga o último print no lixo",
+)
+CREATE_EXAMPLES = (
+    "cria uma pasta chamada viagem",
+    "cria uma pasta nova na área de trabalho",
+    "cria a pasta projetos em documentos",
+    "faz uma pasta chamada fotos",
+    "crie uma pasta chamada notas na área de trabalho",
+    "cria uma nova pasta chamada orçamentos",
+    "criar pasta chamada viagem em documentos",
+    "cria uma pasta pra guardar as fotos",
+    "faz uma pasta nova chamada contas",
+    "cria uma pasta com o nome trabalho",
+)
+
+_VERBS: dict[str, str] = {
+    "mover": "mover",
+    "copiar": "copiar",
+    "renomear": "renomear",
+    "apagar": "apagar",
+    "criar": "criar",
+    "restaurar": "restaurar",
+}
+_KINDS: dict[str, ChangeKind] = {
+    "arquivo_mover": "mover",
+    "arquivo_copiar": "copiar",
+    "arquivo_renomear": "renomear",
+    "arquivo_apagar": "apagar",
+    "pasta_criar": "criar",
+}
+DEFAULT_CREATE_FOLDER = "Área de Trabalho"
+_ITEM = SlotSpec("item", True, "Qual arquivo ou pasta?")
+_KIND_SLOT = SlotSpec("tipo", False, "De que tipo é o arquivo?")
+
+
+def _value(slots: Slots, name: str) -> str | None:
+    found = slots.get(name)
+    return str(found.value) if isinstance(found, SlotValue) else None
+
+
+def _describe_intent(kind: ChangeKind) -> Callable[[Slots], str]:
+    verb = _VERBS[kind]
+
+    def describe(slots: Slots) -> str:
+        item = _value(slots, "item")
+        if item is None:
+            return f"{verb} um arquivo"
+        return f"{verb} {item.split(':', 1)[-1]}"
+
+    return describe
+
+
+class FileOpsSkill:
+    id = "fileops"
+
+    def __init__(
+        self,
+        folders: KnownFolders,
+        search: FileSearch,
+        changer: FileChanger,
+        log: ChangeLog,
+        area: Area,
+    ) -> None:
+        self._folders = folders
+        self._search = search
+        self._changer = changer
+        self._log = log
+        self._area = area
+        self._pending: ChangePlan | None = None
+        self._shown: dict[str, str] = {}
+        """The choices last listed (label → path): a pick arrives back as its label."""
+        destination = SlotSpec("destino", True, "Para qual pasta?")
+        new_name = SlotSpec("novo_nome", True, "Qual o novo nome?")
+        self.intents: tuple[IntentSpec, ...] = tuple(
+            IntentSpec(
+                intent_id,
+                examples,
+                specs,
+                _describe_intent(_KINDS[intent_id]),
+                learnable=False,
+                confirms_itself=True,
+            )
+            for intent_id, examples, specs in (
+                ("arquivo_mover", MOVE_EXAMPLES, (_ITEM, destination, _KIND_SLOT)),
+                ("arquivo_copiar", COPY_EXAMPLES, (_ITEM, destination, _KIND_SLOT)),
+                ("arquivo_renomear", RENAME_EXAMPLES, (_ITEM, new_name, _KIND_SLOT)),
+                ("arquivo_apagar", DELETE_EXAMPLES, (_ITEM, _KIND_SLOT)),
+                (
+                    "pasta_criar",
+                    CREATE_EXAMPLES,
+                    (
+                        SlotSpec("novo_nome", True, "Qual o nome da pasta?"),
+                        SlotSpec("destino", False, "Em qual pasta?"),
+                    ),
+                ),
+            )
+        )
+
+    # resolving -----------------------------------------------------------------------------
+
+    def _labels(self) -> dict[str, str]:
+        labels: dict[str, str] = {}
+        for name in KNOWN_FOLDERS:
+            path = self._folders.resolve(name)
+            if path is not None:
+                labels[path] = name
+        return labels
+
+    def _choose(self, slot: str, hits: Sequence[FileHit], now: datetime) -> str | Outcome:
+        if len(hits) == 1:
+            return hits[0].path
+        shown: dict[str, str] = {}
+        for found in hits[:SHOWN_LIMIT]:
+            base = file_label(found, now)
+            label, n = base, 2
+            while label in shown:
+                label, n = f"{base} #{n}", n + 1
+            shown[label] = found.path
+        self._shown = shown
+        return AmbiguousSlot(slot, tuple(shown))
+
+    def _item_path(self, slots: Slots, now: datetime) -> str | Outcome:
+        value = _value(slots, "item")
+        if value is None:
+            raise ValueError("a file change called without its item")
+        if value in self._shown:
+            return self._shown[value]
+        how, _, words = value.partition(":")
+        try:
+            if how == "ultimo":
+                folder = self._folders.resolve(words)
+                if folder is None:
+                    return FolderNotFound(words)
+                newest = self._search.newest(folder, None, 1)
+                return newest[0].path if newest else NothingRecent()
+            if how == "pasta":
+                hits = self._search.folders(words.split(), SEARCH_LIMIT)
+                return self._choose("item", hits, now) if hits else FolderNotFound(words)
+            kind = _value(slots, "tipo")
+            extensions = KIND_EXTENSIONS.get(kind, ()) if kind is not None else ()
+            hits = self._search.search(words.split(), extensions, SEARCH_LIMIT)
+        except SearchError:
+            return SearchUnavailable()
+        if not hits:
+            return FileNotFound(words, KIND_PHRASES.get(kind, KIND_PHRASES[None]))
+        exact = [h for h in hits if is_exact(h, words)]
+        return exact[0].path if len(exact) == 1 else self._choose("item", hits, now)
+
+    def _destination(self, slots: Slots, default: str | None, now: datetime) -> str | Outcome:
+        found = slots.get("destino")
+        if isinstance(found, Unmatched):
+            try:
+                hits = self._search.folders(found.raw.split(), SEARCH_LIMIT)
+            except SearchError:
+                return SearchUnavailable()
+            return self._choose("destino", hits, now) if hits else FolderNotFound(found.raw)
+        name = str(found.value) if isinstance(found, SlotValue) else default
+        if name is None:
+            raise ValueError("a file change called without its destination")
+        if name in self._shown:
+            return self._shown[name]
+        path = self._folders.resolve(name)
+        return FolderNotFound(name) if path is None else path
+
+    # proposing -----------------------------------------------------------------------------
+
+    def _propose(self, plan: ChangePlan | Outcome) -> Outcome:
+        if not isinstance(plan, ChangePlan):
+            return plan
+        self._pending = plan
+        return FileChangeProposed(describe_plan(plan, self._labels()))
+
+    def execute(self, intent_id: str, slots: Slots, ctx: SkillContext) -> Outcome:
+        kind = _KINDS.get(intent_id)
+        if kind is None:
+            raise ValueError(f"unknown intent {intent_id}")
+        self._pending = None
+        new_name = _value(slots, "novo_nome")
+        if kind == "criar":
+            folder = self._destination(slots, DEFAULT_CREATE_FOLDER, ctx.now)
+            if not isinstance(folder, str):
+                return folder
+            taken = self._changer.names_in(folder)
+            return self._propose(plan_change("criar", None, folder, new_name, taken, self._area))
+        path = self._item_path(slots, ctx.now)
+        if not isinstance(path, str):
+            return path
+        source = self._changer.state(path)
+        if source is None:
+            return FileGone(_name(path))
+        if kind == "apagar":
+            can = self._changer.can_recycle(path)
+            plan = plan_change("apagar", source, None, None, (), self._area, can_recycle=can)
+            return self._propose(plan)
+        if kind == "renomear":
+            taken = self._changer.names_in(_parent(path))
+            return self._propose(plan_change("renomear", source, None, new_name, taken, self._area))
+        folder = self._destination(slots, None, ctx.now)
+        if not isinstance(folder, str):
+            return folder
+        taken = self._changer.names_in(folder)
+        return self._propose(plan_change(kind, source, folder, None, taken, self._area))
+
+    def propose_undo(self, ctx: SkillContext) -> Outcome:
+        self._pending = None
+        change = self._log.latest_open()
+        if change is None:
+            return NothingToUndo()
+        now = self._changer.state(change.target)
+        origin = change.source if change.source is not None else change.target
+        taken = self._changer.names_in(_parent(origin))
+        return self._propose(plan_undo(change, now, taken))
+
+    # applying ------------------------------------------------------------------------------
+
+    def _still_valid(self, plan: ChangePlan) -> bool:
+        """The disk still matches what the user confirmed."""
+        if plan.source is not None and plan.before is not None:
+            now = self._changer.state(plan.source)
+            if now is None or (now.size, now.mtime) != (plan.before.size, plan.before.mtime):
+                return False
+            if plan.undo_of is None and check_source(plan.source, self._area) is not None:
+                return False
+        if plan.kind in ("mover", "copiar", "renomear", "criar", "restaurar"):
+            occupant = self._changer.state(plan.target)
+            same_item = plan.source is not None and _norm(plan.source) == _norm(plan.target)
+            if occupant is not None and not same_item:
+                return False
+        if plan.kind in ("mover", "copiar", "criar") and plan.undo_of is None:
+            return check_destination(_parent(plan.target), self._area) is None
+        return True
+
+    def apply_pending(self, ctx: SkillContext) -> Outcome:
+        plan, self._pending = self._pending, None
+        if plan is None or not self._still_valid(plan):
+            return PlanChanged()
+        labels = self._labels()
+        action = describe_plan(plan, labels)
+        name = _name(plan.source if plan.source is not None else plan.target)
+        ref: str | None = None
+        try:
+            if plan.kind == "restaurar":
+                if plan.recycle_ref is None or not self._changer.restore(plan.recycle_ref):
+                    if plan.undo_of is not None:
+                        self._log.mark_undone(plan.undo_of, ctx.now)
+                    return NotInRecycleBin(name)
+            elif plan.kind == "apagar":
+                if not self._changer.can_recycle(plan.target):
+                    return NoRecycleBin(name)
+                ref = self._changer.recycle(plan.target)
+            elif plan.kind == "criar":
+                self._changer.make_folder(plan.target)
+            elif plan.source is not None:
+                operation = {
+                    "mover": self._changer.move,
+                    "copiar": self._changer.copy,
+                    "renomear": self._changer.rename,
+                }[plan.kind]
+                operation(plan.source, plan.target)
+        except ChangeBusy:
+            return FileBusy(_VERBS[plan.kind], name)
+        if plan.undo_of is not None:
+            self._log.mark_undone(plan.undo_of, ctx.now)
+            return ChangeUndone(action)
+        after = None if plan.kind == "apagar" else self._changer.state(plan.target)
+        self._log.record(plan, after, ref, ctx.now)
+        final = _name(plan.target)
+        folder = _label(_parent(plan.target), labels)
+        if plan.kind == "mover":
+            return FileMoved(final, folder)
+        if plan.kind == "copiar":
+            return FileCopied(final, folder)
+        if plan.kind == "renomear":
+            return FileRenamed(name, final)
+        if plan.kind == "criar":
+            return FolderCreated(final, folder)
+        return FileRecycled(name)

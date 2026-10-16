@@ -172,6 +172,13 @@ def search_sql(
     return f"SELECT TOP {int(limit)} {_COLUMNS} FROM SYSTEMINDEX WHERE {where} {_ORDER}"
 
 
+def folders_sql(words: Sequence[str], scopes: Sequence[str], limit: int) -> str:
+    scope = " OR ".join(f"SCOPE='file:{_quote(s)}'" for s in scopes)
+    parts = [f"({scope})", "System.Kind = 'folder'", *(_like(w) for w in words)]
+    where = " AND ".join(parts)
+    return f"SELECT TOP {int(limit)} {_COLUMNS} FROM SYSTEMINDEX WHERE {where} {_ORDER}"
+
+
 def newest_sql(folder: str, since: datetime | None, limit: int) -> str:
     parts = [f"DIRECTORY='file:{_quote(folder)}'", "System.Kind <> 'folder'"]
     if since is not None:
@@ -246,6 +253,10 @@ class FileSearch(Protocol):
 
     def newest(self, folder: str, since: datetime | None, limit: int) -> list[FileHit]:
         """Files directly in `folder`, newest first. Raises SearchError."""
+        ...
+
+    def folders(self, words: Sequence[str], limit: int) -> list[FileHit]:
+        """Folders whose name contains every word, newest first. Raises SearchError."""
         ...
 
 

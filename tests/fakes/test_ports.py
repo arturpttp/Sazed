@@ -188,3 +188,55 @@ def test_fake_folders_resolve_and_list() -> None:
     assert list(folders.names()) == ["Downloads", "Projetos"]
     assert folders.resolve("Downloads") == "C:/d"
     assert folders.resolve("Projetos") is None
+
+
+def _disk():  # type: ignore[no-untyped-def]
+    from fakes.ports import FakeChanger
+    from sazed.skills.pc.fileops import ItemState
+
+    return FakeChanger(
+        [
+            ItemState(r"C:\U\Downloads\a.txt", False, 10, 1.0, 0),
+            ItemState(r"C:\U\Downloads\viagem", True, 5, 1.0, 1),
+            ItemState(r"C:\U\Downloads\viagem\f.jpg", False, 5, 1.0, 0),
+        ]
+    )
+
+
+def test_fake_changer_moves_folders_with_their_contents_and_lists_names() -> None:
+    disk = _disk()
+    assert disk.names_in(r"C:\U\Downloads") == {"a.txt", "viagem"}
+    disk.move(r"C:\U\Downloads\viagem", r"C:\U\Documents\viagem")
+    assert disk.state(r"C:\U\Documents\viagem\f.jpg") is not None
+    assert disk.state(r"C:\U\Downloads\viagem") is None
+
+
+def test_fake_changer_recycles_restores_and_can_be_busy() -> None:
+    import pytest
+
+    from fakes.ports import FakeChanger
+    from sazed.skills.pc.fileops import ChangeBusy, ItemState
+
+    disk = _disk()
+    ref = disk.recycle(r"C:\U\Downloads\viagem")
+    assert disk.state(r"C:\U\Downloads\viagem\f.jpg") is None
+    assert disk.restore(ref) and disk.state(r"C:\U\Downloads\viagem\f.jpg") is not None
+    assert not disk.restore("ref:C:\nada")
+    busy = FakeChanger([ItemState(r"C:\U\x.txt", False, 1, 1.0, 0)], busy=[r"C:\U\x.txt"])
+    with pytest.raises(ChangeBusy):
+        busy.move(r"C:\U\x.txt", r"C:\U\D\x.txt")
+
+
+def test_fake_change_log_keeps_the_latest_open_change() -> None:
+    from datetime import datetime
+
+    from fakes.ports import FakeChangeLog
+    from sazed.skills.pc.fileops import ChangePlan
+
+    log = FakeChangeLog()
+    plan = ChangePlan("criar", None, r"C:\U\nova", True, None)
+    first = log.record(plan, None, None, datetime(2026, 1, 1))
+    second = log.record(plan, None, None, datetime(2026, 1, 1))
+    log.mark_undone(second, datetime(2026, 1, 2))
+    latest = log.latest_open()
+    assert latest is not None and latest.id == first

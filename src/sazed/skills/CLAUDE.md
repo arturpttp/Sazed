@@ -48,5 +48,11 @@ next to the skill that needs them and implemented in `sazed.adapters`.
   open phrase "conflict" with them. Window seeds also avoid the apps the open/close seeds name
   (Spotify, Discord): e5 weighs the object, and "desminimiza o discord" pulled "desliga o discord".
 
+- File changes (`skills/pc/fileops.py`): `execute` only *proposes* (`FileChangeProposed`,
+  the plan kept in `_pending`); `apply_pending` acts, and only after `_still_valid` re-checks
+  the source (size, mtime), that the target is still free, and the area rules. Every 2c intent
+  has `confirms_itself=True` and `learnable=False`. The area: `fixed` folders never change
+  themselves but may hold changes; nothing inside a `trees` folder (AppData, Sazed) changes.
+
 ## Not here
 Text matching (→ `nlu`), Windows APIs (→ `adapters/windows`).

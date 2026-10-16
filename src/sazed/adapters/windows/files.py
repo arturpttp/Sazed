@@ -15,6 +15,7 @@ from sazed.skills.pc.files import (
     KNOWN_FOLDERS,
     FileHit,
     SearchError,
+    folders_sql,
     is_program,
     search_sql,
 )
@@ -163,6 +164,9 @@ class WindowsFileSearch:
 
     def search(self, words: Sequence[str], extensions: Sequence[str], limit: int) -> list[FileHit]:
         return self._query(search_sql(words, extensions, self._scopes, limit))
+
+    def folders(self, words: Sequence[str], limit: int) -> list[FileHit]:
+        return self._query(folders_sql(words, self._scopes, limit))
 
     def newest(self, folder: str, since: datetime | None, limit: int) -> list[FileHit]:
         # One known folder: listing it is cheap and always current, while the index lags

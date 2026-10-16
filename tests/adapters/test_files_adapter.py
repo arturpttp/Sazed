@@ -116,3 +116,13 @@ def test_newest_reads_the_folder_itself_not_the_lagging_index(
     search = WindowsFileSearch([])
     monkeypatch.setattr(search, "_query", lambda sql: [stale])
     assert [h.name for h in search.newest(str(tmp_path), None, 1)] == ["novo.pdf"]
+
+
+def test_folders_search_goes_through_the_index(monkeypatch: pytest.MonkeyPatch) -> None:
+    from sazed.adapters.windows.files import WindowsFileSearch
+
+    seen: list[str] = []
+    search = WindowsFileSearch(["C:/U"])
+    monkeypatch.setattr(search, "_query", lambda sql: seen.append(sql) or [])
+    assert search.folders(["viagem"], 6) == []
+    assert "System.Kind = 'folder'" in seen[0]

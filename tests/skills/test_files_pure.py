@@ -146,3 +146,14 @@ def test_exact_ignores_extension_accents_and_case() -> None:
     assert is_exact(hit, "relatorio")
     assert is_exact(hit, "RELATÓRIO")
     assert not is_exact(hit, "relat")
+
+
+def test_folders_sql_looks_for_folders_only() -> None:
+    from sazed.skills.pc.files import folders_sql
+
+    sql = folders_sql(["viagem"], ["C:/U"], 6)
+    assert sql == (
+        "SELECT TOP 6 System.ItemUrl, System.ItemFolderNameDisplay, System.DateModified "
+        "FROM SYSTEMINDEX WHERE (SCOPE='file:C:/U') AND System.Kind = 'folder' "
+        "AND System.FileName LIKE '%viagem%' ORDER BY System.DateModified DESC"
+    )

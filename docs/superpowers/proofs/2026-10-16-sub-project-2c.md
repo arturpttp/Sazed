@@ -40,3 +40,12 @@ Mutation: `_extract` passes the normalised text to `novo_nome` →
 ## Task 5: a self-confirming intent is never asked twice
 Mutation: only the LOW_SCORE confirm is turned into Execute →
 `FAILED tests/core/test_policy.py::test_an_intent_that_confirms_itself_is_not_asked_twice_for_a_small_gap`.
+
+## Task 6: the plan is re-checked against the disk before anything happens
+Mutation: `apply_pending` skips `_still_valid`.
+```
+FAILED tests/skills/test_fileops_skill.py::test_a_file_changed_after_the_question_is_left_alone
+FAILED tests/skills/test_fileops_skill.py::test_a_file_removed_after_the_question_is_left_alone
+FAILED tests/skills/test_fileops_skill.py::test_a_target_taken_after_the_question_is_left_alone
+```
+`FileSearch.folders` (new on 2b's port) checked on the real index: "documents" → 1 folder.
