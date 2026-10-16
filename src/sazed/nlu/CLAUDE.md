@@ -26,6 +26,11 @@ dialogue-control phrases. Pure functions over already-loaded data; no OS access,
   app "essa janela". Checked against the real catalog: "com" stays out ("Ação com um clique").
 - `extract_folder` also finds a folder name or synonym as a run of words inside a longer phrase
   ("o último print que eu tirei").
+- File changes (`slots/change.py`): "pra/para/pro" always start the destination, "na/no/em"
+  only when a folder follows ("reunião na segunda" stays a file name); the **last** marker
+  wins. The item is an encoded string ("ultimo:Downloads", "pasta:x", "arquivo:x") because
+  skills cannot import `nlu`. `novo_nome` is read from the original text (`RAW_SLOTS` in the
+  assistant), and a bare answer to "Qual nome?" is the whole text (`bare_name`).
 - `mask_app` (used before learning) must keep the verb: command words are never masked, even
   when one is a fuzzy match for a word of the app name ("roda" vs "Rodas").
 - Folder and file names are masked before learning with `mask_words` (slots `pasta`,

@@ -4,6 +4,7 @@ from collections.abc import Callable, Mapping, Sequence
 
 from sazed.core.types import Extraction
 from sazed.nlu.slots.app import extract_app
+from sazed.nlu.slots.change import extract_destination, extract_item, extract_new_name
 from sazed.nlu.slots.files import extract_file, extract_folder, extract_kind
 from sazed.nlu.slots.mute import extract_mute
 from sazed.nlu.slots.page import extract_page
@@ -63,7 +64,19 @@ def build_extractors(
     def file(text: str, aliases: Mapping[str, str]) -> Extraction | None:
         return extract_file(text)
 
+    def item(text: str, aliases: Mapping[str, str]) -> Extraction | None:
+        return extract_item(text, folders, synonyms)
+
+    def destination(text: str, aliases: Mapping[str, str]) -> Extraction | None:
+        return extract_destination(text, folders, synonyms)
+
+    def new_name(text: str, aliases: Mapping[str, str]) -> Extraction | None:
+        return extract_new_name(text, folders, synonyms)  # gets the original text (RAW_SLOTS)
+
     return {
+        "item": item,
+        "destino": destination,
+        "novo_nome": new_name,
         "lado": side,
         "monitor": monitor,
         "pasta": folder,

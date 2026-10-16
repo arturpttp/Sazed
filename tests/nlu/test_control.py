@@ -63,3 +63,19 @@ def test_pick_candidate(text: str, choice: str) -> None:
 @pytest.mark.parametrize("text", ["o terceiro", "5", "aumenta o volume", "code"])
 def test_pick_candidate_refuses_unclear_answers(text: str) -> None:
     assert pick_candidate(text, CANDIDATES) is None
+
+
+@pytest.mark.parametrize(
+    "text", ["desfaz isso", "desfaz", "desfazer", "volta atrás", "desfaça isso", "Desfaz isso!"]
+)
+def test_undo_phrases(text: str) -> None:
+    from sazed.nlu.normalize import normalize
+
+    found = parse_control(normalize(text))
+    assert found is not None and found.kind is ControlKind.UNDO
+
+
+def test_undo_is_not_read_inside_a_command() -> None:
+    from sazed.nlu.normalize import normalize
+
+    assert parse_control(normalize("desfaz a mala no quarto")) is None

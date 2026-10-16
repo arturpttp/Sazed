@@ -25,3 +25,14 @@ FAILED tests/skills/test_fileops_plans.py::test_a_folder_never_goes_into_itself[
 ## Task 3: undoing a move checks the original name is still free
 Found by `test_undo_refuses_when_the_original_name_is_taken_again` on the first implementation,
 which ignored the item's own name at the origin even for a move (right only for a rename).
+
+## Task 4: the destination starts at the last marker
+Mutation: scan markers from the first. With the first test set it still passed (a finding: no
+case had two markers). Added `test_the_destination_starts_at_the_last_marker`, which then failed:
+```
+FAILED …[move o relatório pra entregar pra pasta projetos-arquivo:relatório entregar]
+FAILED …[copia a foto da praia no rio pra pasta imagens-arquivo:praia rio]
+```
+## Task 4: a new name comes from the original text
+Mutation: `_extract` passes the normalised text to `novo_nome` →
+`FAILED tests/runtime/test_assistant_basic.py::test_a_new_name_is_read_from_the_original_text`.

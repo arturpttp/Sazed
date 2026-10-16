@@ -31,3 +31,16 @@ def test_window_and_file_slots_have_extractors() -> None:
     )
     assert found["tipo"]("acha a planilha x", {}) == SlotValue("tipo", "planilha", "planilha", 1.0)
     assert found["arquivo"]("acha a planilha x", {}) == SlotValue("arquivo", "x", "x", 1.0)
+
+
+def test_file_change_slots_have_extractors() -> None:
+    found = build_extractors([], folder_names=["Documentos"], folder_synonyms={})
+    assert found["item"]("apaga o rascunho", {}) == SlotValue(
+        "item", "arquivo:rascunho", "rascunho", 1.0
+    )
+    assert found["destino"]("move x pra documentos", {}) == SlotValue(
+        "destino", "Documentos", "documentos", 1.0
+    )
+    assert found["novo_nome"]("renomeia x pra Nome Novo", {}) == SlotValue(
+        "novo_nome", "Nome Novo", "Nome Novo", 1.0
+    )

@@ -1,4 +1,4 @@
-"""Dialogue control phrases (yes, no, correction, forget, repeat). Deterministic, pure.
+"""Dialogue control phrases (yes, no, correction, forget, repeat, undo). Deterministic, pure.
 
 Matching runs on accent-stripped text. Accent stripping preserves length for Latin text, so
 the correction's `rest` is sliced from the original normalised text and keeps its accents.
@@ -20,6 +20,7 @@ class ControlKind(Enum):
     CORRECT = "correct"
     FORGET = "forget"
     REPEAT = "repeat"
+    UNDO = "undo"
 
 
 @dataclass(frozen=True)
@@ -62,6 +63,9 @@ _DENY = frozenset(
     }
 )
 _FORGET = frozenset({"esquece isso", "esqueca isso", "esquece", "esqueca", "pode esquecer"})
+_UNDO = frozenset(
+    {"desfaz isso", "desfaz", "desfazer", "volta atras", "desfaca isso", "desfaz o que voce fez"}
+)
 _REPEAT = frozenset({"de novo", "outra vez", "mais", "mais um pouco", "repete", "repita"})
 
 # "não é o X" is deliberately absent: without punctuation it reads as a negation.
@@ -97,6 +101,8 @@ def parse_control(normalized: str) -> Control | None:
         return Control(ControlKind.DENY)
     if text in _FORGET:
         return Control(ControlKind.FORGET)
+    if text in _UNDO:
+        return Control(ControlKind.UNDO)
     if text in _REPEAT:
         return Control(ControlKind.REPEAT)
     match = _CORRECT.match(text)

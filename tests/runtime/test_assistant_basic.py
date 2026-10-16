@@ -118,3 +118,44 @@ def test_out_of_range_step_is_explained_instead_of_using_the_default(make: Make)
     assert r.outcome == InvalidPercent("150")
     assert h.audio.volume == 50
     assert "0 a 100" in r.text
+
+
+class RecordingRenameSkill:
+    id = "rename_t"
+
+    def __init__(self) -> None:
+        from sazed.core.skill import IntentSpec, SlotSpec
+
+        self.seen: list[object] = []
+        self.intents = (
+            IntentSpec(
+                "renomear_t",
+                ("renomeia o arquivo",),
+                (SlotSpec("novo_nome", True, "Qual nome?"),),
+                lambda s: "renomear",
+            ),
+        )
+
+    def execute(self, intent_id, slots, ctx):  # type: ignore[no-untyped-def]
+        from sazed.core.outcomes import Cancelled
+
+        self.seen.append(slots["novo_nome"].value)
+        return Cancelled()
+
+
+def test_a_new_name_is_read_from_the_original_text(make: Make) -> None:
+    skill = RecordingRenameSkill()
+    h = make(
+        {"renomeia o arquivo x pra relatório 2025 final": {"renomear_t": 0.97}},
+        extra_skills=[skill],
+    )
+    h.say("Renomeia o arquivo x pra Relatório 2025-Final")
+    assert skill.seen == ["Relatório 2025-Final"]
+
+
+def test_a_new_name_given_as_an_answer_keeps_its_case(make: Make) -> None:
+    skill = RecordingRenameSkill()
+    h = make({"renomeia o arquivo": {"renomear_t": 0.97}}, extra_skills=[skill])
+    h.say("renomeia o arquivo")
+    h.say("Notas Velhas")
+    assert skill.seen == ["Notas Velhas"]

@@ -69,6 +69,7 @@ from sazed.nlu.control import Control, ControlKind, parse_control, pick_candidat
 from sazed.nlu.matcher import IntentIndex
 from sazed.nlu.normalize import normalize, strip_accents
 from sazed.nlu.slots.app import mask_app
+from sazed.nlu.slots.change import bare_name
 from sazed.nlu.slots.mask import mask_words
 from sazed.runtime.extractors import SlotExtractor
 
@@ -77,6 +78,8 @@ log = logging.getLogger(__name__)
 GENERIC_ACTION = "atender a esse pedido"
 # Slots that name a thing, and the word that stands for any such thing in a learned phrase.
 _NAMED_SLOTS = {"pasta": "pasta", "arquivo": "arquivo"}
+# Slots read from the original text (case and punctuation kept): a new file name.
+RAW_SLOTS = frozenset({"novo_nome"})
 
 
 @dataclass(frozen=True)
@@ -224,7 +227,7 @@ class Assistant:
         if not ranking or ranking[0].intent_id not in self._specs:
             return self._not_understood(u, ranking)
         _, spec = self._specs[ranking[0].intent_id]
-        slots = self._extract(spec, u.normalized)
+        slots = self._extract(spec, u.normalized, raw=u.text)
         parse = ParseResult(u, ranking, slots, frozenset(spec.required - set(slots)))
         requirements = IntentRequirements(spec.required, spec.requires_confirmation(_given(slots)))
         decision = decide(parse, requirements, self._settings.thresholds)
@@ -312,7 +315,10 @@ class Assistant:
                 return None
             return SlotValue(pending.slot, choice, pending.raw or u.normalized, 1.0, exact=True)
         aliases = self._aliases.get(pending.slot, {})
-        extracted = self._extractors[pending.slot](u.normalized, aliases)
+        if pending.slot in RAW_SLOTS:
+            extracted = self._extractors[pending.slot](u.text, aliases) or bare_name(u.text)
+        else:
+            extracted = self._extractors[pending.slot](u.normalized, aliases)
         if isinstance(extracted, SlotValue):
             return extracted
         if isinstance(extracted, Unmatched):
@@ -354,10 +360,13 @@ class Assistant:
         except Exception:
             log.exception("could not record the reaction")
 
-    def _extract(self, spec: IntentSpec, text: str) -> dict[str, Extraction]:
+    def _extract(
+        self, spec: IntentSpec, text: str, raw: str | None = None
+    ) -> dict[str, Extraction]:
         found: dict[str, Extraction] = {}
         for slot in spec.slots:
-            value = self._extractors[slot.name](text, self._aliases.get(slot.name, {}))
+            source = raw if raw is not None and slot.name in RAW_SLOTS else text
+            value = self._extractors[slot.name](source, self._aliases.get(slot.name, {}))
             if value is not None:
                 found[slot.name] = value
         return found
