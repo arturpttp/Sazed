@@ -183,3 +183,26 @@ def test_review_explains_a_conflict_and_accepts_force(
     assert "--forcar" in capsys.readouterr().out
     assert run(boot, ["revisar", "--rotular", str(episode_id), "fechar_app", "--forcar"]) == 0
     assert [e.intent_id for e in app.store.examples()] == ["fechar_app"]
+
+
+def test_main_help_shows_how_to_manage_what_was_learned(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with pytest.raises(SystemExit):
+        main(["--ajuda"])
+    out = capsys.readouterr().out
+    for usage in (
+        "sazed aprendizado --esquecer",
+        "sazed revisar --rotular",
+        "--forcar",
+    ):
+        assert usage in out
+
+
+@pytest.mark.parametrize("command", ["aprendizado", "revisar"])
+def test_subcommand_help_says_uso_once(command: str, capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit):
+        main([command, "--ajuda"])
+    out = capsys.readouterr().out
+    assert out.count("uso:") == 1
+    assert "usage:" not in out

@@ -37,7 +37,11 @@ Sazed, the Terris Keeper from *Mistborn*. Read [`AGENTS.md`](./AGENTS.md) and
 - 2a plan: [`docs/superpowers/plans/2026-10-15-sazed-pc-skills-2a.md`](./docs/superpowers/plans/2026-10-15-sazed-pc-skills-2a.md) (16 tasks),
   implemented on `feat/sub-project-2a`. Proofs:
   [`docs/superpowers/proofs/2026-10-15-sub-project-2a.md`](./docs/superpowers/proofs/2026-10-15-sub-project-2a.md).
-- **Next step:** final branch review of 2a, then merge; then brainstorm 2b (windows, files).
+- 2a final review done (fresh reviewer): 1 Critical + 2 Important fixed (forced shutdown,
+  site closes, "desmuta o computador"); minors deferred in the 2a ledger.
+- **Next step:** user's merge decision for `feat/sub-project-2a`; then the learned-example
+  open finding above; then brainstorm 2b (windows, files). The dashboard (`sazed painel`) is on
+  `feat/dashboard`, being made editable.
 
 ## Measurements
 
