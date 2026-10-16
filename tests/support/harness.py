@@ -6,16 +6,25 @@ from random import Random
 
 from fakes.clock import ManualClock
 from fakes.index import ScriptedIndex
-from fakes.ports import FakeAudio, FakeCatalog, FakeLauncher
+from fakes.ports import (
+    FakeAudio,
+    FakeBrightness,
+    FakeCatalog,
+    FakeLauncher,
+    FakeMedia,
+    FakeOpener,
+    FakePower,
+    FakeScreen,
+    FakeStatus,
+)
 from sazed.adapters.sqlite.coppermind import SqliteCoppermind
 from sazed.core.learning import LearningThresholds
 from sazed.core.policy import Thresholds
 from sazed.core.response import Response
 from sazed.core.skill import Skill
 from sazed.runtime.assistant import Assistant, Settings
-from sazed.runtime.extractors import build_extractors
-from sazed.skills.pc.apps import AppsSkill
-from sazed.skills.pc.volume import VolumeSkill
+from sazed.runtime.config import Config
+from sazed.runtime.skills import PcPorts, build_skills
 
 APPS = ["Google Chrome", "Spotify", "Discord", "Visual Studio Code", "Claude Code"]
 SETTINGS = Settings(
@@ -34,6 +43,11 @@ class Harness:
     launcher: FakeLauncher
     audio: FakeAudio
     clock: ManualClock
+    opener: FakeOpener
+    power: FakePower
+    screen: FakeScreen
+    brightness: FakeBrightness
+    status: FakeStatus
 
     def say(self, text: str) -> Response:
         return self.assistant.handle(text)
@@ -57,15 +71,30 @@ def build_harness(
     launcher = FakeLauncher(running=running, fail_with=launcher_error)
     audio = FakeAudio(volume=volume)
     clock = ManualClock()
-    skills: list[Skill] = [AppsSkill(FakeCatalog(APPS), launcher), VolumeSkill(audio)]
+    opener, power, screen = FakeOpener(), FakePower(), FakeScreen()
+    brightness, status = FakeBrightness(), FakeStatus()
+    ports = PcPorts(
+        catalog=FakeCatalog(APPS),
+        launcher=launcher,
+        audio=audio,
+        media=FakeMedia(),
+        power=power,
+        screen=screen,
+        brightness=brightness,
+        opener=opener,
+        status=status,
+    )
+    skill_set = build_skills(ports, Config())
     assistant = Assistant(
-        skills=[*skills, *extra_skills],
+        skills=[*skill_set.skills, *extra_skills],
         index=index,
-        extractors=build_extractors(APPS),
+        extractors=skill_set.extractors(),
         store=store,
-        aliases={"app": dict(aliases or {})},
+        aliases={"app": {**skill_set.app_aliases, **dict(aliases or {})}},
         settings=SETTINGS,
         clock=clock,
         rng=Random(0),
     )
-    return Harness(assistant, index, store, launcher, audio, clock)
+    return Harness(
+        assistant, index, store, launcher, audio, clock, opener, power, screen, brightness, status
+    )

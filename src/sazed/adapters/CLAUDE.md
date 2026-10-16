@@ -11,9 +11,13 @@ launcher, audio). This is the only package allowed to touch the OS, files, or mo
 - Integration tests are `@pytest.mark.windows` (real apps, real volume) or `@pytest.mark.model`.
 
 ## Traps
-- Store (UWP) apps have no `.lnk`: WhatsApp, the new Notepad and Calculator are invisible
-  to `StartMenuCatalog`. Integration tests use `charmap.exe` for that reason.
-- Some shortcuts target a launcher (`Discord` → `Update.exe`), so closing cannot find their process.
+- Store apps come from `shell:AppsFolder` (`store.py`); their names may be English
+  ("Calculator"), so `DEFAULT_APP_ALIASES` maps pt-BR names. Their visible window is owned by
+  `ApplicationFrameHost.exe`, not the app: `windows_to_close` also closes frames hosting a
+  child window of the app's process.
+- WinRT calls are async: adapters run them to completion with `asyncio.run` inside the method.
+- Squirrel shortcuts target a launcher (`Discord` → `Update.exe`): `_matches` looks for the real
+  executable under the launcher's folder.
 - Closing posts `WM_CLOSE` and never terminates, so unsaved work gets the app's own prompt.
 - `root_pids` counts instances by parent/child, otherwise Chrome's helpers look like many instances.
 - SQLite migrations are append-only, and `PRAGMA user_version` is the schema version.

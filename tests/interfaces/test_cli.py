@@ -8,7 +8,7 @@ import pytest
 
 from fakes.clock import ManualClock
 from fakes.embedder import HashingEmbedder
-from fakes.ports import FakeAudio, FakeCatalog, FakeLauncher
+from fakes.ports import FakeAudio, fake_pc_ports
 from sazed.core.coppermind import Episode, NewAlias
 from sazed.interfaces.cli.main import main
 from sazed.runtime.config import Config, DataConfig
@@ -33,9 +33,7 @@ def boot(tmp_path: Path, audio: FakeAudio) -> Boot:
         return build_app(
             Config(data=DataConfig(dir=tmp_path)),
             embedder=HashingEmbedder(),
-            catalog=FakeCatalog(["WhatsApp", "Google Chrome"]),
-            launcher=FakeLauncher(),
-            audio=audio,
+            ports=fake_pc_ports(["WhatsApp", "Google Chrome"], audio=audio),
             clock=ManualClock(),
             rng=Random(0),
         )
@@ -174,3 +172,14 @@ def test_painel_help_is_pt_br(capsys: pytest.CaptureFixture[str]) -> None:
         main(["painel", "--ajuda"])
     out = capsys.readouterr().out
     assert "porta" in out and "painel" in out.lower()
+
+
+def test_review_explains_a_conflict_and_accepts_force(
+    boot: Boot, app: SazedApp, capsys: pytest.CaptureFixture[str]
+) -> None:
+    ep = Episode("abre o chrome", T0, (), {}, "Execute", None, "")
+    episode_id = app.store.record_episode(ep)
+    assert run(boot, ["revisar", "--rotular", str(episode_id), "fechar_app"]) == 1
+    assert "--forcar" in capsys.readouterr().out
+    assert run(boot, ["revisar", "--rotular", str(episode_id), "fechar_app", "--forcar"]) == 0
+    assert [e.intent_id for e in app.store.examples()] == ["fechar_app"]

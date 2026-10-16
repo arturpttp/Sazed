@@ -1,6 +1,6 @@
 import pytest
 
-from sazed.core.types import SlotValue
+from sazed.core.types import SlotValue, Unmatched
 from sazed.nlu.slots.percent import extract_percent
 
 
@@ -35,5 +35,5 @@ def test_article_um_is_not_the_number_one() -> None:
     assert extract_percent("abaixa um pouco") is None
 
 
-def test_out_of_range_number_is_ignored() -> None:
-    assert extract_percent("volume em 150") is None
+def test_out_of_range_number_is_unmatched_so_the_skill_can_explain() -> None:
+    assert extract_percent("volume em 150") == Unmatched("percent", "150", None)

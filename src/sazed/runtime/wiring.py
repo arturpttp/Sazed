@@ -18,10 +18,8 @@ from sazed.nlu.embedder import Embedder
 from sazed.nlu.matcher import IntentMatcher
 from sazed.runtime.assistant import Assistant, Settings
 from sazed.runtime.config import DEFAULT_CONFIG_PATH, Config, ConfigError, load_config
-from sazed.runtime.extractors import build_extractors
 from sazed.runtime.logs import setup_logging
-from sazed.skills.pc.apps import AppCatalog, AppLauncher, AppsSkill
-from sazed.skills.pc.volume import AudioControl, VolumeSkill
+from sazed.runtime.skills import PcPorts, build_skills
 
 
 @dataclass
@@ -57,32 +55,29 @@ def build_app(
     config: Config,
     *,
     embedder: Embedder,
-    catalog: AppCatalog,
-    launcher: AppLauncher,
-    audio: AudioControl,
+    ports: PcPorts,
     clock: Callable[[], datetime] | None = None,
     rng: Random | None = None,
 ) -> SazedApp:
     clock = clock or datetime.now
     rng = rng or Random()
     store = SqliteCoppermind(config.data.dir / "coppermind.db")
-    skills: list[Skill] = [AppsSkill(catalog, launcher), VolumeSkill(audio)]
+    skill_set = build_skills(ports, config)
     index = IntentMatcher(embedder)
-    for skill in skills:
+    for skill in skill_set.skills:
         for spec in skill.intents:
             index.add_examples(spec.id, spec.examples)
-    names = [entry.name for entry in catalog.entries()]
     assistant = Assistant(
-        skills=skills,
+        skills=skill_set.skills,
         index=index,
-        extractors=build_extractors(names),
+        extractors=skill_set.extractors(),
         store=store,
-        aliases={"app": config.aliases},
+        aliases={"app": skill_set.app_aliases},
         settings=settings_from(config),
         clock=clock,
         rng=rng,
     )
-    return SazedApp(assistant, store, index, skills, config, rng, clock)
+    return SazedApp(assistant, store, index, skill_set.skills, config, rng, clock)
 
 
 log = logging.getLogger(__name__)
@@ -95,16 +90,29 @@ class StartupError(Exception):
 def build_default_app(config: Config) -> SazedApp:
     from sazed.adapters.onnx.embedder import OnnxEmbedder
     from sazed.adapters.windows.audio import PycawAudio
+    from sazed.adapters.windows.brightness import WmiBrightness
     from sazed.adapters.windows.catalog import StartMenuCatalog
     from sazed.adapters.windows.launcher import WindowsLauncher
+    from sazed.adapters.windows.media import WinRtMedia
+    from sazed.adapters.windows.opener import ShellOpener
+    from sazed.adapters.windows.power import WindowsPower
+    from sazed.adapters.windows.screen import WindowsScreen
+    from sazed.adapters.windows.status import PsutilStatus
+    from sazed.adapters.windows.store import StoreCatalog
+    from sazed.skills.pc.apps import CombinedCatalog
 
-    return build_app(
-        config,
-        embedder=OnnxEmbedder(config.model.embedder_path),
-        catalog=StartMenuCatalog(),
+    ports = PcPorts(
+        catalog=CombinedCatalog([StartMenuCatalog(), StoreCatalog()]),
         launcher=WindowsLauncher(),
         audio=PycawAudio(),
+        media=WinRtMedia(),
+        power=WindowsPower(),
+        screen=WindowsScreen(),
+        brightness=WmiBrightness(),
+        opener=ShellOpener(),
+        status=PsutilStatus(),
     )
+    return build_app(config, embedder=OnnxEmbedder(config.model.embedder_path), ports=ports)
 
 
 def start(config_path: Path | None) -> SazedApp:

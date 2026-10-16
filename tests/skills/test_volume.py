@@ -1,9 +1,9 @@
 from datetime import datetime
 
 from fakes.ports import FakeAudio
-from sazed.core.outcomes import Muted, Unmuted, VolumeChanged, VolumeSet
+from sazed.core.outcomes import InvalidPercent, Muted, Unmuted, VolumeChanged, VolumeSet
 from sazed.core.skill import SkillContext
-from sazed.core.types import SlotValue
+from sazed.core.types import SlotValue, Unmatched
 from sazed.skills.pc.volume import VolumeSkill
 
 CTX = SkillContext(now=datetime(2026, 10, 14, 12, 0))
@@ -93,3 +93,30 @@ def test_confirmation_names_the_level() -> None:
     spec = next(s for s in VolumeSkill(FakeAudio()).intents if s.id == "volume_diminuir")
     assert spec.describe(alvo(100)) == "deixar o volume em 100%"
     assert spec.describe({}) == "diminuir o volume"
+
+
+def test_an_explicit_step_of_zero_changes_nothing() -> None:
+    audio = FakeAudio(volume=50)
+    assert VolumeSkill(audio).execute("volume_aumentar", pct(0), CTX) == VolumeChanged(50)
+    assert audio.volume == 50
+
+
+def test_out_of_range_step_is_explained_and_changes_nothing() -> None:
+    audio = FakeAudio(volume=50)
+    slots = {"percent": Unmatched("percent", "150", None)}
+    assert VolumeSkill(audio).execute("volume_aumentar", slots, CTX) == InvalidPercent("150")
+    assert audio.volume == 50
+
+
+def test_out_of_range_level_is_explained_and_changes_nothing() -> None:
+    audio = FakeAudio(volume=50)
+    slots = {"alvo": Unmatched("alvo", "150", None)}
+    assert VolumeSkill(audio).execute("volume_diminuir", slots, CTX) == InvalidPercent("150")
+    assert audio.volume == 50
+
+
+def test_out_of_range_set_is_explained_and_changes_nothing() -> None:
+    audio = FakeAudio(volume=50)
+    slots = {"percent": Unmatched("percent", "150", None)}
+    assert VolumeSkill(audio).execute("volume_definir", slots, CTX) == InvalidPercent("150")
+    assert audio.volume == 50

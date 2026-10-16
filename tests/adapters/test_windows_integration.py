@@ -64,3 +64,63 @@ def test_volume_set_read_and_restore() -> None:
     finally:
         audio.set_volume(original)
         audio.set_muted(was_muted)
+
+
+def test_store_calculator_opens_and_closes() -> None:
+    from sazed.adapters.windows.store import StoreCatalog
+
+    entry = next(e for e in StoreCatalog().entries() if e.name == "Calculator")
+    launcher = WindowsLauncher()
+    launcher.launch(entry)
+    try:
+        assert wait_until(lambda: launcher.instances(entry) >= 1)
+        assert launcher.close(entry) >= 1
+        assert wait_until(lambda: launcher.instances(entry) == 0)
+    finally:
+        if launcher.instances(entry):
+            launcher.close(entry)
+
+
+def test_media_session_is_readable_and_toggling_twice_restores_it() -> None:
+    from sazed.adapters.windows.media import WinRtMedia
+
+    media = WinRtMedia()
+    media.now_playing()  # must not raise, session or not
+    if not media.toggle():
+        pytest.skip("no media session open")
+    time.sleep(1.0)
+    assert media.toggle()  # back to how it was
+
+
+def test_screenshot_is_saved_to_the_given_folder(tmp_path: Path) -> None:
+    from sazed.adapters.windows.screen import WindowsScreen
+
+    name = WindowsScreen(tmp_path).capture("teste.png")
+    assert name == "teste.png"
+    assert (tmp_path / "teste.png").stat().st_size > 0
+
+
+def test_settings_page_opens() -> None:
+    from sazed.adapters.windows.opener import ShellOpener
+
+    ShellOpener().open("ms-settings:sound")  # opens the Settings app; close it afterwards
+
+
+def test_brightness_reads_and_rewrites_the_same_level() -> None:
+    from sazed.adapters.windows.brightness import WmiBrightness
+
+    brightness = WmiBrightness()
+    level = brightness.get()
+    if level is None:
+        pytest.skip("no monitor exposes WMI brightness")
+    assert brightness.set(level)  # the same value: no visible change
+
+
+def test_status_reads_real_numbers() -> None:
+    from sazed.adapters.windows.status import PsutilStatus
+
+    status = PsutilStatus()
+    free, total = status.memory()
+    assert 0 < free < total
+    assert 0.0 <= status.cpu_percent() <= 100.0
+    assert any(mount.upper().startswith("C:") for mount, _, _ in status.disks())

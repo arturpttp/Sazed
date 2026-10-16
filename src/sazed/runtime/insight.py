@@ -17,12 +17,12 @@ from sazed.adapters.sqlite.reader import CoppermindReader, CoppermindUnavailable
 from sazed.core.decisions import Confirm, ConfirmReason, Execute
 from sazed.core.outcomes import FAILURE_NAMES
 from sazed.core.policy import IntentRequirements, Thresholds, decide
-from sazed.core.skill import IntentSpec, Skill, never
+from sazed.core.skill import IntentSpec, Skill, always, never
 from sazed.core.types import IntentScore, ParseResult, Utterance
 from sazed.nlu.normalize import normalize, strip_accents
 from sazed.runtime.config import Config, load_config
-from sazed.skills.pc.apps import AppEntry, AppsSkill
-from sazed.skills.pc.volume import VolumeSkill
+from sazed.runtime.skills import PcPorts, build_skills
+from sazed.skills.pc.apps import AppEntry, StaticCatalog
 
 __all__ = [
     "FAILURE_OUTCOMES",
@@ -35,14 +35,30 @@ FAILURE_OUTCOMES: frozenset[str] = FAILURE_NAMES
 
 PORT_DESCRIPTIONS: dict[str, tuple[str, str]] = {
     "AppCatalog": (
-        "Lê os atalhos (.lnk) do Menu Iniciar do usuário e de todos os usuários.",
-        "StartMenuCatalog",
+        "Lista programas: atalhos do Menu Iniciar, apps da Loja e os sites do config.",
+        "StartMenuCatalog + StoreCatalog",
     ),
     "AppLauncher": (
-        "Abre programas e fecha suas janelas (WM_CLOSE; nunca encerra à força).",
+        "Abre programas e sites e fecha janelas (WM_CLOSE; nunca encerra à força).",
         "WindowsLauncher",
     ),
     "AudioControl": ("Lê e altera o volume principal e o mudo.", "PycawAudio"),
+    "MediaControl": (
+        "Tocar/pausar, próxima, anterior e o que está tocando (sessões de mídia do Windows).",
+        "WinRtMedia",
+    ),
+    "Power": (
+        "Bloquear, desligar, reiniciar, suspender e sair da conta (sempre com confirmação,"
+        " exceto bloquear).",
+        "WindowsPower",
+    ),
+    "Screen": ("Salva capturas de tela em Imagens e abre o recorte de tela.", "WindowsScreen"),
+    "UriOpener": (
+        "Abre endereços: sites, pesquisas, páginas de Configurações (ms-settings:).",
+        "ShellOpener",
+    ),
+    "Brightness": ("Lê e altera o brilho do monitor que aceita WMI.", "WmiBrightness"),
+    "SystemStatus": ("Lê memória livre, uso de CPU e espaço em disco.", "PsutilStatus"),
 }
 NO_DESCRIPTION = ("Sem descrição.", "?")
 
@@ -54,10 +70,24 @@ class _Inert:
         raise RuntimeError(f"the dashboard never calls ports (tried {name})")
 
 
-def skills_for_listing() -> list[Skill]:
-    """The wired skills, built with inert ports (tests assert they match `build_app`)."""
+def skills_for_listing(config: Config | None = None) -> list[Skill]:
+    """The wired skills, built with inert ports (tests assert they match `build_app`).
+
+    The catalog is empty here: listing must not scan the Start menu.
+    """
     inert: Any = _Inert()
-    return [AppsSkill(inert, inert), VolumeSkill(inert)]
+    ports = PcPorts(
+        catalog=StaticCatalog([]),
+        launcher=inert,
+        audio=inert,
+        media=inert,
+        power=inert,
+        screen=inert,
+        brightness=inert,
+        opener=inert,
+        status=inert,
+    )
+    return build_skills(ports, config or Config()).skills
 
 
 @dataclass(frozen=True)
@@ -75,6 +105,8 @@ class IntentInfo:
     example_texts: tuple[str, ...]
     slots: tuple[SlotInfo, ...]
     confirmation: str
+    learnable: bool
+    repeatable: bool
 
 
 @dataclass(frozen=True)
@@ -90,6 +122,14 @@ def _describe(spec: IntentSpec) -> str:
         return spec.id
 
 
+def _confirmation(spec: IntentSpec) -> str:
+    if spec.requires_confirmation is never:
+        return "nunca"
+    if spec.requires_confirmation is always:
+        return "sempre"
+    return "conforme o pedido"
+
+
 def capabilities(skills: Sequence[Skill]) -> list[SkillInfo]:
     return [
         SkillInfo(
@@ -101,7 +141,9 @@ def capabilities(skills: Sequence[Skill]) -> list[SkillInfo]:
                     len(spec.examples),
                     tuple(spec.examples),
                     tuple(SlotInfo(s.name, s.required, s.question) for s in spec.slots),
-                    "nunca" if spec.requires_confirmation is never else "conforme o pedido",
+                    _confirmation(spec),
+                    spec.learnable,
+                    spec.repeatable,
                 )
                 for spec in skill.intents
             ),

@@ -6,7 +6,7 @@ import pytest
 
 from fakes.clock import ManualClock
 from fakes.embedder import HashingEmbedder
-from fakes.ports import FakeAudio, FakeCatalog, FakeLauncher
+from fakes.ports import fake_pc_ports
 from sazed.core.policy import Thresholds
 from sazed.core.skill import SkillContext
 from sazed.core.types import SlotValue
@@ -30,9 +30,7 @@ def test_listing_skills_match_the_wired_skills(tmp_path: Path) -> None:
     app = build_app(
         Config(data=DataConfig(dir=tmp_path)),
         embedder=HashingEmbedder(),
-        catalog=FakeCatalog([]),
-        launcher=FakeLauncher(),
-        audio=FakeAudio(),
+        ports=fake_pc_ports([]),
         clock=ManualClock(),
         rng=Random(0),
     )
@@ -51,19 +49,33 @@ def test_capabilities_describe_every_intent() -> None:
     assert abrir.slots[0].question == "Qual programa devo abrir?"
     assert abrir.confirmation == "nunca"
     assert by_id["fechar_app"].confirmation == "conforme o pedido"
+    assert by_id["pc_desligar"].confirmation == "sempre"
     assert abrir.description.startswith("abrir")
+    assert (abrir.learnable, abrir.repeatable) == (True, False)
+    assert by_id["pc_desligar"].learnable is False
+    assert by_id["volume_aumentar"].repeatable is True
 
 
 def test_listing_skills_never_execute() -> None:
-    skill = skills_for_listing()[0]
-    slots = {"app": SlotValue("app", "Chrome", "chrome", 1.0)}
+    skill = next(s for s in skills_for_listing() if s.id == "volume")
+    slots = {"percent": SlotValue("percent", 30, "30", 1.0)}
     with pytest.raises(RuntimeError, match="never calls ports"):
-        skill.execute("abrir_app", slots, SkillContext(datetime(2026, 10, 15)))
+        skill.execute("volume_definir", slots, SkillContext(datetime(2026, 10, 15)))
 
 
 def test_every_port_has_a_pt_br_description() -> None:
     found = ports(skills_for_listing())
-    assert {p.name for p in found} == {"AppCatalog", "AppLauncher", "AudioControl"}
+    assert {p.name for p in found} == {
+        "AppCatalog",
+        "AppLauncher",
+        "AudioControl",
+        "MediaControl",
+        "Power",
+        "Screen",
+        "UriOpener",
+        "Brightness",
+        "SystemStatus",
+    }
     assert {p.name for p in found} <= set(PORT_DESCRIPTIONS)
     catalog = next(p for p in found if p.name == "AppCatalog")
     assert catalog.methods == ("entries",)

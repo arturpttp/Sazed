@@ -2,15 +2,14 @@ from collections import Counter
 
 import pytest
 
-from fakes.ports import FakeAudio, FakeCatalog, FakeLauncher
+from fakes.ports import fake_pc_ports
 from sazed.core.skill import IntentSpec
 from sazed.nlu.normalize import normalize
-from sazed.skills.pc.apps import AppsSkill
-from sazed.skills.pc.volume import VolumeSkill
+from sazed.runtime.config import Config
+from sazed.runtime.skills import build_skills
 
 SPECS: list[IntentSpec] = [
-    *AppsSkill(FakeCatalog([]), FakeLauncher()).intents,
-    *VolumeSkill(FakeAudio()).intents,
+    spec for skill in build_skills(fake_pc_ports([]), Config()).skills for spec in skill.intents
 ]
 
 
@@ -36,3 +35,14 @@ def test_no_example_belongs_to_two_intents() -> None:
 @pytest.mark.parametrize("spec", SPECS, ids=lambda s: s.id)
 def test_every_slot_has_a_pt_br_question(spec: IntentSpec) -> None:
     assert all(s.question.endswith("?") for s in spec.slots)
+
+
+def test_only_level_steps_and_track_skips_are_repeatable() -> None:
+    assert {s.id for s in SPECS if s.repeatable} == {
+        "volume_aumentar",
+        "volume_diminuir",
+        "brilho_aumentar",
+        "brilho_diminuir",
+        "midia_proxima",
+        "midia_anterior",
+    }

@@ -15,6 +15,10 @@ def never(slots: Slots) -> bool:
     return False
 
 
+def always(slots: Slots) -> bool:
+    return True
+
+
 @dataclass(frozen=True)
 class SlotSpec:
     name: str
@@ -36,6 +40,10 @@ class IntentSpec:
     describe: Callable[[Slots], str]
     """pt-BR infinitive phrase for confirmations and errors, e.g. "abrir Google Chrome"."""
     requires_confirmation: Callable[[Slots], bool] = never
+    learnable: bool = True
+    """False: no phrase is ever learned for this intent (power actions)."""
+    repeatable: bool = False
+    """True: "de novo"/"mais" may rerun it (level steps, next track). Opt-in on purpose."""
 
     @property
     def required(self) -> frozenset[str]:

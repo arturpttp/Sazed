@@ -9,12 +9,10 @@ from sazed.runtime.config import DEFAULT_MODEL_DIR, Config
 from sazed.runtime.evaluation import (
     MAX_FALSE_EXECUTE,
     MIN_ACCURACY,
-    DryRunPorts,
+    dry_run_skills,
     evaluate,
     load_cases,
 )
-from sazed.skills.pc.apps import AppsSkill
-from sazed.skills.pc.volume import VolumeSkill
 
 pytestmark = pytest.mark.model
 FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "nlu_cases.toml"
@@ -26,8 +24,7 @@ def test_fixture_meets_accuracy_and_false_execute_thresholds_with_default_config
     app_names, cases = load_cases(FIXTURE)
     assert len(cases) >= 80
     index = IntentMatcher(OnnxEmbedder(DEFAULT_MODEL_DIR))
-    ports = DryRunPorts(app_names)
-    for skill in (AppsSkill(ports, ports), VolumeSkill(ports)):
+    for skill in dry_run_skills(app_names).skills:
         for spec in skill.intents:
             index.add_examples(spec.id, spec.examples)
     nlu = Config().nlu

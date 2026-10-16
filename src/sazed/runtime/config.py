@@ -5,9 +5,19 @@ from __future__ import annotations
 import os
 import tomllib
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
+
+from sazed.nlu.normalize import normalize, strip_accents
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_MODEL_DIR = PROJECT_ROOT / "models" / "multilingual-e5-small"
@@ -19,6 +29,58 @@ def default_data_dir() -> Path:
 
 
 DEFAULT_CONFIG_PATH = default_data_dir() / "config.toml"
+
+BUILTIN_SITES: dict[str, str] = {
+    "YouTube": "https://www.youtube.com",
+    "Gmail": "https://mail.google.com",
+    "GitHub": "https://github.com",
+    "WhatsApp Web": "https://web.whatsapp.com",
+    "Netflix": "https://www.netflix.com",
+    "Google Drive": "https://drive.google.com",
+    "Google Maps": "https://www.google.com/maps",
+    "Wikipédia": "https://pt.wikipedia.org",
+}
+BUILTIN_ENGINES: dict[str, str] = {
+    "Google": "https://www.google.com/search?q={q}",
+    "YouTube": "https://www.youtube.com/results?search_query={q}",
+    "Wikipédia": "https://pt.wikipedia.org/w/index.php?search={q}",
+}
+
+
+def name_key(name: str) -> str:
+    return strip_accents(normalize(name))
+
+
+def _http_url(value: str) -> str:
+    # A typo here must never make Sazed run a local file: only web addresses are allowed.
+    if not value.lower().startswith(("http://", "https://")):
+        raise ValueError("deve começar com http:// ou https://")
+    return value
+
+
+def _search_template(value: str) -> str:
+    _http_url(value)
+    if value.count("{q}") != 1:
+        raise ValueError("deve conter {q} exatamente uma vez (o lugar da pesquisa)")
+    return value
+
+
+HttpUrl = Annotated[str, AfterValidator(_http_url)]
+SearchTemplate = Annotated[str, AfterValidator(_search_template)]
+
+
+def merge_named(builtin: dict[str, str], user: dict[str, str]) -> dict[str, str]:
+    """User entries replace built-ins with the same name, ignoring case and accents."""
+    merged = {name_key(k): (k, v) for k, v in builtin.items()}
+    for k, v in user.items():
+        merged[name_key(k)] = (k, v)
+    return dict(merged.values())
+
+
+def _names_not_blank(value: dict[str, str]) -> dict[str, str]:
+    if any(not name_key(k) for k in value):
+        raise ValueError("nomes não podem ficar vazios")
+    return value
 
 
 class _Section(BaseModel):
@@ -63,6 +125,25 @@ class LoggingConfig(_Section):
     debug: bool = False
 
 
+class SearchConfig(_Section):
+    default: str = Field("Google", min_length=1)
+    engines: dict[str, SearchTemplate] = Field(default_factory=dict)
+
+    @field_validator("engines")
+    @classmethod
+    def _engine_names(cls, value: dict[str, str]) -> dict[str, str]:
+        return _names_not_blank(value)
+
+    def effective_engines(self) -> dict[str, str]:
+        return merge_named(BUILTIN_ENGINES, self.engines)
+
+    @model_validator(mode="after")
+    def _default_is_known(self) -> SearchConfig:
+        if name_key(self.default) not in {name_key(k) for k in self.effective_engines()}:
+            raise ValueError(f"'{self.default}' não é um buscador conhecido")
+        return self
+
+
 class Config(_Section):
     user: UserConfig = Field(default_factory=UserConfig)
     nlu: NluConfig = Field(default_factory=NluConfig)
@@ -72,6 +153,16 @@ class Config(_Section):
     data: DataConfig = Field(default_factory=DataConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     aliases: dict[str, str] = Field(default_factory=dict)
+    sites: dict[str, HttpUrl] = Field(default_factory=dict)
+    search: SearchConfig = Field(default_factory=SearchConfig)
+
+    @field_validator("sites")
+    @classmethod
+    def _site_names(cls, value: dict[str, str]) -> dict[str, str]:
+        return _names_not_blank(value)
+
+    def effective_sites(self) -> dict[str, str]:
+        return merge_named(BUILTIN_SITES, self.sites)
 
 
 class ConfigError(Exception):

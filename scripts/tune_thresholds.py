@@ -13,12 +13,10 @@ from sazed.runtime.config import DEFAULT_MODEL_DIR
 from sazed.runtime.evaluation import (
     MAX_FALSE_EXECUTE,
     MIN_ACCURACY,
-    DryRunPorts,
+    dry_run_skills,
     evaluate,
     load_cases,
 )
-from sazed.skills.pc.apps import AppsSkill
-from sazed.skills.pc.volume import VolumeSkill
 
 FIXTURE = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "nlu_cases.toml"
 
@@ -36,8 +34,7 @@ class CachedIndex:
 def main() -> None:
     app_names, cases = load_cases(FIXTURE)
     matcher = IntentMatcher(OnnxEmbedder(DEFAULT_MODEL_DIR))
-    ports = DryRunPorts(app_names)
-    for skill in (AppsSkill(ports, ports), VolumeSkill(ports)):
+    for skill in dry_run_skills(app_names).skills:
         for spec in skill.intents:
             matcher.add_examples(spec.id, spec.examples)
     index = CachedIndex(matcher)

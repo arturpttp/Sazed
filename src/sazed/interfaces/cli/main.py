@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import NoReturn, TextIO
 
 from sazed.runtime.admin import (
+    LabelResult,
     failure_rows,
     forget_learned,
     intent_rows,
@@ -45,6 +46,9 @@ def _parser() -> _Parser:
     review = commands.add_parser("revisar", help="lista falhas recentes para rotular")
     review.add_argument("--rotular", nargs=2, metavar=("EPISODIO", "PEDIDO"))
     review.add_argument("--limite", type=int, default=20, help="quantas falhas listar")
+    review.add_argument(
+        "--forcar", action="store_true", help="guarda mesmo se parecer outro pedido"
+    )
     panel = commands.add_parser("painel", help="abre o painel local (somente leitura)")
     panel.add_argument("--porta", type=_port, default=8765, help="porta local (padrão: 8765)")
     panel.add_argument("--raiz", type=Path, default=None, help="pasta do repositório de Sazed")
@@ -78,13 +82,30 @@ def _learned(app: SazedApp, args: argparse.Namespace) -> int:
 def _review(app: SazedApp, args: argparse.Namespace) -> int:
     if args.rotular:
         episode, intent = args.rotular
-        if not episode.isdigit() or not label_episode(app, int(episode), intent):
-            print("Não consegui rotular. Pedidos válidos:")
-            for intent_id, description in intent_rows(app):
-                print(f"  {intent_id:<16} {description}")
+        result = (
+            label_episode(app, int(episode), intent, force=args.forcar)
+            if episode.isdigit()
+            else LabelResult.UNKNOWN
+        )
+        if result is LabelResult.LEARNED:
+            print("Guardado em minha mente de cobre.")
+            return 0
+        if result is LabelResult.ALREADY_KNOWN:
+            print("Isso eu já sabia, Mestre.")
+            return 0
+        if result is LabelResult.CONFLICT:
+            print(
+                "Essa frase se parece com outro pedido que conheço. "
+                "Use --forcar para guardar mesmo assim."
+            )
             return 1
-        print("Guardado em minha mente de cobre.")
-        return 0
+        if result is LabelResult.NOT_LEARNABLE:
+            print("Esse pedido nunca é aprendido: sempre pedirei confirmação antes.")
+            return 1
+        print("Não consegui rotular. Pedidos válidos:")
+        for intent_id, description in intent_rows(app):
+            print(f"  {intent_id:<16} {description}")
+        return 1
     rows = failure_rows(app, args.limite)
     if not rows:
         print("Nenhuma falha recente, Mestre.")

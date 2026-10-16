@@ -17,7 +17,7 @@ from sazed.core.types import IntentScore
 from sazed.interfaces.dashboard.api import DashboardApi
 from sazed.interfaces.dashboard.server import HOST, DashboardHandler, make_server
 from sazed.interfaces.dashboard.sources import DevSources, ResourceSampler
-from sazed.runtime.insight import CoppermindReader, config_view
+from sazed.runtime.insight import CoppermindReader, config_view, skills_for_listing
 
 NOW = datetime(2026, 10, 15, 12, 0)
 SVG_NAMESPACE = b"http://www.w3.org/2000/svg"
@@ -219,7 +219,7 @@ def test_capabilities_redact_and_list_skills(served: tuple[int, DashboardApi]) -
     assert rows["aliases.api_key"]["value"] == "••• (oculto)"
     assert rows["aliases.api_key"]["origin"] == "arquivo"
     assert rows["nlu.t_exec"]["origin"] == "padrão"
-    assert {s["id"] for s in data["skills"]} == {"apps", "volume"}
+    assert {s["id"] for s in data["skills"]} == {s.id for s in skills_for_listing()}
     assert {p["name"] for p in data["ports"]} >= {"AppCatalog"}
 
 

@@ -10,9 +10,7 @@ import psutil
 
 from sazed.adapters.onnx.embedder import OnnxEmbedder
 from sazed.runtime.config import DEFAULT_MODEL_DIR
-from sazed.runtime.evaluation import DryRunPorts
-from sazed.skills.pc.apps import AppsSkill
-from sazed.skills.pc.volume import VolumeSkill
+from sazed.runtime.evaluation import dry_run_skills
 
 
 def main() -> None:
@@ -23,8 +21,7 @@ def main() -> None:
     load_s = time.perf_counter() - started
     after_load = process.memory_info().rss
 
-    ports = DryRunPorts([])
-    skills = (AppsSkill(ports, ports), VolumeSkill(ports))
+    skills = dry_run_skills([]).skills
     seeds = [e for skill in skills for spec in skill.intents for e in spec.examples]
     started = time.perf_counter()
     embedder.embed(seeds)

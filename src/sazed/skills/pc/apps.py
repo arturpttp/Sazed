@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Literal, Protocol
 
 from sazed.core.outcomes import (
     ActionFailed,
@@ -12,21 +12,72 @@ from sazed.core.outcomes import (
     AppNotFound,
     AppNotRunning,
     AppOpened,
+    CannotCloseSite,
     Outcome,
 )
 from sazed.core.skill import IntentSpec, SkillContext, SlotSpec
 from sazed.core.types import Slots, SlotValue, Unmatched
+
+AppKind = Literal["lnk", "store", "site"]
+_KIND_RANK: dict[str, int] = {"lnk": 0, "store": 1, "site": 2}
 
 
 @dataclass(frozen=True)
 class AppEntry:
     name: str
     target: str
+    """lnk: the executable; store: the package install folder ("" if unknown); site: the URL."""
     shortcut: str
+    """What is opened to launch it: a .lnk path, `shell:AppsFolder\\<AUMID>`, or the URL."""
+    kind: AppKind = "lnk"
 
 
 class AppCatalog(Protocol):
     def entries(self) -> Sequence[AppEntry]: ...
+
+
+def merge_entries(*groups: Sequence[AppEntry]) -> list[AppEntry]:
+    """One entry per name (case-insensitive): an installed app beats a Store app beats a site."""
+    best: dict[str, AppEntry] = {}
+    for entry in (e for group in groups for e in group):
+        key = entry.name.strip().casefold()
+        current = best.get(key)
+        if current is None or _KIND_RANK[entry.kind] < _KIND_RANK[current.kind]:
+            best[key] = entry
+    return sorted(best.values(), key=lambda e: e.name.casefold())
+
+
+class StaticCatalog:
+    def __init__(self, entries: Sequence[AppEntry]) -> None:
+        self._entries = list(entries)
+
+    def entries(self) -> Sequence[AppEntry]:
+        return list(self._entries)
+
+
+class CombinedCatalog:
+    def __init__(self, parts: Sequence[AppCatalog]) -> None:
+        self._parts = list(parts)
+
+    def entries(self) -> Sequence[AppEntry]:
+        return merge_entries(*(part.entries() for part in self._parts))
+
+
+def site_entries(sites: Mapping[str, str]) -> list[AppEntry]:
+    return [AppEntry(name, url, url, "site") for name, url in sites.items()]
+
+
+# Store apps can show English names ("Calculator") on a pt-BR desktop. Wiring adds each alias
+# only when its target exists in the catalog; config aliases still override them.
+DEFAULT_APP_ALIASES: dict[str, str] = {
+    "calculadora": "Calculator",
+    "bloco de notas": "Notepad",
+    "fotos": "Photos",
+    "camera": "Camera",
+    "relogio": "Clock",
+    "loja": "Microsoft Store",
+    "ferramenta de captura": "Snipping Tool",
+}
 
 
 class AppLauncher(Protocol):
@@ -56,6 +107,9 @@ OPEN_EXAMPLES = (
     "coloca o teams pra rodar",
     "abre o programa",
     "abrir aplicativo",
+    "abre o youtube",
+    "abre o gmail",
+    "abre o site do github",
 )
 CLOSE_EXAMPLES = (
     "fecha o chrome",
@@ -78,6 +132,9 @@ CLOSE_EXAMPLES = (
     "para o teams",
     "fecha o programa",
     "fechar aplicativo",
+    "fecha o youtube",
+    "fecha o gmail",
+    "fecha o site do github",
 )
 
 
@@ -120,7 +177,7 @@ class AppsSkill:
         if not isinstance(app, SlotValue):
             return False
         entry = self._find(str(app.value))
-        if entry is None:
+        if entry is None or entry.kind == "site":
             return False
         return not app.exact or self._launcher.instances(entry) > 1
 
@@ -137,6 +194,8 @@ class AppsSkill:
             self._launcher.launch(entry)
             return AppOpened(entry.name)
         if intent_id == "fechar_app":
+            if entry.kind == "site":
+                return CannotCloseSite(entry.name)
             if self._launcher.instances(entry) == 0:
                 return AppNotRunning(entry.name)
             if self._launcher.close(entry) == 0:

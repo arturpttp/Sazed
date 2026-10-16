@@ -37,6 +37,114 @@ class Unmuted:
 
 
 @dataclass(frozen=True)
+class MediaToggled:
+    pass
+
+
+@dataclass(frozen=True)
+class MediaNext:
+    pass
+
+
+@dataclass(frozen=True)
+class MediaPrevious:
+    pass
+
+
+@dataclass(frozen=True)
+class NowPlaying:
+    title: str
+    artist: str
+
+
+@dataclass(frozen=True)
+class NoMediaSession:
+    pass
+
+
+@dataclass(frozen=True)
+class Locked:
+    pass
+
+
+@dataclass(frozen=True)
+class ShuttingDown:
+    pass
+
+
+@dataclass(frozen=True)
+class Restarting:
+    pass
+
+
+@dataclass(frozen=True)
+class Suspending:
+    pass
+
+
+@dataclass(frozen=True)
+class SigningOut:
+    pass
+
+
+@dataclass(frozen=True)
+class ScreenshotSaved:
+    file_name: str
+
+
+@dataclass(frozen=True)
+class SnipOpened:
+    pass
+
+
+@dataclass(frozen=True)
+class SettingsOpened:
+    page: str
+
+
+@dataclass(frozen=True)
+class UnknownSettingsPage:
+    raw: str
+
+
+@dataclass(frozen=True)
+class BrightnessSet:
+    percent: int
+
+
+@dataclass(frozen=True)
+class BrightnessChanged:
+    percent: int
+
+
+@dataclass(frozen=True)
+class BrightnessUnsupported:
+    pass
+
+
+@dataclass(frozen=True)
+class MemoryStatus:
+    free: str
+    total: str
+
+
+@dataclass(frozen=True)
+class CpuStatus:
+    percent: str
+
+
+@dataclass(frozen=True)
+class DiskStatus:
+    disks: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class SearchOpened:
+    query: str
+    engine: str
+
+
+@dataclass(frozen=True)
 class ExampleLearned:
     text: str
 
@@ -63,6 +171,11 @@ class NothingToForget:
 
 
 @dataclass(frozen=True)
+class NothingToRepeat:
+    pass
+
+
+@dataclass(frozen=True)
 class Cancelled:
     pass
 
@@ -79,6 +192,11 @@ class AppNotRunning:
 
 
 @dataclass(frozen=True)
+class CannotCloseSite:
+    app: str
+
+
+@dataclass(frozen=True)
 class AmbiguousSlot:
     slot: str
     candidates: tuple[str, ...]
@@ -91,6 +209,13 @@ class ActionFailed:
     action: str
 
 
+@dataclass(frozen=True)
+class InvalidPercent:
+    """A number outside 0-100 was given for a level or a step."""
+
+    raw: str
+
+
 Success = (
     AppOpened
     | AppClosed
@@ -98,14 +223,43 @@ Success = (
     | VolumeChanged
     | Muted
     | Unmuted
+    | SearchOpened
+    | MediaToggled
+    | MediaNext
+    | MediaPrevious
+    | NowPlaying
+    | Locked
+    | ShuttingDown
+    | Restarting
+    | Suspending
+    | SigningOut
+    | ScreenshotSaved
+    | SnipOpened
+    | SettingsOpened
+    | BrightnessSet
+    | BrightnessChanged
+    | MemoryStatus
+    | CpuStatus
+    | DiskStatus
     | ExampleLearned
     | AliasLearned
     | AlreadyKnown
     | Forgotten
     | NothingToForget
+    | NothingToRepeat
     | Cancelled
 )
-Failure = AppNotFound | AppNotRunning | AmbiguousSlot | ActionFailed
+Failure = (
+    AppNotFound
+    | AppNotRunning
+    | AmbiguousSlot
+    | ActionFailed
+    | InvalidPercent
+    | CannotCloseSite
+    | NoMediaSession
+    | UnknownSettingsPage
+    | BrightnessUnsupported
+)
 Outcome = Success | Failure
 
 _FAILURE_TYPES: tuple[type, ...] = get_args(Failure)

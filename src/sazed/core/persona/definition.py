@@ -9,7 +9,7 @@ from __future__ import annotations
 from enum import Enum
 
 from sazed.core.decisions import AskSlot, Confirm
-from sazed.core.outcomes import AppNotFound
+from sazed.core.outcomes import AppNotFound, NowPlaying
 
 TRAITS: tuple[str, ...] = (
     "Guardião terrisano: erudito gentil, cortês e muito educado.",
@@ -26,12 +26,14 @@ class Prompt(Enum):
     CONFLICT_ASK = "conflict_ask"
     GREETING = "greeting"
     FAREWELL = "farewell"
+    LEARN_FAILED = "learn_failed"
 
 
 VARIANT_KEYS: dict[type, tuple[str, ...]] = {
     AppNotFound: ("AppNotFound", "AppNotFound.suggestion"),
     Confirm: ("Confirm", "ConfirmDestructive"),
     AskSlot: ("AskSlot", "AskSlotChoice"),
+    NowPlaying: ("NowPlaying", "NowPlaying.no_artist"),
 }
 
 
@@ -60,6 +62,31 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
     "VolumeChanged": ("Pronto, {mestre}. Volume em {percent}%.", "Volume agora em {percent}%."),
     "Muted": ("Som silenciado, {mestre}.", "Pronto. Silêncio, como pediu."),
     "Unmuted": ("O som está de volta, {mestre}.", "Pronto. Som reativado."),
+    "MediaToggled": ("Feito, {mestre}.", "Pronto, {mestre}."),
+    "MediaNext": ("Próxima faixa, {mestre}.", "Pulando para a próxima, {mestre}."),
+    "MediaPrevious": ("Voltando para a anterior, {mestre}.",),
+    "NowPlaying": ("Está tocando '{title}', de {artist}, {mestre}.",),
+    "NowPlaying.no_artist": ("Está tocando '{title}', {mestre}.",),
+    "NoMediaSession": ("Não há nada tocando no momento, {mestre}.",),
+    "Locked": ("Computador bloqueado, {mestre}.",),
+    "ShuttingDown": ("Desligando em alguns segundos. Até logo, {mestre}.",),
+    "Restarting": ("Reiniciando em alguns segundos, {mestre}. Já volto.",),
+    "Suspending": ("Suspendendo o computador, {mestre}.",),
+    "SigningOut": ("Saindo da sua conta, {mestre}. Até logo.",),
+    "ScreenshotSaved": ("Capturei a tela, {mestre}: {file_name}.",),
+    "SnipOpened": ("Selecione a área da tela, {mestre}.",),
+    "SettingsOpened": ("Abrindo as configurações ({page}), {mestre}.",),
+    "UnknownSettingsPage": ("Não conheço a página de configurações '{raw}', {mestre}.",),
+    "BrightnessSet": ("Brilho em {percent}%, {mestre}.",),
+    "BrightnessChanged": ("Pronto, {mestre}. Brilho em {percent}%.",),
+    "BrightnessUnsupported": ("Este monitor não permite ajustar o brilho por software, {mestre}.",),
+    "MemoryStatus": ("Há {free} livres de {total} de memória, {mestre}.",),
+    "CpuStatus": ("O processador está com {percent} de uso, {mestre}.",),
+    "DiskStatus": ("Espaço em disco, {mestre}: {disks}.",),
+    "SearchOpened": (
+        "Abrindo a busca por '{query}' em {engine}, {mestre}.",
+        "Pesquisando '{query}' em {engine}, {mestre}.",
+    ),
     "ExampleLearned": (
         "Guardarei isso em minha mente de cobre, {mestre}: '{text}'.",
         "Anotado em minha mente de cobre, {mestre}.",
@@ -74,6 +101,7 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
         "Removido de minha mente de cobre, {mestre}: {description}.",
     ),
     "NothingToForget": ("Não há nada recente para esquecer, {mestre}.",),
+    "NothingToRepeat": ("Não há nada recente para repetir, {mestre}.",),
     "Cancelled": ("Como desejar, {mestre}.", "Está bem, {mestre}. Não farei nada."),
     # Outcomes: failures
     "AppNotFound": (
@@ -86,6 +114,10 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
         "Peço desculpas, {mestre}. Não consegui {action}.",
         "Algo deu errado ao tentar {action}, {mestre}. Peço desculpas.",
     ),
+    "CannotCloseSite": (
+        "Não consigo fechar abas do navegador, {mestre}. {app} fica por sua conta.",
+    ),
+    "InvalidPercent": ("Só consigo ajustar de 0 a 100%, {mestre}. '{raw}' fica fora disso.",),
     # Decisions
     "Execute": ("Pois não, {mestre}.",),
     "Confirm": ("Devo {acao}, {mestre}?", "Entendi que deseja {acao}. Confirma, {mestre}?"),
@@ -107,4 +139,7 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
     ),
     "greeting": ("Às suas ordens, {mestre}.", "Estou aqui, {mestre}."),
     "farewell": ("Até logo, {mestre}.",),
+    "learn_failed": (
+        "Peço desculpas, {mestre}: não consegui guardar isso em minha mente de cobre.",
+    ),
 }
