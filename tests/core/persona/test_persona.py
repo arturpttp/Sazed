@@ -113,3 +113,23 @@ def test_file_not_found_names_the_kind() -> None:
 
     text = render(FileNotFound("gastos", "nenhuma planilha chamada"), nome="Artur", rng=Random(0))
     assert text == "Não encontrei nenhuma planilha chamada 'gastos', Mestre Artur."
+
+
+def test_a_change_plan_is_asked_with_its_exact_effect() -> None:
+    from sazed.core.outcomes import FileChangeProposed
+
+    text = render(
+        FileChangeProposed("Mover relatório.docx de Downloads para Documentos"),
+        nome="Artur",
+        rng=Random(0),
+    )
+    assert text == "Mover relatório.docx de Downloads para Documentos. Confirma, Mestre Artur?"
+
+
+def test_bad_name_and_busy_file_explain_themselves() -> None:
+    from sazed.core.outcomes import BadName, FileBusy
+
+    bad = render(BadName("a/b", "não pode ter /"), nome="Artur", rng=Random(0))
+    assert bad == "Esse nome não serve para arquivos, Mestre Artur: não pode ter /."
+    busy = render(FileBusy("mover", "x.docx"), nome="Artur", rng=Random(0))
+    assert busy.startswith("Não consegui mover x.docx, Mestre Artur: ele está aberto")

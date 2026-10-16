@@ -335,6 +335,100 @@ class NothingRecent:
     pass
 
 
+# File changes (sub-project 2c)
+
+
+@dataclass(frozen=True)
+class FileChangeProposed:
+    action: str
+
+
+@dataclass(frozen=True)
+class FileMoved:
+    name: str
+    folder: str
+
+
+@dataclass(frozen=True)
+class FileCopied:
+    name: str
+    folder: str
+
+
+@dataclass(frozen=True)
+class FileRenamed:
+    old: str
+    new: str
+
+
+@dataclass(frozen=True)
+class FileRecycled:
+    name: str
+
+
+@dataclass(frozen=True)
+class FolderCreated:
+    name: str
+    folder: str
+
+
+@dataclass(frozen=True)
+class ChangeUndone:
+    action: str
+
+
+@dataclass(frozen=True)
+class Protected:
+    name: str
+
+
+@dataclass(frozen=True)
+class IntoItself:
+    name: str
+
+
+@dataclass(frozen=True)
+class BadName:
+    name: str
+    reason: str
+
+
+@dataclass(frozen=True)
+class NameTaken:
+    name: str
+
+
+@dataclass(frozen=True)
+class PlanChanged:
+    pass
+
+
+@dataclass(frozen=True)
+class FileBusy:
+    action: str
+    name: str
+
+
+@dataclass(frozen=True)
+class NoRecycleBin:
+    name: str
+
+
+@dataclass(frozen=True)
+class NothingToUndo:
+    pass
+
+
+@dataclass(frozen=True)
+class UndoStale:
+    name: str
+
+
+@dataclass(frozen=True)
+class NotInRecycleBin:
+    name: str
+
+
 Success = (
     AppOpened
     | AppClosed
@@ -379,6 +473,13 @@ Success = (
     | FileOpened
     | ProgramRevealed
     | RecentFiles
+    | FileChangeProposed
+    | FileMoved
+    | FileCopied
+    | FileRenamed
+    | FileRecycled
+    | FolderCreated
+    | ChangeUndone
 )
 Failure = (
     AppNotFound
@@ -400,6 +501,16 @@ Failure = (
     | FolderNotFound
     | FileGone
     | NothingRecent
+    | Protected
+    | IntoItself
+    | BadName
+    | NameTaken
+    | PlanChanged
+    | FileBusy
+    | NoRecycleBin
+    | NothingToUndo
+    | UndoStale
+    | NotInRecycleBin
 )
 Outcome = Success | Failure
 
