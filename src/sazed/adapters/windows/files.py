@@ -166,7 +166,9 @@ class WindowsFileSearch:
         return self._query(search_sql(words, extensions, self._scopes, limit))
 
     def folders(self, words: Sequence[str], limit: int) -> list[FileHit]:
-        return self._query(folders_sql(words, self._scopes, limit))
+        hits = self._query(folders_sql(words, self._scopes, limit))
+        # The index counts a .zip as a "compressed folder": only real folders are folders here.
+        return [h for h in hits if os.path.isdir(h.path)]
 
     def newest(self, folder: str, since: datetime | None, limit: int) -> list[FileHit]:
         # One known folder: listing it is cheap and always current, while the index lags

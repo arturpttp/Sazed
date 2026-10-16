@@ -1066,3 +1066,11 @@ intent = "none"
 [[case]]
 text = "criei coragem e fui"
 intent = "none"
+
+[[case]]
+text = "apaga a pasta downloads pra mim"
+intent = "arquivo_apagar"
+
+[[case]]
+text = "abre a pasta de downloads aí"
+intent = "abrir_pasta"

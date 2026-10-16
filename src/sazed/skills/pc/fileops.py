@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import ntpath
 import re
+import unicodedata
 from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
@@ -43,6 +44,7 @@ from sazed.core.outcomes import (
 from sazed.core.skill import IntentSpec, SkillContext, SlotSpec
 from sazed.core.types import Slots, SlotValue, Unmatched
 from sazed.skills.pc.files import (
+    FOLDER_SYNONYMS,
     KIND_EXTENSIONS,
     KIND_PHRASES,
     KNOWN_FOLDERS,
@@ -459,6 +461,9 @@ DELETE_EXAMPLES = (
     "apaga o arquivo contrato",
     "deleta o último download",
     "apaga a pasta viagem",
+    "apaga a pasta documentos",
+    "deleta a pasta de imagens",
+    "apaga a pasta downloads",
     "joga a planilha de gastos no lixo",
     "exclui o pdf do boleto",
     "manda a foto da praia pra lixeira",
@@ -502,6 +507,14 @@ _KINDS: dict[str, ChangeKind] = {
 DEFAULT_CREATE_FOLDER = "Área de Trabalho"
 _ITEM = SlotSpec("item", True, "Qual arquivo ou pasta?")
 _KIND_SLOT = SlotSpec("tipo", False, "De que tipo é o arquivo?")
+
+
+def _fold(text: str) -> str:
+    decomposed = unicodedata.normalize("NFKD", text.strip())
+    plain = "".join(c for c in decomposed if not unicodedata.combining(c)).casefold()
+    return " ".join(
+        w for w in plain.split() if w not in ("a", "o", "de", "da", "do", "meus", "minhas")
+    )
 
 
 def _value(slots: Slots, name: str) -> str | None:
@@ -590,6 +603,17 @@ class FileOpsSkill:
         self._shown = shown
         return AmbiguousSlot(slot, tuple(shown))
 
+    def _known_folder(self, words: str) -> str | None:
+        """The pt-BR name of a known or configured folder `words` names, if any."""
+        key = _fold(words)
+        for name in self._folders.names():
+            if _fold(name) == key:
+                return name
+        for synonym, name in FOLDER_SYNONYMS.items():
+            if _fold(synonym) == key:
+                return name
+        return None
+
     def _item_path(self, slots: Slots, now: datetime) -> str | Outcome:
         value = _value(slots, "item")
         if value is None:
@@ -605,13 +629,23 @@ class FileOpsSkill:
                 newest = self._search.newest(folder, None, 1)
                 return newest[0].path if newest else NothingRecent()
             if how == "pasta":
+                known = self._known_folder(words)
+                if known is not None:  # "apaga a pasta downloads": the folder itself
+                    return Protected(known)
                 hits = self._search.folders(words.split(), SEARCH_LIMIT)
-                return self._choose("item", hits, now) if hits else FolderNotFound(words)
+                allowed = [h for h in hits if check_source(h.path, self._area) is None]
+                if hits and not allowed:
+                    return Protected(hits[0].name)
+                return self._choose("item", allowed, now) if allowed else FolderNotFound(words)
             kind = _value(slots, "tipo")
             extensions = KIND_EXTENSIONS.get(kind, ()) if kind is not None else ()
             hits = self._search.search(words.split(), extensions, SEARCH_LIMIT)
         except SearchError:
             return SearchUnavailable()
+        allowed = [h for h in hits if check_source(h.path, self._area) is None]
+        if hits and not allowed:
+            return Protected(hits[0].name)
+        hits = allowed
         if not hits:
             return FileNotFound(words, KIND_PHRASES.get(kind, KIND_PHRASES[None]))
         exact = [h for h in hits if is_exact(h, words)]
@@ -624,7 +658,12 @@ class FileOpsSkill:
                 hits = self._search.folders(found.raw.split(), SEARCH_LIMIT)
             except SearchError:
                 return SearchUnavailable()
-            return self._choose("destino", hits, now) if hits else FolderNotFound(found.raw)
+            allowed = [h for h in hits if check_destination(h.path, self._area) is None]
+            if hits and not allowed:
+                return Protected(found.raw)
+            if not allowed:
+                return FolderNotFound(found.raw)
+            return self._choose("destino", allowed, now)
         name = str(found.value) if isinstance(found, SlotValue) else default
         if name is None:
             raise ValueError("a file change called without its destination")

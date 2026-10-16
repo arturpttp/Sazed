@@ -126,3 +126,23 @@ def test_folders_search_goes_through_the_index(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setattr(search, "_query", lambda sql: seen.append(sql) or [])
     assert search.folders(["viagem"], 6) == []
     assert "System.Kind = 'folder'" in seen[0]
+
+
+def test_folder_search_keeps_real_folders_only(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Seen on the real index: a .zip is a "compressed folder" (System.Kind = folder).
+    from sazed.adapters.windows.files import WindowsFileSearch
+    from sazed.skills.pc.files import FileHit
+
+    real = tmp_path / "windows"
+    real.mkdir()
+    archive = tmp_path / "jdk_windows.zip"
+    archive.write_bytes(b"PK")
+    hits = [
+        FileHit(str(archive), archive.name, tmp_path.name, datetime(2026, 1, 1)),
+        FileHit(str(real), real.name, tmp_path.name, datetime(2026, 1, 1)),
+    ]
+    search = WindowsFileSearch([str(tmp_path)])
+    monkeypatch.setattr(search, "_query", lambda sql: hits)
+    assert [h.name for h in search.folders(["windows"], 6)] == ["windows"]

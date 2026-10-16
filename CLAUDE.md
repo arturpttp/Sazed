@@ -53,7 +53,11 @@ Sazed, the Terris Keeper from *Mistborn*. Read [`AGENTS.md`](./AGENTS.md) and
   newest download read from the folder); minors deferred in the 2b ledger.
 - 2026-10-16: 2b merged into `main`. 2c (move, copy, rename, delete, new folder, undo) spec:
   [`docs/superpowers/specs/2026-10-16-sazed-file-changes-2c-design.md`](./docs/superpowers/specs/2026-10-16-sazed-file-changes-2c-design.md).
-- **Next step:** user review of the 2c spec, then its plan.
+- 2c implemented on `feat/sub-project-2c` per its plan
+  ([`docs/superpowers/plans/2026-10-16-sazed-file-changes-2c.md`](./docs/superpowers/plans/2026-10-16-sazed-file-changes-2c.md)).
+  Proofs: [`docs/superpowers/proofs/2026-10-16-sub-project-2c.md`](./docs/superpowers/proofs/2026-10-16-sub-project-2c.md).
+  Fixture 233 cases: accuracy 0.919, false-execute 0.000 (file-change proposals count as asked).
+- **Next step:** final review of `feat/sub-project-2c`, then the user's merge decision.
 
 ## Measurements
 
@@ -134,3 +138,11 @@ a real foreground refusal (covered with fakes); `test_store_calculator_opens_and
 was asleep and Windows suspended each new Calculator before its frame appeared; re-run it with
 the screen on; maximising Character Map (fixed size; the Tk
 window in the `-m windows` suite covers maximise and snap).
+2026-10-16, sub-project 2c, real model, index and Recycle Bin, through the real `Assistant`
+(temp data dir, on files the script created): move / rename / copy / new folder / delete, each
+asked once with its exact effect, each undone with "desfaz isso" (the delete restored from the
+real Recycle Bin); "apaga a pasta downloads" and "renomeia a pasta documentos pra docs" →
+"Por segurança, não mexo em …". Two test items (an undone copy and folder) remain in the
+Recycle Bin by design. Startup after 2c: 2.9 s (484 seed examples), RSS +430 MB.
+**Unverified (2c):** a move to another drive on the real disk (no `[folders]` entry on a second
+drive; the copy-verify-remove path is covered with fakes).

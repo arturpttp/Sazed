@@ -89,3 +89,24 @@ Remaining 2c misrankings all ask: "apaga o arquivo orçamento" (abrir_arquivo 0.
 gap under g_min → "abrir o arquivo orçamento?"), "manda o último download pro lixo" (mover →
 "Para qual pasta?"), "transfere a pasta fotos antigas pra documentos" (copiar 0.938 vs 0.937 →
 the plan says "Copiar…", the user can say no).
+
+## Task 11: by hand on the real disk, index and Recycle Bin
+Through the real `Assistant` (temp data dir) on a file the script created under Documents:
+move → "Mover … de sazed-teste-… para Documentos. Confirma?" → sim → moved → "desfaz isso" →
+"Devolver … de Documentos para …" → sim → back; rename (case kept: "Orçamento Final.txt") and
+back; copy and its undo (the copy to the Recycle Bin); new folder and its undo; delete to the
+real Recycle Bin and "desfaz" → restored. Log: five changes, all undone. Nothing learned.
+
+Found only on the real machine, each fixed with a test that failed first:
+- "apaga a pasta downloads" listed five other folders named "downloads" (game mod packs):
+  a known or configured folder named as the item is now recognised first and refused —
+  `test_a_known_folder_named_as_the_item_is_refused_by_its_pt_br_name`.
+- "renomeia a pasta documentos pra docs" said the folder did not exist (it is "Documents" on
+  disk): now "Por segurança, não mexo em Documentos" (same test).
+- "pra pasta windows" offered folders under AppData\Local\Packages: search results are filtered
+  through the area rules before being offered — `test_search_results_outside_the_area_are_never_offered`.
+- The index counts a `.zip` as a folder: `folders()` keeps real directories only —
+  `test_folder_search_keeps_real_folders_only`.
+- "apaga a pasta downloads" ranked opening the folder: delete seeds now share the folder objects
+  ("apaga a pasta downloads"); fixture 233 cases, accuracy 0.919, false-execute 0.000.
+Startup 2.91–2.95 s (2b: 2.5 s; 484 seed examples), RSS +430 MB unchanged.

@@ -263,3 +263,36 @@ def test_every_file_change_intent_confirms_itself_and_is_never_learned() -> None
         "pasta_criar",
     }
     assert all(s.confirms_itself and not s.learnable and not s.repeatable for s in skill.intents)
+
+
+# found on the real machine (2026-10-16) ----------------------------------------------------
+
+
+def test_a_known_folder_named_as_the_item_is_refused_by_its_pt_br_name() -> None:
+    other_downloads = ItemState(rf"{DOCS}\modpack\downloads", True, 1, 1.0, 1)
+    skill, disk, _ = make([other_downloads])
+    assert skill.execute("arquivo_apagar", slots(item="pasta:downloads"), CTX) == Protected(
+        "Downloads"
+    )
+    assert skill.execute(
+        "arquivo_renomear", slots(item="pasta:documentos", novo_nome="docs"), CTX
+    ) == Protected("Documentos")
+    assert disk.calls == []
+
+
+def test_search_results_outside_the_area_are_never_offered() -> None:
+    inside = ItemState(rf"{DOCS}\windows", True, 0, 1.0, 0)
+    appdata = ItemState(rf"{P}\AppData\Local\Packages\windows", True, 0, 1.0, 0)
+    skill, _, _ = make([REPORT, inside, appdata])
+    found = skill.execute(
+        "arquivo_mover",
+        slots(item="arquivo:relatório", destino=Unmatched("destino", "windows", None)),
+        CTX,
+    )
+    assert found == FileChangeProposed("Mover relatório.docx de Downloads para windows")
+
+
+def test_only_protected_matches_means_protected() -> None:
+    appdata = ItemState(rf"{P}\AppData\Local\viagem", True, 0, 1.0, 0)
+    skill, _, _ = make([appdata])
+    assert skill.execute("arquivo_apagar", slots(item="pasta:viagem"), CTX) == Protected("viagem")
