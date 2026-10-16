@@ -125,3 +125,13 @@ mutation (re-add "minimiza o programa") → `AssertionError: assert {'abrir_app'
 "abre o último print que eu tirei" read the folder as "print que eu tirei" (Unmatched → "a pasta
 não existe"); fixed by matching a known name or synonym as a run of words inside the phrase.
 `test_a_folder_named_inside_a_longer_phrase` failed first (2 of 3 cases).
+
+## Task 11: `learning.t_conflict` 0.92 → 0.95 (measured; it was an unmeasured placeholder)
+By hand, every confirmed window command asked "'minimiza o programa' se parece com outro
+pedido… Guardo mesmo assim?" and learned nothing. Nearest seeds (real model): "minimiza o
+programa" → `area_trabalho_mostrar` "minimiza tudo" 0.939; "restaura o programa" →
+`area_trabalho_voltar` "restaura tudo" 0.923; "vai pro programa" → `abrir_app` "abre o programa"
+0.922 — related commands, not the same one. A real conflict sits at ~1.0 ("fecha o programa"
+taught as `abrir_app`). With 0.92, `test_a_confirmed_window_command_is_learned_without_a_conflict_question`
+fails for both cases (`assert [] == [('minimiza aí o programa', 'janela_minimizar')]`); with
+0.95 they pass and `test_a_real_conflict_is_still_asked_before_learning` still passes.

@@ -105,7 +105,7 @@ class NluConfig(_Section):
 
 
 class LearningConfig(_Section):
-    t_conflict: float = Field(0.92, ge=0, le=1)
+    t_conflict: float = Field(0.95, ge=0, le=1)
     t_dup: float = Field(0.97, ge=0, le=1)
 
 

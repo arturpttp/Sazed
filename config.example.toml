@@ -11,7 +11,7 @@ t_confirm = 0.88
 g_min = 0.01
 
 [learning]
-t_conflict = 0.92
+t_conflict = 0.95
 t_dup = 0.97
 
 [dialogue]

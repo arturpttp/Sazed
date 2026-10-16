@@ -25,7 +25,8 @@ Sazed, the Terris Keeper from *Mistborn*. Read [`AGENTS.md`](./AGENTS.md) and
   forbids fixture phrases that copy a seed.
 - e5-small weighs the object (app name, number) over the verb: seeds deliberately share objects
   across opposing intents (open/close, up/down/set) so the verb decides. Keep that when adding seeds.
-- **Unverified:** `learning.t_conflict` / `t_dup` are placeholders (no fixture measures them yet);
+- `learning.t_conflict` raised to 0.95 in 2b (measured: related commands sit at 0.92–0.94, a
+  real conflict near 1.0; see the 2b proofs). **Unverified:** `t_dup` is still a placeholder;
   closing apps whose shortcut targets a launcher.
 - **Fixed (2026-10-15):** once "abre o whatsapp" was learned from a confirmation, "fecha o
   whatsapp" ranked `abrir_app` (e5 weighs the object). Learned phrases now store "programa" in
