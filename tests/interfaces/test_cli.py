@@ -195,11 +195,12 @@ def test_main_help_shows_how_to_manage_what_was_learned(
         "sazed aprendizado --esquecer",
         "sazed revisar --rotular",
         "--forcar",
+        "sazed painel",
     ):
         assert usage in out
 
 
-@pytest.mark.parametrize("command", ["aprendizado", "revisar"])
+@pytest.mark.parametrize("command", ["aprendizado", "revisar", "painel"])
 def test_subcommand_help_says_uso_once(command: str, capsys: pytest.CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit):
         main([command, "--ajuda"])

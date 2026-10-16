@@ -27,7 +27,8 @@ EXAMPLES = """exemplos:
   sazed aprendizado --esquecer e3        esquece um item aprendido
   sazed revisar                          lista falhas recentes, com o número de cada pedido
   sazed revisar --rotular 12 abrir_app   ensina o que o pedido 12 queria dizer
-      (acrescente --forcar para guardar mesmo se parecer outro pedido)"""
+      (acrescente --forcar para guardar mesmo se parecer outro pedido)
+  sazed painel                           abre o painel local em http://127.0.0.1:8765"""
 
 
 class _Formatter(argparse.RawDescriptionHelpFormatter):
