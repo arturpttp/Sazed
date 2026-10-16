@@ -19,6 +19,8 @@ from typing import Any
 
 from sazed.adapters.sqlite.coppermind import SqliteCoppermind
 from sazed.core.coppermind import LearnedKind, NoteTarget, Snapshot
+
+__all__ = ["Editor", "EditorUnavailable", "NoteTarget", "WriteOutcome"]
 from sazed.runtime import admin
 from sazed.runtime.config import Config
 from sazed.runtime.skills import PcPorts, build_skills

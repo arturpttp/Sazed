@@ -53,6 +53,8 @@ class CatalogEntry(Protocol):
     def target(self) -> str: ...
     @property
     def shortcut(self) -> str: ...
+    @property
+    def kind(self) -> str: ...
 
 
 class BadRequest(Exception):
@@ -178,6 +180,7 @@ class DashboardApi:
         e: Any,
         examples: Sequence[tuple[str, str]],
         aliases: Sequence[tuple[str, str]],
+        notes: Mapping[tuple[str, int], list[dict[str, Any]]] | None = None,
     ) -> dict[str, Any]:
         return {
             "id": e.id,
@@ -196,7 +199,14 @@ class DashboardApi:
                 e.ranking, e.decision, e.slots, e.intent_id, self._skills, self._thresholds
             ),
             "learned": learned_for(e.utterance, examples, aliases),
+            "notes": (notes or {}).get(("episode", e.id), []),
         }
+
+    def _notes(self) -> dict[tuple[str, int], list[dict[str, Any]]]:
+        grouped: dict[tuple[str, int], list[dict[str, Any]]] = {}
+        for note in self._reader.notes():
+            grouped.setdefault((note.target, note.target_id), []).append(asdict(note))
+        return grouped
 
     def episodes(
         self, limit: int, offset: int, q: str | None, decision: str | None, intent: str | None
@@ -205,6 +215,7 @@ class DashboardApi:
         total = self._reader.count_episodes(search=q, decision=decision, intent=intent)
         examples = [(x.text, x.intent_id) for x in self._reader.examples(limit=100_000)]
         aliases = [(a.alias, a.value) for a in self._reader.aliases()]
+        notes = self._notes()
         return {
             "available": True,
             "total": total,
@@ -212,15 +223,23 @@ class DashboardApi:
             "offset": offset,
             "thresholds": asdict(self._thresholds),
             "decisions": DECISION_LABELS,
-            "items": [self._episode(e, examples, aliases) for e in rows],
+            "items": [self._episode(e, examples, aliases, notes) for e in rows],
         }
 
     def examples(self, q: str | None, limit: int) -> dict[str, Any]:
-        items = [asdict(x) for x in self._reader.examples(q, limit=limit)]
+        notes = self._notes()
+        items = [
+            {**asdict(x), "notes": notes.get(("example", x.id), [])}
+            for x in self._reader.examples(q, limit=limit)
+        ]
         return {"available": True, "items": items}
 
     def aliases(self, q: str | None) -> dict[str, Any]:
-        return {"available": True, "items": [asdict(a) for a in self._reader.aliases(q)]}
+        notes = self._notes()
+        items = [
+            {**asdict(a), "notes": notes.get(("alias", a.id), [])} for a in self._reader.aliases(q)
+        ]
+        return {"available": True, "items": items}
 
     def _turns(self) -> list[Turn]:
         return [
@@ -317,7 +336,7 @@ class DashboardApi:
             return unavailable("Não consegui ler o catálogo de programas do Menu Iniciar.")
         needle = (q or "").casefold()
         items = [
-            {"name": e.name, "target": e.target, "shortcut": e.shortcut}
+            {"name": e.name, "target": e.target, "shortcut": e.shortcut, "kind": e.kind}
             for e in entries
             if needle in e.name.casefold()
         ]

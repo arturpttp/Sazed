@@ -23,7 +23,7 @@ from sazed.nlu.normalize import normalize, strip_accents
 from sazed.runtime.config import Config, load_config
 from sazed.runtime.editing import inert_ports
 from sazed.runtime.skills import build_skills
-from sazed.skills.pc.apps import AppEntry, StaticCatalog
+from sazed.skills.pc.apps import AppEntry, CombinedCatalog, StaticCatalog, site_entries
 
 __all__ = [
     "FAILURE_OUTCOMES",
@@ -301,9 +301,11 @@ class _Catalog(Protocol):
     def entries(self) -> Sequence[AppEntry]: ...
 
 
-def default_catalog() -> Callable[[], Sequence[AppEntry]]:
-    """The real Start-menu catalog, scanned on first use."""
-    from sazed.adapters.windows.catalog import StartMenuCatalog
+def default_catalog(config: Config) -> Callable[[], Sequence[AppEntry]]:
+    """Everything Sazed can open: Start menu, Store apps and configured sites (lazy scan)."""
+    from sazed.runtime.editing import real_catalog
 
-    catalog: _Catalog = StartMenuCatalog()
+    catalog: _Catalog = CombinedCatalog(
+        [real_catalog(), StaticCatalog(site_entries(config.effective_sites()))]
+    )
     return catalog.entries

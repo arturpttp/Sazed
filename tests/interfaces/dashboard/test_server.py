@@ -3,63 +3,17 @@ import json
 import re
 import threading
 from collections.abc import Iterator
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-from fakes.ports import FakeCatalog
-from fakes.system import FakeProbe, broken_git
-from sazed.adapters.sqlite.coppermind import SqliteCoppermind
-from sazed.core.coppermind import Episode, NewAlias, NewExample, Reaction
-from sazed.core.types import IntentScore
 from sazed.interfaces.dashboard.api import DashboardApi
 from sazed.interfaces.dashboard.server import HOST, DashboardHandler, make_server
-from sazed.interfaces.dashboard.sources import DevSources, ResourceSampler
-from sazed.runtime.insight import CoppermindReader, config_view, skills_for_listing
+from sazed.runtime.insight import skills_for_listing
+from support.dashboard import ENDPOINTS, build_api
 
-NOW = datetime(2026, 10, 15, 12, 0)
 SVG_NAMESPACE = b"http://www.w3.org/2000/svg"
-
-
-def seed(db: Path) -> None:
-    store = SqliteCoppermind(db)
-    store.learn([NewExample("abre o zap", "abrir_app", b"\x00", "confirmed")], [], NOW)
-    store.learn([], [NewAlias("app", "zap", "WhatsApp")], NOW)
-    ranking = (IntentScore("abrir_app", 0.97), IntentScore("fechar_app", 0.90))
-    slots = {"app": "WhatsApp"}
-    store.record_episode(
-        Episode("abre o zap", NOW, ranking, slots, "Execute", "abrir_app", "AppOpened")
-    )
-    second = store.record_episode(
-        Episode("toca algo", NOW, (IntentScore("abrir_app", 0.5),), {}, "NotUnderstood", None, "")
-    )
-    store.set_reaction(second, Reaction.NONE)
-    store.close()
-
-
-def build_api(tmp_path: Path, *, with_db: bool = True, reader: Any = None) -> DashboardApi:
-    data = tmp_path / "data"
-    data.mkdir()
-    config_path = tmp_path / "config.toml"
-    config_path.write_text(
-        f'[data]\ndir = "{data.as_posix()}"\n[aliases]\napi_key = "sk-SEGREDO"\n',
-        encoding="utf-8",
-    )
-    if with_db:
-        seed(data / "coppermind.db")
-    view = config_view(config_path)
-    return DashboardApi(
-        view=view,
-        config_path=config_path,
-        reader=reader or CoppermindReader(data / "coppermind.db"),
-        dev=DevSources(tmp_path, git=broken_git),
-        sampler=ResourceSampler(FakeProbe(), own_pid=999),
-        catalog=lambda: FakeCatalog(["WhatsApp", "Google Chrome"]).entries(),
-        clock=lambda: NOW,
-        wall=lambda: 1000.0,
-    )
 
 
 @pytest.fixture
@@ -100,19 +54,6 @@ def test_binds_to_loopback_only(tmp_path: Path) -> None:
         server.server_close()
 
 
-ENDPOINTS = [
-    "/api/overview",
-    "/api/episodes",
-    "/api/learning",
-    "/api/dev",
-    "/api/resources",
-    "/api/examples",
-    "/api/aliases",
-    "/api/capabilities",
-    "/api/catalog",
-]
-
-
 def test_routes_list_is_the_one_tested() -> None:
     assert sorted(DashboardApi.ROUTES) == sorted(ENDPOINTS)
 
@@ -150,9 +91,9 @@ def test_only_get_is_served(served: tuple[int, DashboardApi], method: str) -> No
     assert headers["Allow"] == "GET"
 
 
-def test_every_handler_method_other_than_get_refuses() -> None:
+def test_every_handler_method_other_than_get_and_post_refuses() -> None:
     names = {n for n in dir(DashboardHandler) if n.startswith("do_")}
-    assert names == {"do_GET"}  # any other verb goes through __getattr__ → 405
+    assert names == {"do_GET", "do_POST"}  # any other verb goes through __getattr__ → 405
 
 
 def test_unknown_path_is_404(served: tuple[int, DashboardApi]) -> None:
@@ -226,6 +167,7 @@ def test_capabilities_redact_and_list_skills(served: tuple[int, DashboardApi]) -
 def test_catalog_search(served: tuple[int, DashboardApi]) -> None:
     data = get_json(served[0], "/api/catalog?q=chrome")
     assert [e["name"] for e in data["items"]] == ["Google Chrome"]
+    assert data["items"][0]["kind"] == "lnk"
     assert data["total"] == 2
 
 

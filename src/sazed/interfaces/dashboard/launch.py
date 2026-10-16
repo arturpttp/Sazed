@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import secrets
 import time
 from collections.abc import Callable
 from datetime import datetime
@@ -13,7 +14,9 @@ from pathlib import Path
 from sazed.interfaces.dashboard.api import DashboardApi
 from sazed.interfaces.dashboard.server import HOST, make_server
 from sazed.interfaces.dashboard.sources import DevSources, PsutilProbe, ResourceSampler
+from sazed.interfaces.dashboard.writes import WriteApi
 from sazed.runtime.config import DEFAULT_CONFIG_PATH, PROJECT_ROOT, ConfigError
+from sazed.runtime.editing import Editor
 from sazed.runtime.insight import (
     ConfigView,
     CoppermindReader,
@@ -33,7 +36,7 @@ def build_api(view: ConfigView, config_path: Path, root: Path) -> DashboardApi:
         reader=CoppermindReader(coppermind_path(view.config)),
         dev=DevSources(root),
         sampler=ResourceSampler(PsutilProbe(), own_pid=os.getpid()),
-        catalog=default_catalog(),
+        catalog=default_catalog(view.config),
         clock=datetime.now,  # the dashboard's only clock; everything below takes `now`
         wall=time.time,
     )
@@ -65,24 +68,26 @@ def run(
     config = view.config
     setup_logging(config.data.dir / "logs", debug=config.logging.debug, filename="painel.log")
     api = build_api(view, path, root or PROJECT_ROOT)
+    # Writes load the model only when first needed; reads never do.
+    writes = WriteApi(Editor(config, clock=datetime.now))
+    token = secrets.token_urlsafe(32)  # per launch, embedded in the page, required on POST
     try:
-        server = make_server(api, port)
+        server = make_server(api, port, writes=writes, token=token)
     except OSError:
+        writes.close()
         log.exception("could not bind the dashboard to port %s", port)
         out(
             f"Não consegui abrir a porta {port}; talvez já esteja em uso. "
             "Escolha outra com --porta."
         )
         return 2
-    out(
-        f"Painel de Sazed em http://{HOST}:{server.server_address[1]}/ "
-        "(somente leitura). Ctrl+C para encerrar."
-    )
+    out(f"Painel de Sazed em http://{HOST}:{server.server_address[1]}/ Ctrl+C para encerrar.")
     try:
         serve(server)
     except KeyboardInterrupt:
         pass
     finally:
         server.server_close()
+        writes.close()
     out("Painel encerrado.")
     return 0

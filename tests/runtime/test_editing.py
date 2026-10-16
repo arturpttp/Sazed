@@ -3,41 +3,16 @@
 import sqlite3
 from datetime import datetime
 from pathlib import Path
-from random import Random
 
 import pytest
 
-from fakes.clock import ManualClock
-from fakes.embedder import HashingEmbedder
-from fakes.ports import fake_pc_ports
 from sazed.core.coppermind import NoteTarget
 from sazed.runtime.config import Config, DataConfig, ModelConfig
 from sazed.runtime.editing import Editor, EditorUnavailable, build_editing_app
-from sazed.runtime.wiring import SazedApp, build_app
+from support.editing import NAMES, AppFactory
 
-NAMES = ["WhatsApp", "Discord"]
 FRESH = "me mostra o mensageiro verde"
 T = datetime(2026, 10, 15, 12, 0)
-
-
-class AppFactory:
-    def __init__(self, error: Exception | None = None) -> None:
-        self.calls = 0
-        self.error = error
-        self.app: SazedApp | None = None
-
-    def __call__(self, config: Config) -> SazedApp:
-        self.calls += 1
-        if self.error is not None:
-            raise self.error
-        self.app = build_app(
-            config,
-            embedder=HashingEmbedder(),
-            ports=fake_pc_ports(NAMES),
-            clock=ManualClock(),
-            rng=Random(0),
-        )
-        return self.app
 
 
 def make_editor(tmp_path: Path, factory: AppFactory | None = None) -> tuple[Editor, AppFactory]:
