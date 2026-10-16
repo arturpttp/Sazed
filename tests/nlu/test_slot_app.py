@@ -1,3 +1,5 @@
+import pytest
+
 from sazed.core.types import Ambiguous, SlotValue, Unmatched
 from sazed.nlu.slots.app import extract_app
 
@@ -65,6 +67,44 @@ def test_alias_to_an_app_that_no_longer_exists_is_ignored() -> None:
 
 def test_only_command_words_means_no_app_named() -> None:
     assert extract_app("abre o programa", NAMES, {}) is None
+
+
+CALC = {"calculadora": "Calculator"}
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "bota a calculadora pra rodar",
+        "bote a calculadora",
+        "coloca a calculadora pra rodar",
+        "coloque a calculadora",
+        "ponha a calculadora pra rodar",
+        "sobe a calculadora",
+        "carrega a calculadora",
+        "chama a calculadora",
+        "joga a calculadora",
+        "derruba a calculadora",
+        "tira a calculadora",
+        "me mostra a calculadora",
+        "mostre a calculadora",
+    ],
+)
+def test_colloquial_verbs_leave_only_the_name(text: str) -> None:
+    # Aliases match only the whole query, so a verb left in it ("bota calculadora")
+    # made the pt-BR alias miss (seen by hand, 2026-10-16).
+    assert extract_app(text, ["Calculator"], CALC) == SlotValue(
+        "app", "Calculator", "calculadora", 1.0, exact=True
+    )
+
+
+def test_poe_is_an_app_name_not_the_verb_poe() -> None:
+    # "põe" strips to "poe", which is also the name of installed apps (Path of Exile tools).
+    # As a command word, "abre o poe" would name no app at all.
+    names = ["PoE Overlay", "Spotify"]
+    assert extract_app("abre o poe", names, {}) == SlotValue(
+        "app", "PoE Overlay", "poe", 1.0, exact=True
+    )
 
 
 def test_an_exact_name_wins_over_a_longer_name_containing_it() -> None:

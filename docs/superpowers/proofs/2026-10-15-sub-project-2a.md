@@ -217,3 +217,26 @@ Mutations on `mask_app`: drop the alias keys →
 `is_name` → the first test set still passed (a finding: "Abrir Arquivo" was covered by the set
 subtraction); added `test_a_verb_close_to_a_name_word_is_kept`, which then failed with
 `assert 'programa o programa' == 'roda o programa'`.
+
+## Colloquial verbs are command words (found in use after 2a)
+"bota a calculadora pra rodar" left the query "bota calculadora", so the pt-BR alias
+"calculadora" (matched only as the whole query) missed and Sazed answered "Não encontrei".
+Added bota/coloca/ponha/sobe/carrega/chama/joga/derruba/tira/mostra (and their forms) to
+`COMMAND_WORDS`. Before the fix, 13 of 13 cases of `test_colloquial_verbs_leave_only_the_name`
+failed. Mutation: drop `"bota"` again:
+```
+E       AssertionError: assert Unmatched(name='app', raw='bota calculadora', suggestion='Calculator') == SlotValue(name='app', value='Calculator', raw='calculadora', confidence=1.0, exact=True)
+FAILED tests/nlu/test_slot_app.py::test_colloquial_verbs_leave_only_the_name[bota a calculadora pra rodar]
+1 failed, 34 passed
+```
+"poe" (stripped "põe") was left out on purpose: the machine has "PoE Overlay" apps. Mutation:
+add `"poe"`. A first version of the guard ("abre o poe overlay") still passed on the name and
+failed only on `raw` (a finding: one leftover word still matched); the guard now uses the case
+that really breaks:
+```
+E       AssertionError: assert None == SlotValue(name='app', value='PoE Overlay', raw='poe', confidence=1.0, exact=True)
+FAILED tests/nlu/test_slot_app.py::test_poe_is_an_app_name_not_the_verb_poe
+```
+The real catalog (183 Start-menu + Store names) was checked for words equal to a new command
+word: only "poe". NLU fixture with the real model (qint8), before and after: 150 cases,
+accuracy 0.928, false-execute 0.000, executed 0.496 / asked 0.504 / not understood 0.000.

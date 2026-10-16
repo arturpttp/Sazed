@@ -18,6 +18,9 @@ dialogue-control phrases. Pure functions over already-loaded data; no OS access,
   step). The `percent` extractor still reads it too: `volume_definir` seeds say "pra 70".
 - Numbers outside 0–100 are `Unmatched` (never clamped): the skill answers `InvalidPercent`
   with the valid range. `Unmatched` counts as given, so the policy does not ask again.
+- `COMMAND_WORDS` are removed from every app query, and aliases match only the whole query:
+  a missing verb ("bota") makes the alias miss ("bota calculadora"). Never add a word that is
+  also an app-name word: "poe" (stripped "põe") would make "abre o poe" name no app.
 - `mask_app` (used before learning) must keep the verb: command words are never masked, even
   when one is a fuzzy match for a word of the app name ("roda" vs "Rodas").
 - `IntentMatcher.add_examples` embeds in one batch; adding seeds one at a time is ~N× slower with the real model.
