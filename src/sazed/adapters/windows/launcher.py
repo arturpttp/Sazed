@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import os
+import time
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 
@@ -55,12 +56,23 @@ class WindowInfo:
     hwnd: int
     pid: int
     child_pids: frozenset[int]
+    class_name: str = ""
+
+
+# A Store app's own CoreWindow ignores WM_CLOSE; only its ApplicationFrameHost frame closes it.
+# Right after launch the CoreWindow is briefly top-level, before the frame adopts it.
+CORE_WINDOW_CLASS = "Windows.UI.Core.CoreWindow"
+FRAME_WAIT_SECONDS = 2.0
 
 
 def windows_to_close(windows: Sequence[WindowInfo], pids: set[int]) -> list[int]:
     """Top-level windows owned by the app, or hosting it: Store apps draw inside an
     ApplicationFrameHost.exe frame whose child window belongs to the app's process."""
-    return [w.hwnd for w in windows if w.pid in pids or w.child_pids & pids]
+    return [
+        w.hwnd
+        for w in windows
+        if w.class_name != CORE_WINDOW_CLASS and (w.pid in pids or w.child_pids & pids)
+    ]
 
 
 def _snapshot() -> list[tuple[int, int, str | None]]:
@@ -87,26 +99,38 @@ class WindowsLauncher:
         pids = {pid for pid, _, exe in _snapshot() if matches(exe)}
         if not pids:
             return 0
-        windows: list[WindowInfo] = []
 
         def pid_of(hwnd: int) -> int:
             return int(win32process.GetWindowThreadProcessId(hwnd)[1])
 
-        def on_window(hwnd: int, _: object) -> bool:
-            if win32gui.IsWindowVisible(hwnd):
-                children: set[int] = set()
+        def visible_windows() -> list[WindowInfo]:
+            found: list[WindowInfo] = []
 
-                def on_child(child: int, __: object) -> bool:
-                    children.add(pid_of(child))
-                    return True
+            def on_window(hwnd: int, _: object) -> bool:
+                if win32gui.IsWindowVisible(hwnd):
+                    children: set[int] = set()
 
-                with contextlib.suppress(win32gui.error):  # no child windows
-                    win32gui.EnumChildWindows(hwnd, on_child, None)
-                windows.append(WindowInfo(hwnd, pid_of(hwnd), frozenset(children)))
-            return True
+                    def on_child(child: int, __: object) -> bool:
+                        children.add(pid_of(child))
+                        return True
 
-        win32gui.EnumWindows(on_window, None)
-        targets = windows_to_close(windows, pids)
+                    with contextlib.suppress(win32gui.error):  # no child windows
+                        win32gui.EnumChildWindows(hwnd, on_child, None)
+                    found.append(
+                        WindowInfo(
+                            hwnd, pid_of(hwnd), frozenset(children), win32gui.GetClassName(hwnd)
+                        )
+                    )
+                return True
+
+            win32gui.EnumWindows(on_window, None)
+            return found
+
+        targets = windows_to_close(visible_windows(), pids)
+        deadline = time.monotonic() + FRAME_WAIT_SECONDS
+        while not targets and entry.kind == "store" and time.monotonic() < deadline:
+            time.sleep(0.1)  # a just-launched Store app: wait for its frame to adopt it
+            targets = windows_to_close(visible_windows(), pids)
         for hwnd in targets:
             win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
         return len(targets)

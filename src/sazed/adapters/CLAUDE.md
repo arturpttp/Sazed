@@ -14,7 +14,9 @@ launcher, audio). This is the only package allowed to touch the OS, files, or mo
 - Store apps come from `shell:AppsFolder` (`store.py`); their names may be English
   ("Calculator"), so `DEFAULT_APP_ALIASES` maps pt-BR names. Their visible window is owned by
   `ApplicationFrameHost.exe`, not the app: `windows_to_close` also closes frames hosting a
-  child window of the app's process.
+  child window of the app's process. Right after launch the app's own top-level
+  `Windows.UI.Core.CoreWindow` exists before the frame adopts it and ignores WM_CLOSE: it is
+  never a target, and `close` waits up to 2 s for the frame (a race seen in the windows suite).
 - WinRT calls are async: adapters run them to completion with `asyncio.run` inside the method.
 - Squirrel shortcuts target a launcher (`Discord` → `Update.exe`): `_matches` looks for the real
   executable under the launcher's folder.

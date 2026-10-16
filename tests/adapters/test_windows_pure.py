@@ -143,6 +143,25 @@ def test_a_frame_window_hosting_the_app_is_closed() -> None:
     assert windows_to_close(windows, {4376}) == [1, 3]
 
 
+def test_a_store_apps_own_core_window_is_never_the_close_target() -> None:
+    # Right after launch a UWP app shows a top-level Windows.UI.Core.CoreWindow before its frame
+    # adopts it; that window ignores WM_CLOSE (seen with Calculator, 2026-10-15).
+    core = "Windows.UI.Core.CoreWindow"
+    starting = [
+        WindowInfo(hwnd=5, pid=4376, child_pids=frozenset(), class_name=core),
+        WindowInfo(
+            hwnd=6, pid=900, child_pids=frozenset({900}), class_name="ApplicationFrameWindow"
+        ),
+    ]
+    assert windows_to_close(starting, {4376}) == []
+    adopted = [
+        WindowInfo(
+            hwnd=6, pid=900, child_pids=frozenset({900, 4376}), class_name="ApplicationFrameWindow"
+        )
+    ]
+    assert windows_to_close(adopted, {4376}) == [6]
+
+
 @pytest.mark.parametrize(
     "uri",
     [

@@ -188,3 +188,13 @@ E
 - `tests/nlu/test_ranking_pairs.py` (real model) FAILED for "fecha o gmail aí", "fecha o github",
   "fecha o youtube pra mim" (top `abrir_app`) and "desmuta o computador" (top `pc_desligar`);
   all pass after the close-site and "o pc" mute seeds.
+
+## Store app close race (found after merging into main)
+`test_store_calculator_opens_and_closes` failed every time inside the `-m windows` suite (after
+the Character Map test): right after launch Calculator's own top-level
+`Windows.UI.Core.CoreWindow` was the only target, it ignores WM_CLOSE, and the app stayed open.
+Fix: never target a CoreWindow; wait up to 2 s for the ApplicationFrameHost frame. Mutation:
+drop the CoreWindow exclusion from `windows_to_close`.
+```
+FAILED tests/adapters/test_windows_pure.py::test_a_store_apps_own_core_window_is_never_the_close_target
+```
