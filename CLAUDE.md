@@ -59,7 +59,9 @@ Sazed, the Terris Keeper from *Mistborn*. Read [`AGENTS.md`](./AGENTS.md) and
   Fixture 233 cases: accuracy 0.919, false-execute 0.000 (file-change proposals count as asked).
 - 2c final review (fresh reviewer): 1 Critical (a delete could be a silent permanent delete) and
   3 Important fixed; 10 minors deferred in the 2c ledger.
-- **Next step:** the user's merge decision for `feat/sub-project-2c`.
+- 2026-10-16: 2c merged into `main`; sub-project 2 (PC skills) is complete.
+- **Next step:** check a move to another drive by hand; then brainstorm sub-project 3
+  (organization skills: reminders, alarms, timers, notes; scheduler + persistence).
 
 ## Measurements
 
