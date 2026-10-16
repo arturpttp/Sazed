@@ -38,3 +38,12 @@ Mutation: drop the final `maximize` after `place`.
 ```
 FAILED tests/skills/test_windows_skill.py::test_moving_a_maximised_window_keeps_it_maximised
 ```
+
+## Task 6: the search SQL cannot be broken out of; program files are recognised in any case
+Mutation: `escape_sql_like` forgets to double quotes.
+```
+FAILED tests/skills/test_files_pure.py::test_like_escaping[d'água-d''água]
+FAILED tests/skills/test_files_pure.py::test_an_injection_attempt_stays_inside_the_string[x' OR 1=1 --]
+FAILED tests/skills/test_files_pure.py::test_an_injection_attempt_stays_inside_the_string[a'; DROP TABLE x; --]
+```
+Mutation: `is_program` compares without `.lower()` → 23 failures (every upper-case extension).
