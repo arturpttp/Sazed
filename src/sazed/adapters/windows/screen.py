@@ -6,18 +6,10 @@ import logging
 import os
 from pathlib import Path
 
+from sazed.skills.pc.fileops import free_name
+
 log = logging.getLogger(__name__)
 FOLDERID_SCREENSHOTS = "{b7bede81-df94-4682-a7d8-57a52620b86f}"
-
-
-def unique_name(name: str, existing: set[str]) -> str:
-    if name not in existing:
-        return name
-    stem, dot, ext = name.rpartition(".")
-    n = 2
-    while f"{stem} ({n}){dot}{ext}" in existing:
-        n += 1
-    return f"{stem} ({n}){dot}{ext}"
 
 
 def screenshots_dir() -> Path:
@@ -40,7 +32,7 @@ class WindowsScreen:
 
         folder = self._folder or screenshots_dir()
         folder.mkdir(parents=True, exist_ok=True)
-        name = unique_name(file_name, {p.name for p in folder.iterdir()})
+        name = free_name(file_name, {p.name for p in folder.iterdir()})
         ImageGrab.grab(all_screens=True).save(folder / name)
         return name
 

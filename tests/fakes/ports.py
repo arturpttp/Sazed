@@ -123,7 +123,7 @@ class FakeScreen:
         self.snips = 0
 
     def capture(self, file_name: str) -> str:
-        from sazed.adapters.windows.screen import unique_name
+        from sazed.skills.pc.fileops import free_name as unique_name
 
         name = unique_name(file_name, self.existing)
         self.existing.add(name)
